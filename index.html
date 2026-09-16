@@ -658,7 +658,17 @@
             }
         }
 
-        // УЛУЧШЕННЫЙ АЛГОРИТМ ПОИСКА КАРТОЧКИ (Устойчивый к коврам и узорам)
+        // Вспомогательная функция отрисовки галочки (✓)
+        function drawCheckmark(mat, cx, cy, colorScalar) {
+            let p1 = new cv.Point(cx - 12, cy + 2);
+            let p2 = new cv.Point(cx - 3, cy + 12);
+            let p3 = new cv.Point(cx + 14, cy - 8);
+
+            cv.line(mat, p1, p2, colorScalar, 4, cv.LINE_AA);
+            cv.line(mat, p2, p3, colorScalar, 4, cv.LINE_AA);
+        }
+
+        // РАСПОЗНАВАНИЕ КАРТОЧКИ И ОТРИСОВКА МАРКЕРОВ ЦВЕТОВ
         function processImageWithCard(canvasSource, canvasTargetId) {
             let src = null, gray = null, blurred = null, thresh = null, morph = null;
             let contours = null, hierarchy = null;
@@ -678,12 +688,10 @@
                 const imgHeight = src.rows;
                 const totalArea = imgWidth * imgHeight;
 
-                // 1. Сильное размытие (11x11) скрывает текстуру ткани/ковра
                 cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
                 cv.GaussianBlur(gray, blurred, new cv.Size(11, 11), 0);
-
-                // 2. Адаптивная пороговая фильтрация + Морфология для объединения карточки
                 cv.Canny(blurred, thresh, 30, 100);
+
                 let kernel = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(5, 5));
                 cv.morphologyEx(thresh, morph, cv.MORPH_CLOSE, kernel);
                 kernel.delete();
@@ -694,7 +702,6 @@
                 let bestQuad = null;
                 let bestBoundingRect = null;
 
-                // 3. Поиск лучшего прямоугольного контура
                 for (let i = 0; i < contours.size(); ++i) {
                     let cnt = contours.get(i);
                     let area = cv.contourArea(cnt);
@@ -702,7 +709,6 @@
                     if (area > totalArea * 0.04) {
                         let peri = cv.arcLength(cnt, true);
                         
-                        // Пробуем найти 4 угла с разной точностью
                         for (let epsScale = 0.015; epsScale <= 0.08; epsScale += 0.01) {
                             let approx = new cv.Mat();
                             cv.approxPolyDP(cnt, approx, epsScale * peri, true);
@@ -724,7 +730,6 @@
                             approx.delete();
                         }
 
-                        // Сохраняем запасной прямоугольник области
                         if (!bestQuad && area > maxArea) {
                             maxArea = area;
                             bestBoundingRect = cv.boundingRect(cnt);
@@ -739,7 +744,6 @@
 
                 let holeCenterX, holeCenterY, holeRadius;
 
-                // 4. Если нашли 4 угла -> Выпрямляем перспективу
                 if (bestQuad) {
                     let add = bestQuad.map(p => p.x + p.y);
                     let diff = bestQuad.map(p => p.y - p.x);
@@ -760,7 +764,6 @@
                     holeRadius = 35;
 
                 } else if (bestBoundingRect) {
-                    // 5. Запасной кроп, если узор ковра помешал найти четкие 4 угла
                     let rect = bestBoundingRect;
                     let roi = src.roi(rect);
                     cv.resize(roi, warped, new cv.Size(CARD_W, CARD_H));
@@ -771,14 +774,13 @@
                     holeRadius = 35;
 
                 } else {
-                    // 6. Если карточка вообще не найдена (кадр по центру)
                     cv.resize(src, warped, new cv.Size(CARD_W, CARD_H));
                     holeCenterX = Math.round(CARD_W * 0.50);
                     holeCenterY = Math.round(CARD_H * 0.46);
                     holeRadius = 35;
                 }
 
-                // 5. Замер цвета из центральной зоны прорези
+                // Расчет цвета из центрального отверстия
                 let safeRadius = Math.round(holeRadius * 0.75);
                 let rSum = 0, gSum = 0, bSum = 0, count = 0;
 
@@ -803,10 +805,23 @@
                     };
                 }
 
-                // Маркерный зеленый круг в центре прорези
-                let greenColor = new cv.Scalar(0, 230, 118, 255);
+                const greenColor = new cv.Scalar(0, 230, 118, 255);
+
+                // 1. Отрисовка зелёного прицельного кружка над прорезью
                 cv.circle(warped, new cv.Point(holeCenterX, holeCenterY), holeRadius, greenColor, 3);
                 cv.circle(warped, new cv.Point(holeCenterX, holeCenterY), 3, greenColor, -1);
+
+                // 2. Отрисовка зелёных галочек над 4 цветными плашками
+                const colorPatches = [
+                    { name: 'white', x: Math.round(CARD_W * 0.19), y: Math.round(CARD_H * 0.35) },
+                    { name: 'gray',  x: Math.round(CARD_W * 0.19), y: Math.round(CARD_H * 0.70) },
+                    { name: 'black', x: Math.round(CARD_W * 0.81), y: Math.round(CARD_H * 0.35) },
+                    { name: 'cyan',  x: Math.round(CARD_W * 0.81), y: Math.round(CARD_H * 0.70) }
+                ];
+
+                colorPatches.forEach(patch => {
+                    drawCheckmark(warped, patch.x, patch.y, greenColor);
+                });
 
                 cv.imshow(canvasTargetId, warped);
 
