@@ -990,7 +990,7 @@
             container.innerHTML = html;
         }
 
-        // ЦВЕТОКОРРЕКЦИЯ С ЗАЩИТОЙ ТЕНЕЙ (чтобы не уходить в 0, 0, 0)
+        // КУСОЧНО-ЛИНЕЙНАЯ ИНТЕРПОЛЯЦИЯ ПО 4 ТОЧКАМ (Защита от просадки в тенях)
         function applyColorCorrection(rawTarget, patches) {
             const IDEAL = {
                 white: { r: 255, g: 255, b: 255 },
@@ -999,26 +999,45 @@
                 cyan:  { r: 0,   g: 160, b: 220 }
             };
 
-            function correctChannel(val, whiteM, grayM, blackM, idealW, idealG, idealB) {
-                // Расчет коэффициента масштаба по светлым и средним тонам (White & Gray)
-                let scale = (idealW - idealG) / Math.max(1, (whiteM - grayM));
-                let offset = idealW - scale * whiteM;
-                let corrected = scale * val + offset;
+            function interpolateChannel(val, ch) {
+                // Формируем опорную кривую для каждого RGB канала
+                let pts = [
+                    { x: 0, y: 0 },
+                    { x: patches.black[ch], y: IDEAL.black[ch] },
+                    { x: patches.cyan[ch],  y: IDEAL.cyan[ch] },
+                    { x: patches.gray[ch],  y: IDEAL.gray[ch] },
+                    { x: patches.white[ch], y: IDEAL.white[ch] },
+                    { x: 255, y: 255 }
+                ];
 
-                // Защита от ухода в ноль: если значение темнее чёрной плашки,
-                // пропорционально масштабируем его от 0 до идеального черного
-                if (val < blackM && blackM > 0) {
-                    let blackCalibrated = Math.max(1, scale * blackM + offset);
-                    corrected = blackCalibrated * (Math.max(0, val) / blackM);
+                // Сортируем точки по возрастанию замеренных значений X
+                pts.sort((a, b) => a.x - b.x);
+
+                // Очищаем дубликаты X во избежание деления на ноль
+                let clean = [pts[0]];
+                for (let i = 1; i < pts.length; i++) {
+                    if (pts[i].x > clean[clean.length - 1].x) {
+                        clean.push(pts[i]);
+                    }
                 }
 
-                return Math.max(0, Math.min(255, Math.round(corrected)));
+                // Вычисляем значение на интерполированном отрезке
+                for (let i = 0; i < clean.length - 1; i++) {
+                    let p1 = clean[i], p2 = clean[i + 1];
+                    if (val >= p1.x && val <= p2.x) {
+                        let ratio = (val - p1.x) / (p2.x - p1.x);
+                        let interpolated = p1.y + ratio * (p2.y - p1.y);
+                        return Math.max(0, Math.min(255, Math.round(interpolated)));
+                    }
+                }
+
+                return val < clean[0].x ? clean[0].y : clean[clean.length - 1].y;
             }
 
             return {
-                r: correctChannel(rawTarget.r, patches.white.r, patches.gray.r, patches.black.r, IDEAL.white.r, IDEAL.gray.r, IDEAL.black.r),
-                g: correctChannel(rawTarget.g, patches.white.g, patches.gray.g, patches.black.g, IDEAL.white.g, IDEAL.gray.g, IDEAL.black.g),
-                b: correctChannel(rawTarget.b, patches.white.b, patches.gray.b, patches.black.b, IDEAL.white.b, IDEAL.gray.b, IDEAL.black.b)
+                r: interpolateChannel(rawTarget.r, 'r'),
+                g: interpolateChannel(rawTarget.g, 'g'),
+                b: interpolateChannel(rawTarget.b, 'b')
             };
         }
 
@@ -1040,7 +1059,7 @@
             const percentRaw = Math.max(0, Math.min(100, Math.round(100 - (diffRaw / 255) * 100 * 2.5)));
             const statusRaw = getStatusBadge(diffRaw);
 
-            // 2. Скорректированные цвета по матрицам
+            // 2. Скорректированные цвета по кусочной кривой
             const stdCorr = applyColorCorrection(stdRaw, standardColorData.patches);
             const smpCorr = applyColorCorrection(smpRaw, sampleColorData.patches);
             const diffCorr = Math.round((Math.abs(stdCorr.r - smpCorr.r) + 
