@@ -164,7 +164,7 @@
             border-radius: 16px; 
             display: flex; 
             flex-direction: column; 
-            justify-content: space-between;
+            justify-content: flex-start;
             box-shadow: 0 8px 24px rgba(0,0,0,0.3);
         }
 
@@ -232,16 +232,32 @@
 
         .btn-action:disabled { opacity: 0.3; pointer-events: none; filter: grayscale(1); }
 
-        .info-text { 
-            font-size: 11px; 
-            font-weight: 600;
-            color: var(--text-muted); 
-            margin-top: 8px; 
-            min-height: 18px; 
+        /* Вертикальный список RGB для плашек */
+        .patches-list {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            margin-top: 10px;
+            width: 100%;
+            background: rgba(0, 0, 0, 0.35);
+            padding: 8px;
+            border-radius: 10px;
+            border: 1px solid var(--card-border);
+        }
+
+        .patch-row {
             display: flex;
             align-items: center;
-            justify-content: center;
             gap: 6px;
+            font-size: 10px;
+            color: var(--text-muted);
+        }
+
+        .patch-row.main-patch {
+            border-bottom: 1px dashed rgba(255, 255, 255, 0.15);
+            padding-bottom: 4px;
+            margin-bottom: 2px;
+            color: var(--text-main);
         }
 
         .swatch-dot {
@@ -249,7 +265,12 @@
             height: 10px;
             border-radius: 50%;
             border: 1px solid rgba(255,255,255,0.3);
-            display: inline-block;
+            flex-shrink: 0;
+        }
+
+        .patch-text {
+            font-weight: 600;
+            white-space: nowrap;
         }
 
         .card { 
@@ -458,7 +479,7 @@
                     <button class="btn-action" id="btnStandard" onclick="openCamera('standard')" disabled>
                         📷 Снять Эталон
                     </button>
-                    <div class="info-text" id="infoStandard">---</div>
+                    <div id="infoStandard"></div>
                 </div>
 
                 <div class="col">
@@ -472,7 +493,7 @@
                     <button class="btn-action secondary" id="btnSample" onclick="openCamera('sample')" disabled>
                         📸 Снять Образец
                     </button>
-                    <div class="info-text" id="infoSample">---</div>
+                    <div id="infoSample"></div>
                 </div>
             </div>
 
@@ -534,8 +555,8 @@
 
     <script>
         let isOpenCvReady = false;
-        let standardColor = null;
-        let sampleColor = null;
+        let standardColorData = null;
+        let sampleColorData = null;
         let activeMode = 'standard';
         let mediaStream = null;
 
@@ -642,38 +663,63 @@
 
         function handleImageSource(canvasSource, mode) {
             const canvasTargetId = mode === 'standard' ? 'canvasStandard' : 'canvasSample';
-            const color = processImageWithCard(canvasSource, canvasTargetId);
+            const colorData = processImageWithCard(canvasSource, canvasTargetId);
 
             if (mode === 'standard') {
-                standardColor = color;
-                renderInfoText(infoStandard, standardColor);
-                localStorage.setItem('cm_card_standard_color', JSON.stringify(standardColor));
+                standardColorData = colorData;
+                renderPatchesList('infoStandard', standardColorData);
+                localStorage.setItem('cm_card_standard_data', JSON.stringify(standardColorData));
 
                 btnSample.disabled = false;
-                if (sampleColor) compareColors();
+                if (sampleColorData) compareColors();
             } else {
-                sampleColor = color;
-                renderInfoText(infoSample, sampleColor);
+                sampleColorData = colorData;
+                renderPatchesList('infoSample', sampleColorData);
                 compareColors();
             }
         }
 
-        // Вспомогательная функция отрисовки галочки (✓)
-        function drawCheckmark(mat, cx, cy, colorScalar) {
-            let p1 = new cv.Point(cx - 12, cy + 2);
-            let p2 = new cv.Point(cx - 3, cy + 12);
-            let p3 = new cv.Point(cx + 14, cy - 8);
-
-            cv.line(mat, p1, p2, colorScalar, 4, cv.LINE_AA);
-            cv.line(mat, p2, p3, colorScalar, 4, cv.LINE_AA);
+        // Отрисовка круглого прицела с перекрестьем
+        function drawTargetCrosshair(mat, cx, cy, colorScalar, radius = 18) {
+            let pCenter = new cv.Point(cx, cy);
+            cv.circle(mat, pCenter, radius, colorScalar, 2, cv.LINE_AA);
+            cv.circle(mat, pCenter, 2, colorScalar, -1, cv.LINE_AA);
+            
+            cv.line(mat, new cv.Point(cx - radius - 4, cy), new cv.Point(cx + radius + 4, cy), colorScalar, 1.5, cv.LINE_AA);
+            cv.line(mat, new cv.Point(cx, cy - radius - 4), new cv.Point(cx, cy + radius + 4), colorScalar, 1.5, cv.LINE_AA);
         }
 
-        // РАСПОЗНАВАНИЕ КАРТОЧКИ И ОТРИСОВКА МАРКЕРОВ ЦВЕТОВ
+        // Вспомогательная функция усреднения цвета области
+        function getRegionColor(mat, cx, cy, radius = 12) {
+            let rSum = 0, gSum = 0, bSum = 0, count = 0;
+            for (let y = cy - radius; y <= cy + radius; y++) {
+                for (let x = cx - radius; x <= cx + radius; x++) {
+                    let dist = Math.sqrt(Math.pow(x - cx, 2) + Math.pow(y - cy, 2));
+                    if (dist <= radius && x >= 0 && x < mat.cols && y >= 0 && y < mat.rows) {
+                        let pixel = mat.ucharPtr(y, x);
+                        rSum += pixel[0];
+                        gSum += pixel[1];
+                        bSum += pixel[2];
+                        count++;
+                    }
+                }
+            }
+            return count > 0 ? {
+                r: Math.round(rSum / count),
+                g: Math.round(gSum / count),
+                b: Math.round(bSum / count)
+            } : { r: 0, g: 0, b: 0 };
+        }
+
+        // РАСПОЗНАВАНИЕ КАРТОЧКИ И ПРИЦЕЛИВАНИЕ ПО ЦЕНТРАМ ПЛАШЕК
         function processImageWithCard(canvasSource, canvasTargetId) {
             let src = null, gray = null, blurred = null, thresh = null, morph = null;
             let contours = null, hierarchy = null;
             let warped = null, srcMat = null, dstMat = null, M = null;
-            let extractedColor = { r: 0, g: 0, b: 0 };
+            let extractedData = {
+                main: { r: 0, g: 0, b: 0 },
+                patches: { white: {r:0,g:0,b:0}, gray: {r:0,g:0,b:0}, black: {r:0,g:0,b:0}, cyan: {r:0,g:0,b:0} }
+            };
 
             try {
                 src = cv.imread(canvasSource);
@@ -780,47 +826,30 @@
                     holeRadius = 35;
                 }
 
-                // Расчет цвета из центрального отверстия
-                let safeRadius = Math.round(holeRadius * 0.75);
-                let rSum = 0, gSum = 0, bSum = 0, count = 0;
+                // 1. Точные координаты центров плашек на карточке 856x540
+                const colorPatches = [
+                    { key: 'white', x: Math.round(CARD_W * 0.175), y: Math.round(CARD_H * 0.38) },
+                    { key: 'gray',  x: Math.round(CARD_W * 0.175), y: Math.round(CARD_H * 0.68) },
+                    { key: 'black', x: Math.round(CARD_W * 0.825), y: Math.round(CARD_H * 0.38) },
+                    { key: 'cyan',  x: Math.round(CARD_W * 0.825), y: Math.round(CARD_H * 0.68) }
+                ];
 
-                for (let y = holeCenterY - safeRadius; y <= holeCenterY + safeRadius; y++) {
-                    for (let x = holeCenterX - safeRadius; x <= holeCenterX + safeRadius; x++) {
-                        let dist = Math.sqrt(Math.pow(x - holeCenterX, 2) + Math.pow(y - holeCenterY, 2));
-                        if (dist <= safeRadius && x >= 0 && x < CARD_W && y >= 0 && y < CARD_H) {
-                            let pixel = warped.ucharPtr(y, x);
-                            rSum += pixel[0];
-                            gSum += pixel[1];
-                            bSum += pixel[2];
-                            count++;
-                        }
-                    }
-                }
+                // 2. Расчет цвета из центрального отверстия
+                extractedData.main = getRegionColor(warped, holeCenterX, holeCenterY, Math.round(holeRadius * 0.7));
 
-                if (count > 0) {
-                    extractedColor = {
-                        r: Math.round(rSum / count),
-                        g: Math.round(gSum / count),
-                        b: Math.round(bSum / count)
-                    };
-                }
+                // 3. Расчет цвета с 4 плашек
+                colorPatches.forEach(p => {
+                    extractedData.patches[p.key] = getRegionColor(warped, p.x, p.y, 14);
+                });
 
                 const greenColor = new cv.Scalar(0, 230, 118, 255);
 
-                // 1. Отрисовка зелёного прицельного кружка над прорезью
-                cv.circle(warped, new cv.Point(holeCenterX, holeCenterY), holeRadius, greenColor, 3);
-                cv.circle(warped, new cv.Point(holeCenterX, holeCenterY), 3, greenColor, -1);
+                // 4. Отрисовка прицела над центральным отверстием
+                drawTargetCrosshair(warped, holeCenterX, holeCenterY, greenColor, holeRadius);
 
-                // 2. Отрисовка зелёных галочек над 4 цветными плашками
-                const colorPatches = [
-                    { name: 'white', x: Math.round(CARD_W * 0.19), y: Math.round(CARD_H * 0.35) },
-                    { name: 'gray',  x: Math.round(CARD_W * 0.19), y: Math.round(CARD_H * 0.70) },
-                    { name: 'black', x: Math.round(CARD_W * 0.81), y: Math.round(CARD_H * 0.35) },
-                    { name: 'cyan',  x: Math.round(CARD_W * 0.81), y: Math.round(CARD_H * 0.70) }
-                ];
-
-                colorPatches.forEach(patch => {
-                    drawCheckmark(warped, patch.x, patch.y, greenColor);
+                // 5. Отрисовка прицелов точно по центрам 4 плашек
+                colorPatches.forEach(p => {
+                    drawTargetCrosshair(warped, p.x, p.y, greenColor, 18);
                 });
 
                 cv.imshow(canvasTargetId, warped);
@@ -839,28 +868,67 @@
                 if (M) M.delete();
             }
 
-            return extractedColor;
+            return extractedData;
         }
 
         function restoreState() {
-            const savedColor = localStorage.getItem('cm_card_standard_color');
-            if (savedColor) {
-                standardColor = JSON.parse(savedColor);
-                renderInfoText(infoStandard, standardColor);
+            const savedData = localStorage.getItem('cm_card_standard_data');
+            if (savedData) {
+                standardColorData = JSON.parse(savedData);
+                renderPatchesList('infoStandard', standardColorData);
                 btnSample.disabled = false;
             }
         }
 
-        function renderInfoText(element, colorObj) {
-            element.innerHTML = `<span class="swatch-dot" style="background: rgb(${colorObj.r},${colorObj.g},${colorObj.b});"></span> RGB: ${colorObj.r}, ${colorObj.g}, ${colorObj.b}`;
+        // Рендер столбца со всеми 4 цветами + главным цветом под кнопкой
+        function renderPatchesList(elementId, dataObj) {
+            const container = document.getElementById(elementId);
+            if (!dataObj || !dataObj.main) {
+                container.innerHTML = '';
+                return;
+            }
+
+            const patchNames = {
+                white: 'Белый',
+                gray: 'Серый',
+                black: 'Чёрный',
+                cyan: 'Циан'
+            };
+
+            const m = dataObj.main;
+            const p = dataObj.patches;
+
+            let html = `<div class="patches-list">
+                <div class="patch-row main-patch">
+                    <span class="swatch-dot" style="background: rgb(${m.r},${m.g},${m.b});"></span>
+                    <span class="patch-text"><b>Цель:</b> RGB ${m.r}, ${m.g}, ${m.b}</span>
+                </div>`;
+
+            for (const key of ['white', 'gray', 'black', 'cyan']) {
+                if (p && p[key]) {
+                    const c = p[key];
+                    html += `
+                        <div class="patch-row">
+                            <span class="swatch-dot" style="background: rgb(${c.r},${c.g},${c.b});"></span>
+                            <span class="patch-text">${patchNames[key]}: ${c.r}, ${c.g}, ${c.b}</span>
+                        </div>
+                    `;
+                }
+            }
+
+            html += `</div>`;
+            container.innerHTML = html;
         }
 
         function compareColors() {
-            if (!standardColor || !sampleColor) return;
+            if (!standardColorData || !sampleColorData) return;
 
-            const diff = Math.round((Math.abs(standardColor.r - sampleColor.r) + 
-                                    Math.abs(standardColor.g - sampleColor.g) + 
-                                    Math.abs(standardColor.b - sampleColor.b)) / 3);
+            const std = standardColorData.main;
+            const smp = sampleColorData.main;
+
+            const diff = Math.round((Math.abs(std.r - smp.r) + 
+                                    Math.abs(std.g - smp.g) + 
+                                    Math.abs(std.b - smp.b)) / 3);
 
             infoCard.style.display = 'block';
 
@@ -884,12 +952,12 @@
                 
                 <div class="swatch-comparison">
                     <div class="swatch-item">
-                        <div class="swatch-circle" style="background: rgb(${standardColor.r},${standardColor.g},${standardColor.b})"></div>
+                        <div class="swatch-circle" style="background: rgb(${std.r},${std.g},${std.b})"></div>
                         <span>Эталон</span>
                     </div>
                     <div style="font-weight:800; opacity:0.3; font-size:11px;">VS</div>
                     <div class="swatch-item">
-                        <div class="swatch-circle" style="background: rgb(${sampleColor.r},${sampleColor.g},${sampleColor.b})"></div>
+                        <div class="swatch-circle" style="background: rgb(${smp.r},${smp.g},${smp.b})"></div>
                         <span>Образец</span>
                     </div>
                 </div>
@@ -897,12 +965,12 @@
         }
 
         resetBtn.addEventListener('click', () => {
-            localStorage.removeItem('cm_card_standard_color');
-            standardColor = null;
-            sampleColor = null;
+            localStorage.removeItem('cm_card_standard_data');
+            standardColorData = null;
+            sampleColorData = null;
 
-            infoStandard.innerText = '---';
-            infoSample.innerText = '---';
+            infoStandard.innerHTML = '';
+            infoSample.innerHTML = '';
             infoCard.style.display = 'none';
             resultDiv.innerText = '';
 
