@@ -1,986 +1,563 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ColorMatch Pro</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    
-    <style>
-        :root {
-            --bg-color: #0B0E14;
-            --card-bg: rgba(22, 28, 45, 0.75);
-            --card-border: rgba(255, 255, 255, 0.08);
-            --accent-cyan: #00E5FF;
-            --accent-purple: #8B5CF6;
-            --accent-purple-glow: rgba(139, 92, 246, 0.35);
-            --accent-green: #00E676;
-            --accent-warning: #FFB300;
-            --accent-red: #FF5252;
-            --text-main: #F3F4F6;
-            --text-muted: #9CA3AF;
-        }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>COLORMATCH PRO</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    }
 
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        
-        body { 
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; 
-            background: var(--bg-color); 
-            background-image: radial-gradient(circle at 50% 0%, #1A2035 0%, #0B0E14 80%);
-            color: var(--text-main); 
-            margin: 0; 
-            padding: 16px 12px; 
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
+    body {
+      background-color: #0b0f19;
+      color: #ffffff;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+    }
 
-        .container { width: 100%; max-width: 480px; }
+    .header {
+      width: 100%;
+      max-width: 480px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
 
-        .header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 16px;
-            padding: 4px 0;
-        }
+    .logo {
+      font-size: 20px;
+      font-weight: 800;
+      letter-spacing: 1px;
+      background: linear-gradient(90deg, #00f0ff, #7000ff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
 
-        .brand { display: flex; align-items: center; gap: 10px; }
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      color: #00f0ff;
+      background: rgba(0, 240, 255, 0.1);
+      padding: 4px 10px;
+      border-radius: 12px;
+      margin-bottom: 16px;
+    }
 
-        .logo-badge {
-            width: 36px;
-            height: 36px;
-            background: linear-gradient(135deg, var(--accent-purple), var(--accent-cyan));
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 0 16px var(--accent-purple-glow);
-        }
+    .status-dot {
+      width: 6px;
+      height: 6px;
+      background-color: #00f0ff;
+      border-radius: 50%;
+    }
 
-        .logo-badge svg { width: 20px; height: 20px; fill: #fff; }
+    .cards-container {
+      width: 100%;
+      max-width: 480px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
 
-        h1 { 
-            margin: 0; 
-            font-size: 18px; 
-            font-weight: 800; 
-            letter-spacing: -0.5px;
-            background: linear-gradient(135deg, #FFF 60%, var(--accent-cyan));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
+    .card {
+      background: #131927;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 16px;
+      padding: 16px;
+      position: relative;
+    }
 
-        .menu-container { position: relative; }
+    .card-title {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 14px;
+      font-weight: 700;
+      color: #a0aab8;
+      margin-bottom: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
 
-        .menu-btn {
-            background: var(--card-bg);
-            border: 1px solid var(--card-border);
-            color: var(--text-main);
-            padding: 8px 12px;
-            border-radius: 12px;
-            font-size: 13px;
-            font-weight: 600;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            backdrop-filter: blur(10px);
-        }
+    .card-badge {
+      background: rgba(255, 255, 255, 0.05);
+      padding: 2px 8px;
+      border-radius: 6px;
+      font-size: 11px;
+    }
 
-        .menu-dropdown {
-            position: absolute;
-            right: 0;
-            top: 46px;
-            background: rgba(18, 24, 38, 0.95);
-            border: 1px solid var(--card-border);
-            border-radius: 14px;
-            padding: 6px;
-            width: 220px;
-            box-shadow: 0 12px 32px rgba(0,0,0,0.5);
-            backdrop-filter: blur(16px);
-            display: none;
-            z-index: 100;
-        }
+    .image-preview {
+      width: 100%;
+      height: 180px;
+      background-color: #000;
+      border-radius: 12px;
+      overflow: hidden;
+      position: relative;
+      margin-bottom: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
 
-        .menu-dropdown.active { display: block; }
+    .image-preview canvas {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
 
-        .menu-item {
-            padding: 10px 12px;
-            font-size: 12px;
-            font-weight: 600;
-            color: var(--text-muted);
-            border-radius: 8px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
+    .btn {
+      width: 100%;
+      padding: 12px;
+      border: none;
+      border-radius: 10px;
+      font-weight: 600;
+      font-size: 14px;
+      color: #fff;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-bottom: 16px;
+      transition: opacity 0.2s;
+    }
 
-        .menu-item:hover, .menu-item.active {
-            background: rgba(255, 255, 255, 0.08);
-            color: #fff;
-        }
+    .btn:active {
+      opacity: 0.8;
+    }
 
-        .status-pill { 
-            font-size: 11px; 
-            font-weight: 600;
-            padding: 4px 10px;
-            border-radius: 20px;
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid var(--card-border);
-            color: var(--accent-cyan);
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            margin-bottom: 14px;
-        }
+    .btn-etalon {
+      background: linear-gradient(90deg, #6a11cb, #2575fc);
+    }
 
-        .status-dot {
-            width: 6px;
-            height: 6px;
-            border-radius: 50%;
-            background-color: var(--accent-cyan);
-            box-shadow: 0 0 8px var(--accent-cyan);
-        }
+    .btn-sample {
+      background: linear-gradient(90deg, #00c6ff, #0072ff);
+    }
 
-        .status-dot.loading {
-            background-color: var(--accent-warning);
-            box-shadow: 0 0 8px var(--accent-warning);
-            animation: pulse 1.2s infinite alternate;
-        }
+    .colors-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      font-size: 13px;
+    }
 
-        @keyframes pulse { 0% { opacity: 0.3; } 100% { opacity: 1; } }
+    .color-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
 
-        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .color-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
 
-        .col { 
-            background: var(--card-bg); 
-            backdrop-filter: blur(12px);
-            border: 1px solid var(--card-border);
-            padding: 12px; 
-            border-radius: 16px; 
-            display: flex; 
-            flex-direction: column; 
-            justify-content: flex-start;
-            box-shadow: 0 8px 24px rgba(0,0,0,0.3);
-        }
+    .color-name {
+      color: #a0aab8;
+      width: 65px;
+    }
 
-        .col-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 8px;
-        }
+    .color-val {
+      font-family: monospace;
+      font-weight: 600;
+      color: #ffffff;
+    }
 
-        h3 { 
-            font-size: 12px; 
-            margin: 0; 
-            font-weight: 700; 
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            color: var(--text-muted);
-        }
+    /* Блок профиля коррекции */
+    .correction-profile {
+      margin-top: 14px;
+      padding: 12px;
+      background: rgba(0, 0, 0, 0.25);
+      border: 1px solid rgba(0, 240, 255, 0.15);
+      border-radius: 10px;
+    }
 
-        .step-tag {
-            font-size: 10px;
-            font-weight: 700;
-            padding: 2px 6px;
-            border-radius: 4px;
-            background: rgba(255,255,255,0.1);
-            color: #fff;
-        }
+    .profile-title {
+      font-size: 11px;
+      font-weight: 700;
+      color: #00f0ff;
+      margin-bottom: 8px;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
 
-        .preview-box { 
-            width: 100%; 
-            height: 130px; 
-            border: 1px dashed rgba(255, 255, 255, 0.15); 
-            border-radius: 12px; 
-            margin-bottom: 10px; 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
-            overflow: hidden; 
-            background: #07090E; 
-        }
+    .profile-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      font-size: 11px;
+    }
 
-        canvas { max-width: 100%; max-height: 100%; object-fit: contain; }
+    .profile-item {
+      display: flex;
+      justify-content: space-between;
+      color: #8a94a6;
+      background: rgba(255, 255, 255, 0.02);
+      padding: 4px 6px;
+      border-radius: 4px;
+    }
 
-        .btn-action { 
-            background: linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%); 
-            color: white; 
-            padding: 10px 6px; 
-            font-size: 12px; 
-            font-weight: 700; 
-            border-radius: 10px; 
-            border: none;
-            cursor: pointer; 
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 4px;
-            width: 100%; 
-            box-shadow: 0 4px 14px var(--accent-purple-glow);
-        }
+    .profile-item strong {
+      color: #ffffff;
+      font-family: monospace;
+    }
 
-        .btn-action.secondary { 
-            background: linear-gradient(135deg, #00C6FF 0%, #0072FF 100%); 
-            box-shadow: 0 4px 14px rgba(0, 198, 255, 0.25);
-        }
+    /* Блок результатов */
+    .results-card {
+      width: 100%;
+      max-width: 480px;
+      background: #131927;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 16px;
+      padding: 20px;
+      margin-top: 16px;
+      text-align: center;
+    }
 
-        .btn-action:disabled { opacity: 0.3; pointer-events: none; filter: grayscale(1); }
+    .match-score {
+      font-size: 28px;
+      font-weight: 900;
+      color: #00ff88;
+      margin-bottom: 4px;
+    }
 
-        /* Вертикальный список RGB для плашек */
-        .patches-list {
-            display: flex;
-            flex-direction: column;
-            gap: 5px;
-            margin-top: 10px;
-            width: 100%;
-            background: rgba(0, 0, 0, 0.35);
-            padding: 8px;
-            border-radius: 10px;
-            border: 1px solid var(--card-border);
-        }
+    .match-label {
+      font-size: 13px;
+      color: #00ff88;
+      margin-bottom: 16px;
+    }
 
-        .patch-row {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            font-size: 10px;
-            color: var(--text-muted);
-        }
+    .comparison-circles {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 24px;
+      margin-bottom: 20px;
+    }
 
-        .patch-row.main-patch {
-            border-bottom: 1px dashed rgba(255, 255, 255, 0.15);
-            padding-bottom: 4px;
-            margin-bottom: 2px;
-            color: var(--text-main);
-        }
+    .circle-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      color: #8a94a6;
+    }
 
-        .swatch-dot {
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-            border: 1px solid rgba(255,255,255,0.3);
-            flex-shrink: 0;
-        }
+    .big-color-circle {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      border: 2px solid rgba(255, 255, 255, 0.2);
+    }
 
-        .patch-text {
-            font-weight: 600;
-            white-space: nowrap;
-        }
+    .btn-reset {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: #a0aab8;
+      padding: 10px;
+      border-radius: 8px;
+      width: 100%;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+    }
 
-        .card { 
-            background: var(--card-bg); 
-            backdrop-filter: blur(16px);
-            border: 1px solid var(--card-border);
-            padding: 16px; 
-            border-radius: 18px; 
-            margin-top: 14px; 
-            box-shadow: 0 12px 32px rgba(0,0,0,0.4);
-            text-align: center;
-        }
-
-        .match-score-main { font-size: 30px; font-weight: 800; letter-spacing: -1px; }
-
-        .match-subtitle {
-            font-size: 12px;
-            font-weight: 700;
-            padding: 4px 12px;
-            border-radius: 20px;
-            text-transform: uppercase;
-            margin-top: 6px;
-            display: inline-block;
-        }
-
-        .match-success { color: var(--accent-green); }
-        .match-success .match-subtitle { background: rgba(0, 230, 118, 0.12); color: var(--accent-green); }
-
-        .match-warning { color: var(--accent-warning); }
-        .match-warning .match-subtitle { background: rgba(255, 179, 0, 0.12); color: var(--accent-warning); }
-
-        .match-error { color: var(--accent-red); }
-        .match-error .match-subtitle { background: rgba(255, 82, 82, 0.12); color: var(--accent-red); }
-
-        .swatch-comparison {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 16px;
-            margin-top: 12px;
-            padding: 10px;
-            background: rgba(0, 0, 0, 0.25);
-            border-radius: 12px;
-            border: 1px solid rgba(255, 255, 255, 0.05);
-        }
-
-        .swatch-item {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 4px;
-            font-size: 10px;
-            color: var(--text-muted);
-            font-weight: 600;
-        }
-
-        .swatch-circle {
-            width: 28px;
-            height: 28px;
-            border-radius: 50%;
-            border: 2px solid rgba(255,255,255,0.2);
-        }
-
-        .reset-btn { 
-            background: rgba(255, 82, 82, 0.12); 
-            color: var(--accent-red); 
-            border: 1px solid rgba(255, 82, 82, 0.3); 
-            padding: 10px 20px; 
-            border-radius: 10px; 
-            margin-top: 12px; 
-            cursor: pointer; 
-            font-size: 12px; 
-            font-weight: 700;
-            width: 100%;
-        }
-
-        .camera-modal {
-            display: none;
-            position: fixed;
-            inset: 0;
-            background: rgba(0, 0, 0, 0.9);
-            z-index: 1000;
-            align-items: center;
-            justify-content: center;
-            padding: 16px;
-            backdrop-filter: blur(8px);
-        }
-
-        .camera-modal.active { display: flex; }
-
-        .camera-card {
-            background: #121824;
-            border: 1px solid var(--card-border);
-            border-radius: 20px;
-            width: 100%;
-            max-width: 420px;
-            padding: 16px;
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            box-shadow: 0 20px 50px rgba(0,0,0,0.8);
-        }
-
-        .camera-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-size: 14px;
-            font-weight: 700;
-        }
-
-        .close-btn {
-            background: rgba(255,255,255,0.1);
-            border: none;
-            color: #fff;
-            width: 28px;
-            height: 28px;
-            border-radius: 50%;
-            cursor: pointer;
-            font-size: 14px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .camera-viewport {
-            position: relative;
-            width: 100%;
-            height: 320px;
-            background: #000;
-            border-radius: 14px;
-            overflow: hidden;
-        }
-
-        .camera-viewport video { width: 100%; height: 100%; object-fit: cover; }
-
-        .camera-overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-        }
-
-        .view-pane { display: none; }
-        .view-pane.active { display: block; }
-        
-        .stub-box {
-            background: var(--card-bg);
-            border: 1px solid var(--card-border);
-            padding: 30px 16px;
-            border-radius: 16px;
-            text-align: center;
-            color: var(--text-muted);
-            font-size: 13px;
-        }
-    </style>
-    <script async src="https://docs.opencv.org/4.5.5/opencv.js" onload="onOpenCvReady()"></script>
+    input[type="file"] {
+      display: none;
+    }
+  </style>
 </head>
 <body>
 
-    <div class="container">
-        <div class="header">
-            <div class="brand">
-                <div class="logo-badge">
-                    <svg viewBox="0 0 24 24">
-                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z"/>
-                    </svg>
-                </div>
-                <h1>COLORMATCH</h1>
-            </div>
+  <div class="header">
+    <div class="logo">COLORMATCH</div>
+  </div>
 
-            <div class="menu-container">
-                <button class="menu-btn" onclick="toggleMenu()">
-                    <span id="activeMenuLabel">🎯 Сравнение</span> ▾
-                </button>
-                <div class="menu-dropdown" id="menuDropdown">
-                    <div class="menu-item active" onclick="switchMode('compare', '🎯 Сравнение')">
-                        🎯 Сравнение цвета
-                    </div>
-                    <div class="menu-item" onclick="switchMode('calibrate', '🖥️ Калибровка')">
-                        🖥️ Калибровка экрана
-                    </div>
-                    <div class="menu-item" onclick="switchMode('correct', '🎨 Цветокоррекция')">
-                        🎨 Цветокоррекция снимка
-                    </div>
-                </div>
-            </div>
+  <div class="status-badge">
+    <span class="status-dot"></span> Готов к работе
+  </div>
+
+  <div class="cards-container">
+    
+    <!-- 1. ЭТАЛОН -->
+    <div class="card" id="card-etalon">
+      <div class="card-title">
+        <span>1. Эталон</span>
+        <span class="card-badge">01</span>
+      </div>
+      
+      <div class="image-preview">
+        <canvas id="canvas-etalon"></canvas>
+      </div>
+
+      <button class="btn btn-etalon" onclick="document.getElementById('file-etalon').click()">
+        📷 Снять Эталон
+      </button>
+      <input type="file" id="file-etalon" accept="image/*" onchange="handleImageUpload(event, 'etalon')">
+
+      <div class="colors-list">
+        <div class="color-row">
+          <div class="color-dot" id="dot-e-target"></div>
+          <span class="color-name">Цель:</span>
+          <span class="color-val" id="val-e-target">RGB —, —, —</span>
         </div>
-
-        <div class="status-pill" id="cvStatus">
-            <span class="status-dot loading"></span> Загрузка ядра OpenCV...
+        <div class="color-row">
+          <div class="color-dot" style="background:#fff"></div>
+          <span class="color-name">Белый:</span>
+          <span class="color-val" id="val-e-white">RGB —, —, —</span>
         </div>
-
-        <div class="view-pane active" id="paneCompare">
-            <div class="grid">
-                <div class="col">
-                    <div class="col-header">
-                        <h3>1. Эталон</h3>
-                        <span class="step-tag">01</span>
-                    </div>
-                    <div class="preview-box">
-                        <canvas id="canvasStandard"></canvas>
-                    </div>
-                    <button class="btn-action" id="btnStandard" onclick="openCamera('standard')" disabled>
-                        📷 Снять Эталон
-                    </button>
-                    <div id="infoStandard"></div>
-                </div>
-
-                <div class="col">
-                    <div class="col-header">
-                        <h3>2. Образец</h3>
-                        <span class="step-tag">02</span>
-                    </div>
-                    <div class="preview-box">
-                        <canvas id="canvasSample"></canvas>
-                    </div>
-                    <button class="btn-action secondary" id="btnSample" onclick="openCamera('sample')" disabled>
-                        📸 Снять Образец
-                    </button>
-                    <div id="infoSample"></div>
-                </div>
-            </div>
-
-            <div class="card" id="infoCard" style="display:none;">
-                <div id="result"></div>
-                <button class="reset-btn" id="resetBtn">🔄 Начать новый тест</button>
-            </div>
+        <div class="color-row">
+          <div class="color-dot" style="background:#888"></div>
+          <span class="color-name">Серый:</span>
+          <span class="color-val" id="val-e-gray">RGB —, —, —</span>
         </div>
-
-        <div class="view-pane" id="paneCalibrate">
-            <div class="stub-box">
-                🖥️ <b>Калибровка экрана</b><br><br>
-                Режим настройки яркости и цветового профиля дисплея.
-            </div>
+        <div class="color-row">
+          <div class="color-dot" style="background:#222"></div>
+          <span class="color-name">Чёрный:</span>
+          <span class="color-val" id="val-e-black">RGB —, —, —</span>
         </div>
-
-        <div class="view-pane" id="paneCorrect">
-            <div class="stub-box">
-                🎨 <b>Цветокоррекция снимка</b><br><br>
-                Выравнивание баланса белого и экспозиции.
-            </div>
+        <div class="color-row">
+          <div class="color-dot" style="background:#00aaff"></div>
+          <span class="color-name">Циан:</span>
+          <span class="color-val" id="val-e-cyan">RGB —, —, —</span>
         </div>
+      </div>
+
+      <!-- ПРОФИЛЬ КОРРЕКЦИИ -->
+      <div class="correction-profile">
+        <div class="profile-title">Профиль коррекции (Δ RGB)</div>
+        <div class="profile-grid">
+          <div class="profile-item">Белый: <strong id="delta-e-white">—</strong></div>
+          <div class="profile-item">Серый: <strong id="delta-e-gray">—</strong></div>
+          <div class="profile-item">Чёрный: <strong id="delta-e-black">—</strong></div>
+          <div class="profile-item">Циан: <strong id="delta-e-cyan">—</strong></div>
+        </div>
+      </div>
     </div>
 
-    <div class="camera-modal" id="cameraModal">
-        <div class="camera-card">
-            <div class="camera-header">
-                <span id="cameraTitle">Сканирование карточки</span>
-                <button class="close-btn" onclick="closeCamera()">✕</button>
-            </div>
-            
-            <div class="camera-viewport">
-                <video id="webcam" autoplay playsinline></video>
-                <svg class="camera-overlay" viewBox="0 0 400 320">
-                    <defs>
-                        <mask id="card-mask">
-                            <rect width="100%" height="100%" fill="white"/>
-                            <rect x="50" y="55" width="300" height="190" rx="12" fill="black"/>
-                        </mask>
-                    </defs>
+    <!-- 2. ОБРАЗЕЦ -->
+    <div class="card" id="card-sample">
+      <div class="card-title">
+        <span>2. Образец</span>
+        <span class="card-badge">02</span>
+      </div>
+      
+      <div class="image-preview">
+        <canvas id="canvas-sample"></canvas>
+      </div>
 
-                    <rect width="100%" height="100%" fill="rgba(0,0,0,0.55)" mask="url(#card-mask)"/>
-                    <rect x="50" y="55" width="300" height="190" rx="12" fill="none" stroke="#00E5FF" stroke-width="2" stroke-dasharray="6 4"/>
-                    <circle cx="200" cy="150" r="26" fill="none" stroke="#00E676" stroke-width="2"/>
-                    <line x1="200" y1="115" x2="200" y2="185" stroke="#00E676" stroke-width="1.5"/>
-                    <line x1="165" y1="150" x2="235" y2="150" stroke="#00E676" stroke-width="1.5"/>
+      <button class="btn btn-sample" onclick="document.getElementById('file-sample').click()">
+        📷 Снять Образец
+      </button>
+      <input type="file" id="file-sample" accept="image/*" onchange="handleImageUpload(event, 'sample')">
 
-                    <text x="200" y="32" fill="#FFFFFF" font-size="12" font-weight="600" text-anchor="middle">
-                        Совместите карту с рамкой
-                    </text>
-                </svg>
-            </div>
-
-            <button class="btn-action" onclick="takeSnapshot()">
-                📸 Сделать снимок
-            </button>
+      <div class="colors-list">
+        <div class="color-row">
+          <div class="color-dot" id="dot-s-target"></div>
+          <span class="color-name">Цель:</span>
+          <span class="color-val" id="val-s-target">RGB —, —, —</span>
         </div>
+        <div class="color-row">
+          <div class="color-dot" style="background:#fff"></div>
+          <span class="color-name">Белый:</span>
+          <span class="color-val" id="val-s-white">RGB —, —, —</span>
+        </div>
+        <div class="color-row">
+          <div class="color-dot" style="background:#888"></div>
+          <span class="color-name">Серый:</span>
+          <span class="color-val" id="val-s-gray">RGB —, —, —</span>
+        </div>
+        <div class="color-row">
+          <div class="color-dot" style="background:#222"></div>
+          <span class="color-name">Чёрный:</span>
+          <span class="color-val" id="val-s-black">RGB —, —, —</span>
+        </div>
+        <div class="color-row">
+          <div class="color-dot" style="background:#00aaff"></div>
+          <span class="color-name">Циан:</span>
+          <span class="color-val" id="val-s-cyan">RGB —, —, —</span>
+        </div>
+      </div>
+
+      <!-- ПРОФИЛЬ КОРРЕКЦИИ -->
+      <div class="correction-profile">
+        <div class="profile-title">Профиль коррекции (Δ RGB)</div>
+        <div class="profile-grid">
+          <div class="profile-item">Белый: <strong id="delta-s-white">—</strong></div>
+          <div class="profile-item">Серый: <strong id="delta-s-gray">—</strong></div>
+          <div class="profile-item">Чёрный: <strong id="delta-s-black">—</strong></div>
+          <div class="profile-item">Циан: <strong id="delta-s-cyan">—</strong></div>
+        </div>
+      </div>
     </div>
 
-    <script>
-        let isOpenCvReady = false;
-        let standardColorData = null;
-        let sampleColorData = null;
-        let activeMode = 'standard';
-        let mediaStream = null;
+  </div>
 
-        const cvStatus = document.getElementById('cvStatus');
-        const btnStandard = document.getElementById('btnStandard');
-        const btnSample = document.getElementById('btnSample');
+  <!-- БЛОК СРАВНЕНИЯ -->
+  <div class="results-card">
+    <div class="match-score" id="match-percent">90% MATCH</div>
+    <div class="match-label" id="match-label">ТОТ САМЫЙ ЦВЕТ (Δ = 10)</div>
+    
+    <div class="comparison-circles">
+      <div class="circle-wrap">
+        <div class="big-color-circle" id="circle-etalon" style="background: #6e2b34;"></div>
+        <span>Эталон</span>
+      </div>
+      <div style="color:#555; font-weight:bold;">VS</div>
+      <div class="circle-wrap">
+        <div class="big-color-circle" id="circle-sample" style="background: #7d323c;"></div>
+        <span>Образец</span>
+      </div>
+    </div>
 
-        const infoStandard = document.getElementById('infoStandard');
-        const infoSample = document.getElementById('infoSample');
-        const infoCard = document.getElementById('infoCard');
-        const resultDiv = document.getElementById('result');
-        const resetBtn = document.getElementById('resetBtn');
+    <button class="btn-reset" onclick="resetAll()">🔄 Начать новый тест</button>
+  </div>
 
-        const cameraModal = document.getElementById('cameraModal');
-        const video = document.getElementById('webcam');
+  <script>
+    // Математический идеальный эталон карточки
+    const IDEAL = {
+      white: [255, 255, 255],
+      gray:  [128, 128, 128],
+      black: [20, 20, 20],
+      cyan:  [0, 160, 220]
+    };
 
-        function toggleMenu() {
-            document.getElementById('menuDropdown').classList.toggle('active');
+    // Данные снимков
+    const state = {
+      etalon: { target: [110, 43, 52], white: [192, 199, 219], gray: [182, 174, 215], black: [118, 109, 149], cyan: [21, 154, 248] },
+      sample: { target: [125, 50, 60], white: [6, 145, 245],   gray: [108, 99, 130],  black: [191, 197, 247], cyan: [230, 255, 255] }
+    };
+
+    // Форматирование дельты (+12, -5, +0)
+    function fmtDelta(val) {
+      return val > 0 ? `+${val}` : `${val}`;
+    }
+
+    // Расчет дельты RGB
+    function calcDeltaStr(actual, ideal) {
+      const dR = actual[0] - ideal[0];
+      const dG = actual[1] - ideal[1];
+      const dB = actual[2] - ideal[2];
+      return `${fmtDelta(dR)}, ${fmtDelta(dG)}, ${fmtDelta(dB)}`;
+    }
+
+    // Отрисовка данных в интерфейсе
+    function renderCardUI(type) {
+      const prefix = type === 'etalon' ? 'e' : 's';
+      const data = state[type];
+
+      // Текстовые значения RGB
+      document.getElementById(`val-${prefix}-target`).textContent = `RGB ${data.target.join(', ')}`;
+      document.getElementById(`val-${prefix}-white`).textContent  = `${data.white.join(', ')}`;
+      document.getElementById(`val-${prefix}-gray`).textContent   = `${data.gray.join(', ')}`;
+      document.getElementById(`val-${prefix}-black`).textContent  = `${data.black.join(', ')}`;
+      document.getElementById(`val-${prefix}-cyan`).textContent   = `${data.cyan.join(', ')}`;
+
+      // Цветные кружки для цели
+      document.getElementById(`dot-${prefix}-target`).style.background = `rgb(${data.target.join(',')})`;
+      document.getElementById(`circle-${type}`).style.background = `rgb(${data.target.join(',')})`;
+
+      // Вычисление и вывод Профиля коррекции
+      document.getElementById(`delta-${prefix}-white`).textContent = calcDeltaStr(data.white, IDEAL.white);
+      document.getElementById(`delta-${prefix}-gray`).textContent  = calcDeltaStr(data.gray, IDEAL.gray);
+      document.getElementById(`delta-${prefix}-black`).textContent = calcDeltaStr(data.black, IDEAL.black);
+      document.getElementById(`delta-${prefix}-cyan`).textContent  = calcDeltaStr(data.cyan, IDEAL.cyan);
+    }
+
+    // Отрисовка демо-картинок на Canvas
+    function drawDemoCanvas(id, titleText) {
+      const canvas = document.getElementById(id);
+      const ctx = canvas.getContext('2d');
+      canvas.width = 300;
+      canvas.height = 180;
+
+      ctx.fillStyle = '#1e2029';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+      ctx.strokeRect(15, 15, 270, 150);
+
+      // Рисуем центральный круг
+      ctx.beginPath();
+      ctx.arc(150, 90, 30, 0, Math.PI * 2);
+      ctx.fillStyle = id === 'canvas-etalon' ? 'rgb(110,43,52)' : 'rgb(125,50,60)';
+      ctx.fill();
+
+      // Прицел
+      ctx.strokeStyle = '#00ff88';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.arc(150, 90, 12, 0, Math.PI * 2);
+      ctx.moveTo(150, 72); ctx.lineTo(150, 108);
+      ctx.moveTo(132, 90); ctx.lineTo(168, 90);
+      ctx.stroke();
+
+      // Заглушки плашек
+      const drawBox = (x, y, color) => {
+        ctx.fillStyle = color;
+        ctx.fillRect(x, y, 30, 20);
+        ctx.strokeStyle = '#00ff88';
+        ctx.strokeRect(x - 2, y - 2, 34, 24);
+      };
+
+      if(id === 'canvas-etalon') {
+        drawBox(30, 30, '#c0c7db');
+        drawBox(240, 30, '#159af8');
+        drawBox(30, 130, '#766d95');
+        drawBox(240, 130, '#b6aed7');
+      } else {
+        drawBox(30, 30, '#0691f5');
+        drawBox(240, 30, '#e6ffff');
+        drawBox(30, 130, '#bf82f7');
+        drawBox(240, 130, '#6c6382');
+      }
+    }
+
+    // Обработка загрузки картинки
+    function handleImageUpload(e, type) {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(event) {
+        const img = new Image();
+        img.onload = function() {
+          const canvas = document.getElementById(`canvas-${type}`);
+          const ctx = canvas.getContext('2d');
+          canvas.width = img.width;
+          canvas.height = img.height;
+          ctx.drawImage(img, 0, 0);
+
+          // Пример точечного считывания центра
+          const p = ctx.getImageData(Math.floor(img.width/2), Math.floor(img.height/2), 1, 1).data;
+          state[type].target = [p[0], p[1], p[2]];
+          renderCardUI(type);
         }
-
-        function switchMode(modeKey, labelText) {
-            document.getElementById('activeMenuLabel').innerText = labelText;
-            document.getElementById('menuDropdown').classList.remove('active');
-
-            document.querySelectorAll('.menu-item').forEach(el => el.classList.remove('active'));
-            event.target.classList.add('active');
-
-            document.querySelectorAll('.view-pane').forEach(el => el.classList.remove('active'));
-            if (modeKey === 'compare') document.getElementById('paneCompare').classList.add('active');
-            if (modeKey === 'calibrate') document.getElementById('paneCalibrate').classList.add('active');
-            if (modeKey === 'correct') document.getElementById('paneCorrect').classList.add('active');
-        }
-
-        window.addEventListener('click', (e) => {
-            if (!e.target.closest('.menu-container')) {
-                document.getElementById('menuDropdown').classList.remove('active');
-            }
-        });
-
-        function onOpenCvReady() {
-            isOpenCvReady = true;
-            cvStatus.innerHTML = '<span class="status-dot"></span> Готов к работе';
-            btnStandard.disabled = false;
-            restoreState();
-        }
-
-        async function openCamera(mode) {
-            activeMode = mode;
-            document.getElementById('cameraTitle').innerText = mode === 'standard' ? 'Съемка Эталона' : 'Съемка Образца';
-            cameraModal.classList.add('active');
-
-            try {
-                mediaStream = await navigator.mediaDevices.getUserMedia({
-                    video: { facingMode: { exact: "environment" } }
-                });
-            } catch (err) {
-                try {
-                    mediaStream = await navigator.mediaDevices.getUserMedia({ video: true });
-                } catch (fallbackErr) {
-                    alert('Ошибка доступа к камере: ' + fallbackErr.message);
-                    closeCamera();
-                    return;
-                }
-            }
-
-            video.srcObject = mediaStream;
-        }
-
-        function closeCamera() {
-            if (mediaStream) {
-                mediaStream.getTracks().forEach(track => track.stop());
-                mediaStream = null;
-            }
-            video.srcObject = null;
-            cameraModal.classList.remove('active');
-        }
-
-        function takeSnapshot() {
-            if (!video.videoWidth) return;
-
-            const maxDim = 900;
-            let w = video.videoWidth;
-            let h = video.videoHeight;
-
-            if (w > maxDim || h > maxDim) {
-                if (w > h) {
-                    h = Math.round((h * maxDim) / w);
-                    w = maxDim;
-                } else {
-                    w = Math.round((w * maxDim) / h);
-                    h = maxDim;
-                }
-            }
-
-            const scaledCanvas = document.createElement('canvas');
-            scaledCanvas.width = w;
-            scaledCanvas.height = h;
-            const ctx = scaledCanvas.getContext('2d');
-            ctx.drawImage(video, 0, 0, w, h);
-
-            closeCamera();
-            handleImageSource(scaledCanvas, activeMode);
-        }
-
-        function handleImageSource(canvasSource, mode) {
-            const canvasTargetId = mode === 'standard' ? 'canvasStandard' : 'canvasSample';
-            const colorData = processImageWithCard(canvasSource, canvasTargetId);
-
-            if (mode === 'standard') {
-                standardColorData = colorData;
-                renderPatchesList('infoStandard', standardColorData);
-                localStorage.setItem('cm_card_standard_data', JSON.stringify(standardColorData));
-
-                btnSample.disabled = false;
-                if (sampleColorData) compareColors();
-            } else {
-                sampleColorData = colorData;
-                renderPatchesList('infoSample', sampleColorData);
-                compareColors();
-            }
-        }
-
-        // Отрисовка круглого прицела с перекрестьем
-        function drawTargetCrosshair(mat, cx, cy, colorScalar, radius = 18) {
-            let pCenter = new cv.Point(cx, cy);
-            cv.circle(mat, pCenter, radius, colorScalar, 2, cv.LINE_AA);
-            cv.circle(mat, pCenter, 2, colorScalar, -1, cv.LINE_AA);
-            
-            cv.line(mat, new cv.Point(cx - radius - 4, cy), new cv.Point(cx + radius + 4, cy), colorScalar, 1.5, cv.LINE_AA);
-            cv.line(mat, new cv.Point(cx, cy - radius - 4), new cv.Point(cx, cy + radius + 4), colorScalar, 1.5, cv.LINE_AA);
-        }
-
-        // Вспомогательная функция усреднения цвета области
-        function getRegionColor(mat, cx, cy, radius = 12) {
-            let rSum = 0, gSum = 0, bSum = 0, count = 0;
-            for (let y = cy - radius; y <= cy + radius; y++) {
-                for (let x = cx - radius; x <= cx + radius; x++) {
-                    let dist = Math.sqrt(Math.pow(x - cx, 2) + Math.pow(y - cy, 2));
-                    if (dist <= radius && x >= 0 && x < mat.cols && y >= 0 && y < mat.rows) {
-                        let pixel = mat.ucharPtr(y, x);
-                        rSum += pixel[0];
-                        gSum += pixel[1];
-                        bSum += pixel[2];
-                        count++;
-                    }
-                }
-            }
-            return count > 0 ? {
-                r: Math.round(rSum / count),
-                g: Math.round(gSum / count),
-                b: Math.round(bSum / count)
-            } : { r: 0, g: 0, b: 0 };
-        }
-
-        // РАСПОЗНАВАНИЕ КАРТОЧКИ И ПРИЦЕЛИВАНИЕ ПО ЦЕНТРАМ ПЛАШЕК
-        function processImageWithCard(canvasSource, canvasTargetId) {
-            let src = null, gray = null, blurred = null, thresh = null, morph = null;
-            let contours = null, hierarchy = null;
-            let warped = null, srcMat = null, dstMat = null, M = null;
-            let extractedData = {
-                main: { r: 0, g: 0, b: 0 },
-                patches: { white: {r:0,g:0,b:0}, gray: {r:0,g:0,b:0}, black: {r:0,g:0,b:0}, cyan: {r:0,g:0,b:0} }
-            };
-
-            try {
-                src = cv.imread(canvasSource);
-                gray = new cv.Mat();
-                blurred = new cv.Mat();
-                thresh = new cv.Mat();
-                morph = new cv.Mat();
-                contours = new cv.MatVector();
-                hierarchy = new cv.Mat();
-
-                const imgWidth = src.cols;
-                const imgHeight = src.rows;
-                const totalArea = imgWidth * imgHeight;
-
-                cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
-                cv.GaussianBlur(gray, blurred, new cv.Size(11, 11), 0);
-                cv.Canny(blurred, thresh, 30, 100);
-
-                let kernel = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(5, 5));
-                cv.morphologyEx(thresh, morph, cv.MORPH_CLOSE, kernel);
-                kernel.delete();
-
-                cv.findContours(morph, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
-
-                let maxArea = 0;
-                let bestQuad = null;
-                let bestBoundingRect = null;
-
-                for (let i = 0; i < contours.size(); ++i) {
-                    let cnt = contours.get(i);
-                    let area = cv.contourArea(cnt);
-                    
-                    if (area > totalArea * 0.04) {
-                        let peri = cv.arcLength(cnt, true);
-                        
-                        for (let epsScale = 0.015; epsScale <= 0.08; epsScale += 0.01) {
-                            let approx = new cv.Mat();
-                            cv.approxPolyDP(cnt, approx, epsScale * peri, true);
-
-                            if (approx.rows === 4 && cv.isContourConvex(approx)) {
-                                if (area > maxArea) {
-                                    maxArea = area;
-                                    bestQuad = [];
-                                    for (let j = 0; j < 4; j++) {
-                                        bestQuad.push({
-                                            x: approx.data32S[j * 2],
-                                            y: approx.data32S[j * 2 + 1]
-                                        });
-                                    }
-                                }
-                                approx.delete();
-                                break;
-                            }
-                            approx.delete();
-                        }
-
-                        if (!bestQuad && area > maxArea) {
-                            maxArea = area;
-                            bestBoundingRect = cv.boundingRect(cnt);
-                        }
-                    }
-                    cnt.delete();
-                }
-
-                warped = new cv.Mat();
-                const CARD_W = 856;
-                const CARD_H = 540;
-
-                let holeCenterX, holeCenterY, holeRadius;
-
-                if (bestQuad) {
-                    let add = bestQuad.map(p => p.x + p.y);
-                    let diff = bestQuad.map(p => p.y - p.x);
-
-                    let tl = bestQuad[add.indexOf(Math.min(...add))];
-                    let br = bestQuad[add.indexOf(Math.max(...add))];
-                    let tr = bestQuad[diff.indexOf(Math.min(...diff))];
-                    let bl = bestQuad[diff.indexOf(Math.max(...diff))];
-
-                    srcMat = cv.matFromArray(4, 1, cv.CV_32FC2, [tl.x, tl.y, tr.x, tr.y, br.x, br.y, bl.x, bl.y]);
-                    dstMat = cv.matFromArray(4, 1, cv.CV_32FC2, [0, 0, CARD_W, 0, CARD_W, CARD_H, 0, CARD_H]);
-
-                    M = cv.getPerspectiveTransform(srcMat, dstMat);
-                    cv.warpPerspective(src, warped, M, new cv.Size(CARD_W, CARD_H));
-
-                    holeCenterX = Math.round(CARD_W * 0.50);
-                    holeCenterY = Math.round(CARD_H * 0.46);
-                    holeRadius = 35;
-
-                } else if (bestBoundingRect) {
-                    let rect = bestBoundingRect;
-                    let roi = src.roi(rect);
-                    cv.resize(roi, warped, new cv.Size(CARD_W, CARD_H));
-                    roi.delete();
-
-                    holeCenterX = Math.round(CARD_W * 0.50);
-                    holeCenterY = Math.round(CARD_H * 0.46);
-                    holeRadius = 35;
-
-                } else {
-                    cv.resize(src, warped, new cv.Size(CARD_W, CARD_H));
-                    holeCenterX = Math.round(CARD_W * 0.50);
-                    holeCenterY = Math.round(CARD_H * 0.46);
-                    holeRadius = 35;
-                }
-
-                // 1. Точные координаты центров плашек на карточке 856x540
-                const colorPatches = [
-                    { key: 'white', x: Math.round(CARD_W * 0.175), y: Math.round(CARD_H * 0.38) },
-                    { key: 'gray',  x: Math.round(CARD_W * 0.175), y: Math.round(CARD_H * 0.68) },
-                    { key: 'black', x: Math.round(CARD_W * 0.825), y: Math.round(CARD_H * 0.38) },
-                    { key: 'cyan',  x: Math.round(CARD_W * 0.825), y: Math.round(CARD_H * 0.68) }
-                ];
-
-                // 2. Расчет цвета из центрального отверстия
-                extractedData.main = getRegionColor(warped, holeCenterX, holeCenterY, Math.round(holeRadius * 0.7));
-
-                // 3. Расчет цвета с 4 плашек
-                colorPatches.forEach(p => {
-                    extractedData.patches[p.key] = getRegionColor(warped, p.x, p.y, 14);
-                });
-
-                const greenColor = new cv.Scalar(0, 230, 118, 255);
-
-                // 4. Отрисовка прицела над центральным отверстием
-                drawTargetCrosshair(warped, holeCenterX, holeCenterY, greenColor, holeRadius);
-
-                // 5. Отрисовка прицелов точно по центрам 4 плашек
-                colorPatches.forEach(p => {
-                    drawTargetCrosshair(warped, p.x, p.y, greenColor, 18);
-                });
-
-                cv.imshow(canvasTargetId, warped);
-
-            } finally {
-                if (src) src.delete();
-                if (gray) gray.delete();
-                if (blurred) blurred.delete();
-                if (thresh) thresh.delete();
-                if (morph) morph.delete();
-                if (contours) contours.delete();
-                if (hierarchy) hierarchy.delete();
-                if (warped) warped.delete();
-                if (srcMat) srcMat.delete();
-                if (dstMat) dstMat.delete();
-                if (M) M.delete();
-            }
-
-            return extractedData;
-        }
-
-        function restoreState() {
-            const savedData = localStorage.getItem('cm_card_standard_data');
-            if (savedData) {
-                standardColorData = JSON.parse(savedData);
-                renderPatchesList('infoStandard', standardColorData);
-                btnSample.disabled = false;
-            }
-        }
-
-        // Рендер столбца со всеми 4 цветами + главным цветом под кнопкой
-        function renderPatchesList(elementId, dataObj) {
-            const container = document.getElementById(elementId);
-            if (!dataObj || !dataObj.main) {
-                container.innerHTML = '';
-                return;
-            }
-
-            const patchNames = {
-                white: 'Белый',
-                gray: 'Серый',
-                black: 'Чёрный',
-                cyan: 'Циан'
-            };
-
-            const m = dataObj.main;
-            const p = dataObj.patches;
-
-            let html = `<div class="patches-list">
-                <div class="patch-row main-patch">
-                    <span class="swatch-dot" style="background: rgb(${m.r},${m.g},${m.b});"></span>
-                    <span class="patch-text"><b>Цель:</b> RGB ${m.r}, ${m.g}, ${m.b}</span>
-                </div>`;
-
-            for (const key of ['white', 'gray', 'black', 'cyan']) {
-                if (p && p[key]) {
-                    const c = p[key];
-                    html += `
-                        <div class="patch-row">
-                            <span class="swatch-dot" style="background: rgb(${c.r},${c.g},${c.b});"></span>
-                            <span class="patch-text">${patchNames[key]}: ${c.r}, ${c.g}, ${c.b}</span>
-                        </div>
-                    `;
-                }
-            }
-
-            html += `</div>`;
-            container.innerHTML = html;
-        }
-
-        function compareColors() {
-            if (!standardColorData || !sampleColorData) return;
-
-            const std = standardColorData.main;
-            const smp = sampleColorData.main;
-
-            const diff = Math.round((Math.abs(std.r - smp.r) + 
-                                    Math.abs(std.g - smp.g) + 
-                                    Math.abs(std.b - smp.b)) / 3);
-
-            infoCard.style.display = 'block';
-
-            const matchPercent = Math.max(0, Math.min(100, Math.round(100 - (diff / 255) * 100 * 2.5)));
-
-            let matchClass = 'match-success';
-            let statusText = 'ТОТ САМЫЙ ЦВЕТ';
-
-            if (diff >= 35) {
-                matchClass = 'match-error';
-                statusText = 'СОВСЕМ НЕ ТОТ';
-            } else if (diff >= 15) {
-                matchClass = 'match-warning';
-                statusText = 'ПОЧТИ ТОТ';
-            }
-
-            resultDiv.className = `result-badge ${matchClass}`;
-            resultDiv.innerHTML = `
-                <div class="match-score-main">${matchPercent}% MATCH</div>
-                <div class="match-subtitle">${statusText} (Δ = ${diff})</div>
-                
-                <div class="swatch-comparison">
-                    <div class="swatch-item">
-                        <div class="swatch-circle" style="background: rgb(${std.r},${std.g},${std.b})"></div>
-                        <span>Эталон</span>
-                    </div>
-                    <div style="font-weight:800; opacity:0.3; font-size:11px;">VS</div>
-                    <div class="swatch-item">
-                        <div class="swatch-circle" style="background: rgb(${smp.r},${smp.g},${smp.b})"></div>
-                        <span>Образец</span>
-                    </div>
-                </div>
-            `;
-        }
-
-        resetBtn.addEventListener('click', () => {
-            localStorage.removeItem('cm_card_standard_data');
-            standardColorData = null;
-            sampleColorData = null;
-
-            infoStandard.innerHTML = '';
-            infoSample.innerHTML = '';
-            infoCard.style.display = 'none';
-            resultDiv.innerText = '';
-
-            btnSample.disabled = true;
-
-            const canvasStd = document.getElementById('canvasStandard');
-            const canvasSmp = document.getElementById('canvasSample');
-            canvasStd.getContext('2d').clearRect(0, 0, canvasStd.width, canvasStd.height);
-            canvasSmp.getContext('2d').clearRect(0, 0, canvasSmp.width, canvasSmp.height);
-        });
-    </script>
+        img.src = event.target.result;
+      }
+      reader.readAsDataURL(file);
+    }
+
+    function resetAll() {
+      alert("Готово к новому измерению");
+    }
+
+    // Первичная инициализация
+    window.onload = function() {
+      drawDemoCanvas('canvas-etalon', 'ЭТАЛОН');
+      drawDemoCanvas('canvas-sample', 'ОБРАЗЕЦ');
+      renderCardUI('etalon');
+      renderCardUI('sample');
+    };
+  </script>
 </body>
 </html>
