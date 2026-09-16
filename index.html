@@ -38,26 +38,17 @@
             align-items: center;
         }
 
-        .container {
-            width: 100%;
-            max-width: 480px;
-        }
+        .container { width: 100%; max-width: 480px; }
 
-        /* HEADER & MENU */
         .header {
             display: flex;
             align-items: center;
             justify-content: space-between;
             margin-bottom: 16px;
             padding: 4px 0;
-            position: relative;
         }
 
-        .brand {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
+        .brand { display: flex; align-items: center; gap: 10px; }
 
         .logo-badge {
             width: 36px;
@@ -82,7 +73,6 @@
             -webkit-text-fill-color: transparent;
         }
 
-        /* MENU DROPDOWN */
         .menu-container { position: relative; }
 
         .menu-btn {
@@ -127,7 +117,6 @@
             display: flex;
             align-items: center;
             gap: 8px;
-            transition: all 0.2s;
         }
 
         .menu-item:hover, .menu-item.active {
@@ -135,7 +124,6 @@
             color: #fff;
         }
 
-        /* STATUS PILL */
         .status-pill { 
             font-size: 11px; 
             font-weight: 600;
@@ -166,12 +154,7 @@
 
         @keyframes pulse { 0% { opacity: 0.3; } 100% { opacity: 1; } }
 
-        /* GRID & CARDS */
-        .grid { 
-            display: grid; 
-            grid-template-columns: 1fr 1fr; 
-            gap: 12px; 
-        }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 
         .col { 
             background: var(--card-bg); 
@@ -225,7 +208,6 @@
 
         canvas { max-width: 100%; max-height: 100%; object-fit: contain; }
 
-        /* BUTTONS */
         .btn-action { 
             background: linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%); 
             color: white; 
@@ -241,7 +223,6 @@
             gap: 4px;
             width: 100%; 
             box-shadow: 0 4px 14px var(--accent-purple-glow);
-            text-align: center;
         }
 
         .btn-action.secondary { 
@@ -249,11 +230,7 @@
             box-shadow: 0 4px 14px rgba(0, 198, 255, 0.25);
         }
 
-        .btn-action:disabled { 
-            opacity: 0.3; 
-            pointer-events: none; 
-            filter: grayscale(1);
-        }
+        .btn-action:disabled { opacity: 0.3; pointer-events: none; filter: grayscale(1); }
 
         .info-text { 
             font-size: 11px; 
@@ -275,7 +252,6 @@
             display: inline-block;
         }
 
-        /* RESULT CARD */
         .card { 
             background: var(--card-bg); 
             backdrop-filter: blur(16px);
@@ -350,7 +326,6 @@
             width: 100%;
         }
 
-        /* MODAL CAMERA STYLES */
         .camera-modal {
             display: none;
             position: fixed;
@@ -409,11 +384,7 @@
             overflow: hidden;
         }
 
-        .camera-viewport video {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
+        .camera-viewport video { width: 100%; height: 100%; object-fit: cover; }
 
         .camera-overlay {
             position: absolute;
@@ -424,7 +395,6 @@
             pointer-events: none;
         }
 
-        /* STUB VIEW */
         .view-pane { display: none; }
         .view-pane.active { display: block; }
         
@@ -443,7 +413,6 @@
 <body>
 
     <div class="container">
-        <!-- HEADER -->
         <div class="header">
             <div class="brand">
                 <div class="logo-badge">
@@ -476,10 +445,8 @@
             <span class="status-dot loading"></span> Загрузка ядра OpenCV...
         </div>
 
-        <!-- 1. РЕЖИМ СРАВНЕНИЯ -->
         <div class="view-pane active" id="paneCompare">
             <div class="grid">
-                <!-- 1. ЭТАЛОН -->
                 <div class="col">
                     <div class="col-header">
                         <h3>1. Эталон</h3>
@@ -494,7 +461,6 @@
                     <div class="info-text" id="infoStandard">---</div>
                 </div>
 
-                <!-- 2. ОБРАЗЕЦ -->
                 <div class="col">
                     <div class="col-header">
                         <h3>2. Образец</h3>
@@ -516,24 +482,21 @@
             </div>
         </div>
 
-        <!-- 2. РЕЖИМ КАЛИБРОВКИ ЭКРАНА -->
         <div class="view-pane" id="paneCalibrate">
             <div class="stub-box">
                 🖥️ <b>Калибровка экрана</b><br><br>
-                Режим настройки яркости и цветового профиля дисплея по эталонной карте.
+                Режим настройки яркости и цветового профиля дисплея.
             </div>
         </div>
 
-        <!-- 3. РЕЖИМ ЦВЕТОКОРРЕКЦИИ -->
         <div class="view-pane" id="paneCorrect">
             <div class="stub-box">
                 🎨 <b>Цветокоррекция снимка</b><br><br>
-                Автоматическое выравнивание баланса белого и экспозиции кадра по серому полю карты.
+                Выравнивание баланса белого и экспозиции.
             </div>
         </div>
     </div>
 
-    <!-- ВСПЛЫВАЮЩЕЕ ОКНО КАМЕРЫ С ПРИЦЕЛОМ -->
     <div class="camera-modal" id="cameraModal">
         <div class="camera-card">
             <div class="camera-header">
@@ -543,8 +506,6 @@
             
             <div class="camera-viewport">
                 <video id="webcam" autoplay playsinline></video>
-                
-                <!-- SVG ПРИЦЕЛ -->
                 <svg class="camera-overlay" viewBox="0 0 400 320">
                     <defs>
                         <mask id="card-mask">
@@ -553,16 +514,9 @@
                         </mask>
                     </defs>
 
-                    <!-- Тёмная маска вокруг карточки -->
                     <rect width="100%" height="100%" fill="rgba(0,0,0,0.55)" mask="url(#card-mask)"/>
-
-                    <!-- Внешний контур карточки -->
                     <rect x="50" y="55" width="300" height="190" rx="12" fill="none" stroke="#00E5FF" stroke-width="2" stroke-dasharray="6 4"/>
-
-                    <!-- Прицельный кружок для отверстия -->
                     <circle cx="200" cy="150" r="26" fill="none" stroke="#00E676" stroke-width="2"/>
-
-                    <!-- Перекрестье в центре -->
                     <line x1="200" y1="115" x2="200" y2="185" stroke="#00E676" stroke-width="1.5"/>
                     <line x1="165" y1="150" x2="235" y2="150" stroke="#00E676" stroke-width="1.5"/>
 
@@ -624,12 +578,10 @@
         function onOpenCvReady() {
             isOpenCvReady = true;
             cvStatus.innerHTML = '<span class="status-dot"></span> Готов к работе';
-            
             btnStandard.disabled = false;
             restoreState();
         }
 
-        // РАБОТА С ВСПЛЫВАЮЩЕЙ КАМЕРОЙ (getUserMedia)
         async function openCamera(mode) {
             activeMode = mode;
             document.getElementById('cameraTitle').innerText = mode === 'standard' ? 'Съемка Эталона' : 'Съемка Образца';
@@ -643,7 +595,7 @@
                 try {
                     mediaStream = await navigator.mediaDevices.getUserMedia({ video: true });
                 } catch (fallbackErr) {
-                    alert('Не удалось получить доступ к камере: ' + fallbackErr.message);
+                    alert('Ошибка доступа к камере: ' + fallbackErr.message);
                     closeCamera();
                     return;
                 }
@@ -661,11 +613,10 @@
             cameraModal.classList.remove('active');
         }
 
-        // ЗАХВАТ КАДРА ИЗ ВИДЕОПОТОКА
         function takeSnapshot() {
             if (!video.videoWidth) return;
 
-            const maxDim = 800; // Повышено для четкого определения 4 углов
+            const maxDim = 900;
             let w = video.videoWidth;
             let h = video.videoHeight;
 
@@ -707,9 +658,9 @@
             }
         }
 
-        // ОБНОВЛЕННЫЙ АЛГОРИТМ OPENCV (ПОИСК 4 УГЛОВ И ВЫПРЯМЛЕНИЕ ПЕРСПЕКТИВЫ)
+        // УЛУЧШЕННЫЙ АЛГОРИТМ ПОИСКА КАРТОЧКИ (Устойчивый к коврам и узорам)
         function processImageWithCard(canvasSource, canvasTargetId) {
-            let src = null, gray = null, blurred = null, thresh = null;
+            let src = null, gray = null, blurred = null, thresh = null, morph = null;
             let contours = null, hierarchy = null;
             let warped = null, srcMat = null, dstMat = null, M = null;
             let extractedColor = { r: 0, g: 0, b: 0 };
@@ -719,6 +670,7 @@
                 gray = new cv.Mat();
                 blurred = new cv.Mat();
                 thresh = new cv.Mat();
+                morph = new cv.Mat();
                 contours = new cv.MatVector();
                 hierarchy = new cv.Mat();
 
@@ -726,28 +678,32 @@
                 const imgHeight = src.rows;
                 const totalArea = imgWidth * imgHeight;
 
-                // 1. Детекция внешнего контура рамки
+                // 1. Сильное размытие (11x11) скрывает текстуру ткани/ковра
                 cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
-                cv.GaussianBlur(gray, blurred, new cv.Size(5, 5), 0);
-                cv.Canny(blurred, thresh, 50, 150);
-                
-                let kernel = cv.Mat.ones(3, 3, cv.CV_8U);
-                cv.dilate(thresh, thresh, kernel);
+                cv.GaussianBlur(gray, blurred, new cv.Size(11, 11), 0);
+
+                // 2. Адаптивная пороговая фильтрация + Морфология для объединения карточки
+                cv.Canny(blurred, thresh, 30, 100);
+                let kernel = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(5, 5));
+                cv.morphologyEx(thresh, morph, cv.MORPH_CLOSE, kernel);
                 kernel.delete();
 
-                cv.findContours(thresh, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
+                cv.findContours(morph, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
 
                 let maxArea = 0;
                 let bestQuad = null;
+                let bestBoundingRect = null;
 
-                // Поиск 4 углов карточки
+                // 3. Поиск лучшего прямоугольного контура
                 for (let i = 0; i < contours.size(); ++i) {
                     let cnt = contours.get(i);
                     let area = cv.contourArea(cnt);
                     
-                    if (area > totalArea * 0.03) {
+                    if (area > totalArea * 0.04) {
                         let peri = cv.arcLength(cnt, true);
-                        for (let epsScale = 0.015; epsScale <= 0.06; epsScale += 0.01) {
+                        
+                        // Пробуем найти 4 угла с разной точностью
+                        for (let epsScale = 0.015; epsScale <= 0.08; epsScale += 0.01) {
                             let approx = new cv.Mat();
                             cv.approxPolyDP(cnt, approx, epsScale * peri, true);
 
@@ -767,6 +723,12 @@
                             }
                             approx.delete();
                         }
+
+                        // Сохраняем запасной прямоугольник области
+                        if (!bestQuad && area > maxArea) {
+                            maxArea = area;
+                            bestBoundingRect = cv.boundingRect(cnt);
+                        }
                     }
                     cnt.delete();
                 }
@@ -777,8 +739,8 @@
 
                 let holeCenterX, holeCenterY, holeRadius;
 
+                // 4. Если нашли 4 угла -> Выпрямляем перспективу
                 if (bestQuad) {
-                    // 2. Сортировка 4 углов: Top-Left, Top-Right, Bottom-Right, Bottom-Left
                     let add = bestQuad.map(p => p.x + p.y);
                     let diff = bestQuad.map(p => p.y - p.x);
 
@@ -787,26 +749,36 @@
                     let tr = bestQuad[diff.indexOf(Math.min(...diff))];
                     let bl = bestQuad[diff.indexOf(Math.max(...diff))];
 
-                    // 3. Выпрямление перспективы (Warp Perspective)
                     srcMat = cv.matFromArray(4, 1, cv.CV_32FC2, [tl.x, tl.y, tr.x, tr.y, br.x, br.y, bl.x, bl.y]);
                     dstMat = cv.matFromArray(4, 1, cv.CV_32FC2, [0, 0, CARD_W, 0, CARD_W, CARD_H, 0, CARD_H]);
 
                     M = cv.getPerspectiveTransform(srcMat, dstMat);
                     cv.warpPerspective(src, warped, M, new cv.Size(CARD_W, CARD_H));
 
-                    // Координаты центра прорези на выпрямленной карточке
                     holeCenterX = Math.round(CARD_W * 0.50);
                     holeCenterY = Math.round(CARD_H * 0.46);
                     holeRadius = 35;
+
+                } else if (bestBoundingRect) {
+                    // 5. Запасной кроп, если узор ковра помешал найти четкие 4 угла
+                    let rect = bestBoundingRect;
+                    let roi = src.roi(rect);
+                    cv.resize(roi, warped, new cv.Size(CARD_W, CARD_H));
+                    roi.delete();
+
+                    holeCenterX = Math.round(CARD_W * 0.50);
+                    holeCenterY = Math.round(CARD_H * 0.46);
+                    holeRadius = 35;
+
                 } else {
-                    // Резервный расчет, если карточка полностью не распознана
+                    // 6. Если карточка вообще не найдена (кадр по центру)
                     cv.resize(src, warped, new cv.Size(CARD_W, CARD_H));
                     holeCenterX = Math.round(CARD_W * 0.50);
                     holeCenterY = Math.round(CARD_H * 0.46);
                     holeRadius = 35;
                 }
 
-                // 4. Замер цвета из центрального отверстия
+                // 5. Замер цвета из центральной зоны прорези
                 let safeRadius = Math.round(holeRadius * 0.75);
                 let rSum = 0, gSum = 0, bSum = 0, count = 0;
 
@@ -831,7 +803,7 @@
                     };
                 }
 
-                // Отрисовка прицельного маркерного кольца на выпрямленной карточке
+                // Маркерный зеленый круг в центре прорези
                 let greenColor = new cv.Scalar(0, 230, 118, 255);
                 cv.circle(warped, new cv.Point(holeCenterX, holeCenterY), holeRadius, greenColor, 3);
                 cv.circle(warped, new cv.Point(holeCenterX, holeCenterY), 3, greenColor, -1);
@@ -839,11 +811,11 @@
                 cv.imshow(canvasTargetId, warped);
 
             } finally {
-                // Безусловная очистка оперативной памяти WebAssembly
                 if (src) src.delete();
                 if (gray) gray.delete();
                 if (blurred) blurred.delete();
                 if (thresh) thresh.delete();
+                if (morph) morph.delete();
                 if (contours) contours.delete();
                 if (hierarchy) hierarchy.delete();
                 if (warped) warped.delete();
