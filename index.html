@@ -990,30 +990,28 @@
             container.innerHTML = html;
         }
 
-        // КУСОЧНО-ЛИНЕЙНАЯ ИНТЕРПОЛЯЦИЯ ПО 4 ТОЧКАМ (Защита от просадки в тенях)
+        // КУСОЧНО-ЛИНЕЙНАЯ ИНТЕРПОЛЯЦИЯ СТРОГО ПО 3 НЕЙТРАЛЬНЫМ ТОЧКАМ (БЕЗ ЦИАНА)
         function applyColorCorrection(rawTarget, patches) {
             const IDEAL = {
                 white: { r: 255, g: 255, b: 255 },
                 gray:  { r: 128, g: 128, b: 128 },
-                black: { r: 20,  g: 20,  b: 20  },
-                cyan:  { r: 0,   g: 160, b: 220 }
+                black: { r: 20,  g: 20,  b: 20  }
             };
 
             function interpolateChannel(val, ch) {
-                // Формируем опорную кривую для каждого RGB канала
+                // Опорные точки построены строго по нейтральной шкале
                 let pts = [
                     { x: 0, y: 0 },
                     { x: patches.black[ch], y: IDEAL.black[ch] },
-                    { x: patches.cyan[ch],  y: IDEAL.cyan[ch] },
                     { x: patches.gray[ch],  y: IDEAL.gray[ch] },
                     { x: patches.white[ch], y: IDEAL.white[ch] },
                     { x: 255, y: 255 }
                 ];
 
-                // Сортируем точки по возрастанию замеренных значений X
+                // Сортировка по возрастанию замеренных значений X
                 pts.sort((a, b) => a.x - b.x);
 
-                // Очищаем дубликаты X во избежание деления на ноль
+                // Фильтрация дубликатов X во избежание деления на ноль
                 let clean = [pts[0]];
                 for (let i = 1; i < pts.length; i++) {
                     if (pts[i].x > clean[clean.length - 1].x) {
@@ -1021,7 +1019,7 @@
                     }
                 }
 
-                // Вычисляем значение на интерполированном отрезке
+                // Вычисление значения на интерполированном отрезке
                 for (let i = 0; i < clean.length - 1; i++) {
                     let p1 = clean[i], p2 = clean[i + 1];
                     if (val >= p1.x && val <= p2.x) {
