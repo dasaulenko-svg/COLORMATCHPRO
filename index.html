@@ -636,12 +636,10 @@
             cameraModal.classList.add('active');
 
             try {
-                // Запрашиваем заднюю камеру
                 mediaStream = await navigator.mediaDevices.getUserMedia({
                     video: { facingMode: { exact: "environment" } }
                 });
             } catch (err) {
-                // Фолбэк для ноутбуков и систем без явной задней камеры
                 try {
                     mediaStream = await navigator.mediaDevices.getUserMedia({ video: true });
                 } catch (fallbackErr) {
@@ -667,8 +665,7 @@
         function takeSnapshot() {
             if (!video.videoWidth) return;
 
-            // Сразу масштабируем кадр до макс. 300px для экономии памяти и быстродействия
-            const maxDim = 300;
+            const maxDim = 800; // Повышено для четкого определения 4 углов
             let w = video.videoWidth;
             let h = video.videoHeight;
 
@@ -710,10 +707,11 @@
             }
         }
 
-        // ALGORITHM OPENCV
+        // ОБНОВЛЕННЫЙ АЛГОРИТМ OPENCV (ПОИСК 4 УГЛОВ И ВЫПРЯМЛЕНИЕ ПЕРСПЕКТИВЫ)
         function processImageWithCard(canvasSource, canvasTargetId) {
             let src = null, gray = null, blurred = null, thresh = null;
-            let contours = null, hierarchy = null, imgData = null;
+            let contours = null, hierarchy = null;
+            let warped = null, srcMat = null, dstMat = null, M = null;
             let extractedColor = { r: 0, g: 0, b: 0 };
 
             try {
@@ -727,64 +725,96 @@
                 const imgWidth = src.cols;
                 const imgHeight = src.rows;
                 const totalArea = imgWidth * imgHeight;
-                const imgCenterX = imgWidth / 2;
-                const imgCenterY = imgHeight / 2;
 
+                // 1. Детекция внешнего контура рамки
                 cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
                 cv.GaussianBlur(gray, blurred, new cv.Size(5, 5), 0);
-                cv.adaptiveThreshold(blurred, thresh, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY_INV, 11, 2);
-                cv.findContours(thresh, contours, hierarchy, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE);
+                cv.Canny(blurred, thresh, 50, 150);
+                
+                let kernel = cv.Mat.ones(3, 3, cv.CV_8U);
+                cv.dilate(thresh, thresh, kernel);
+                kernel.delete();
 
-                let cardRect = null;
-                let bestScore = -1;
+                cv.findContours(thresh, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
 
+                let maxArea = 0;
+                let bestQuad = null;
+
+                // Поиск 4 углов карточки
                 for (let i = 0; i < contours.size(); ++i) {
                     let cnt = contours.get(i);
                     let area = cv.contourArea(cnt);
                     
-                    if (area > totalArea * 0.02 && area < totalArea * 0.50) {
-                        let rect = cv.boundingRect(cnt);
-                        let aspectRatio = rect.width / rect.height;
-                        
-                        if (aspectRatio >= 1.25 && aspectRatio <= 1.85) {
-                            let rectCenterX = rect.x + rect.width / 2;
-                            let rectCenterY = rect.y + rect.height / 2;
-                            let distToCenter = Math.hypot(rectCenterX - imgCenterX, rectCenterY - imgCenterY);
-                            let maxDist = Math.hypot(imgCenterX, imgCenterY);
-                            let normDist = distToCenter / maxDist;
+                    if (area > totalArea * 0.03) {
+                        let peri = cv.arcLength(cnt, true);
+                        for (let epsScale = 0.015; epsScale <= 0.06; epsScale += 0.01) {
+                            let approx = new cv.Mat();
+                            cv.approxPolyDP(cnt, approx, epsScale * peri, true);
 
-                            let score = area / (1 + normDist * 4);
-
-                            if (score > bestScore) {
-                                bestScore = score;
-                                cardRect = rect;
+                            if (approx.rows === 4 && cv.isContourConvex(approx)) {
+                                if (area > maxArea) {
+                                    maxArea = area;
+                                    bestQuad = [];
+                                    for (let j = 0; j < 4; j++) {
+                                        bestQuad.push({
+                                            x: approx.data32S[j * 2],
+                                            y: approx.data32S[j * 2 + 1]
+                                        });
+                                    }
+                                }
+                                approx.delete();
+                                break;
                             }
+                            approx.delete();
                         }
                     }
                     cnt.delete();
                 }
 
+                warped = new cv.Mat();
+                const CARD_W = 856;
+                const CARD_H = 540;
+
                 let holeCenterX, holeCenterY, holeRadius;
 
-                if (cardRect) {
-                    holeCenterX = Math.round(cardRect.x + cardRect.width * 0.50);
-                    holeCenterY = Math.round(cardRect.y + cardRect.height * 0.45);
-                    holeRadius = Math.round(cardRect.width * 0.12);
+                if (bestQuad) {
+                    // 2. Сортировка 4 углов: Top-Left, Top-Right, Bottom-Right, Bottom-Left
+                    let add = bestQuad.map(p => p.x + p.y);
+                    let diff = bestQuad.map(p => p.y - p.x);
+
+                    let tl = bestQuad[add.indexOf(Math.min(...add))];
+                    let br = bestQuad[add.indexOf(Math.max(...add))];
+                    let tr = bestQuad[diff.indexOf(Math.min(...diff))];
+                    let bl = bestQuad[diff.indexOf(Math.max(...diff))];
+
+                    // 3. Выпрямление перспективы (Warp Perspective)
+                    srcMat = cv.matFromArray(4, 1, cv.CV_32FC2, [tl.x, tl.y, tr.x, tr.y, br.x, br.y, bl.x, bl.y]);
+                    dstMat = cv.matFromArray(4, 1, cv.CV_32FC2, [0, 0, CARD_W, 0, CARD_W, CARD_H, 0, CARD_H]);
+
+                    M = cv.getPerspectiveTransform(srcMat, dstMat);
+                    cv.warpPerspective(src, warped, M, new cv.Size(CARD_W, CARD_H));
+
+                    // Координаты центра прорези на выпрямленной карточке
+                    holeCenterX = Math.round(CARD_W * 0.50);
+                    holeCenterY = Math.round(CARD_H * 0.46);
+                    holeRadius = 35;
                 } else {
-                    holeCenterX = Math.round(imgWidth / 2);
-                    holeCenterY = Math.round(imgHeight / 2);
-                    holeRadius = Math.round(Math.min(imgWidth, imgHeight) * 0.08);
+                    // Резервный расчет, если карточка полностью не распознана
+                    cv.resize(src, warped, new cv.Size(CARD_W, CARD_H));
+                    holeCenterX = Math.round(CARD_W * 0.50);
+                    holeCenterY = Math.round(CARD_H * 0.46);
+                    holeRadius = 35;
                 }
 
+                // 4. Замер цвета из центрального отверстия
                 let safeRadius = Math.round(holeRadius * 0.75);
                 let rSum = 0, gSum = 0, bSum = 0, count = 0;
 
-                imgData = cv.imread(canvasSource);
                 for (let y = holeCenterY - safeRadius; y <= holeCenterY + safeRadius; y++) {
                     for (let x = holeCenterX - safeRadius; x <= holeCenterX + safeRadius; x++) {
                         let dist = Math.sqrt(Math.pow(x - holeCenterX, 2) + Math.pow(y - holeCenterY, 2));
-                        if (dist <= safeRadius && x >= 0 && x < imgWidth && y >= 0 && y < imgHeight) {
-                            let pixel = imgData.ucharPtr(y, x);
+                        if (dist <= safeRadius && x >= 0 && x < CARD_W && y >= 0 && y < CARD_H) {
+                            let pixel = warped.ucharPtr(y, x);
                             rSum += pixel[0];
                             gSum += pixel[1];
                             bSum += pixel[2];
@@ -801,26 +831,25 @@
                     };
                 }
 
-                let redColor = new cv.Scalar(255, 82, 82, 255);
+                // Отрисовка прицельного маркерного кольца на выпрямленной карточке
                 let greenColor = new cv.Scalar(0, 230, 118, 255);
+                cv.circle(warped, new cv.Point(holeCenterX, holeCenterY), holeRadius, greenColor, 3);
+                cv.circle(warped, new cv.Point(holeCenterX, holeCenterY), 3, greenColor, -1);
 
-                if (cardRect) {
-                    cv.rectangle(src, new cv.Point(cardRect.x, cardRect.y), new cv.Point(cardRect.x + cardRect.width, cardRect.y + cardRect.height), redColor, 2);
-                }
-
-                cv.circle(src, new cv.Point(holeCenterX, holeCenterY), holeRadius, greenColor, 2);
-                cv.circle(src, new cv.Point(holeCenterX, holeCenterY), 2, greenColor, -1);
-
-                cv.imshow(canvasTargetId, src);
+                cv.imshow(canvasTargetId, warped);
 
             } finally {
+                // Безусловная очистка оперативной памяти WebAssembly
                 if (src) src.delete();
                 if (gray) gray.delete();
                 if (blurred) blurred.delete();
                 if (thresh) thresh.delete();
                 if (contours) contours.delete();
                 if (hierarchy) hierarchy.delete();
-                if (imgData) imgData.delete();
+                if (warped) warped.delete();
+                if (srcMat) srcMat.delete();
+                if (dstMat) dstMat.delete();
+                if (M) M.delete();
             }
 
             return extractedColor;
