@@ -52,14 +52,33 @@
       gap: 10px;
     }
 
+    .preview-box {
+      width: 100%;
+      aspect-ratio: 4/3;
+      background: var(--inner-card);
+      border-radius: 10px;
+      border: 1px dashed var(--border-color);
+      overflow: hidden;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .preview-box canvas {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
     .btn {
       width: 100%;
-      padding: 10px 14px;
+      padding: 10px 12px;
       border-radius: 12px;
       border: none;
       color: #fff;
       font-weight: 600;
-      font-size: 14px;
+      font-size: 13px;
       cursor: pointer;
       display: flex;
       align-items: center;
@@ -79,13 +98,19 @@
     }
 
     .info-list {
-      font-size: 12px;
+      font-size: 11px;
       display: flex;
       flex-direction: column;
-      gap: 4px;
+      gap: 3px;
       color: var(--text-muted);
     }
     .info-list span { color: var(--text-main); font-weight: 600; }
+
+    .delta-section {
+      border-top: 1px solid var(--border-color);
+      padding-top: 6px;
+      margin-top: 2px;
+    }
 
     .result-block {
       background: var(--card-bg);
@@ -139,6 +164,44 @@
       border-radius: 50%;
       border: 2px solid rgba(255,255,255,0.1);
     }
+
+    /* Модальное окно камеры */
+    .modal-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.85);
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      z-index: 1000;
+    }
+    .modal-overlay.active { display: flex; }
+    .camera-container {
+      position: relative;
+      width: 100%;
+      max-width: 400px;
+      aspect-ratio: 4/3;
+      background: #000;
+      border-radius: 16px;
+      overflow: hidden;
+    }
+    video { width: 100%; height: 100%; object-fit: cover; }
+    .capture-overlay {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      border: 2px dashed rgba(255,255,255,0.4);
+      pointer-events: none;
+      box-sizing: border-box;
+    }
+    .modal-actions {
+      margin-top: 16px;
+      display: flex;
+      gap: 12px;
+      width: 100%;
+      max-width: 400px;
+    }
   </style>
 </head>
 <body>
@@ -148,7 +211,10 @@
   <div class="cards-grid">
     <!-- Эталон -->
     <div class="card">
-      <button class="btn btn-purple">📷 Снять Эталон</button>
+      <div class="preview-box">
+        <canvas id="ref-canvas"></canvas>
+      </div>
+      <button class="btn btn-purple" onclick="openCamera('ref')">📷 Снять Эталон</button>
       <div class="info-list">
         <div>⚪ <b>Цель:</b> <span id="ref-target-text">RGB 168, 162, 163</span></div>
         <div>⚪ Белый: <span id="ref-w-text">226, 217, 223</span></div>
@@ -156,17 +222,34 @@
         <div>⚪ Чёрный: <span id="ref-b-text">125, 110, 111</span></div>
         <div>🔵 Циан: <span id="ref-c-text">52, 147, 194</span></div>
       </div>
+      <div class="section-title">ЦВЕТОКОРРЕКЦИЯ (Δ RGB)</div>
+      <div class="info-list delta-section">
+        <div>Белый: <span id="ref-dw-text">-29, -38, -32</span></div>
+        <div>Серый: <span id="ref-dg-text">+53, +44, +49</span></div>
+        <div>Чёрный: <span id="ref-db-text">+105, +90, +91</span></div>
+        <div>Циан: <span id="ref-dc-text">+52, -13, -26</span></div>
+      </div>
     </div>
 
     <!-- Образец -->
     <div class="card">
-      <button class="btn btn-cyan">📷 Снять Образец</button>
+      <div class="preview-box">
+        <canvas id="sam-canvas"></canvas>
+      </div>
+      <button class="btn btn-cyan" onclick="openCamera('sam')">📷 Снять Образец</button>
       <div class="info-list">
         <div>⚪ <b>Цель:</b> <span id="sam-target-text">RGB 159, 156, 156</span></div>
         <div>⚪ Белый: <span id="sam-w-text">210, 203, 210</span></div>
         <div>⚪ Серый: <span id="sam-g-text">188, 183, 188</span></div>
         <div>⚪ Чёрный: <span id="sam-b-text">84, 73, 73</span></div>
         <div>🔵 Циан: <span id="sam-c-text">15, 100, 148</span></div>
+      </div>
+      <div class="section-title">ЦВЕТОКОРРЕКЦИЯ (Δ RGB)</div>
+      <div class="info-list delta-section">
+        <div>Белый: <span id="sam-dw-text">-45, -52, -45</span></div>
+        <div>Серый: <span id="sam-dg-text">+60, +55, +60</span></div>
+        <div>Чёрный: <span id="sam-db-text">+64, +53, +53</span></div>
+        <div>Циан: <span id="sam-dc-text">+15, -60, -72</span></div>
       </div>
     </div>
   </div>
@@ -201,27 +284,43 @@
     <div class="swatch-compare">
       <div class="swatch-item">
         <div id="raw-ref-swatch" class="swatch-circle"></div>
-        <span>Эталон (168, 162, 163)</span>
+        <span id="raw-ref-label">Эталон</span>
       </div>
       <span style="font-weight:700; color:var(--text-muted)">VS</span>
       <div class="swatch-item">
         <div id="raw-sam-swatch" class="swatch-circle"></div>
-        <span>Образец (159, 156, 156)</span>
+        <span id="raw-sam-label">Образец</span>
       </div>
     </div>
   </div>
 
 </div>
 
+<!-- Модальное окно камеры -->
+<div id="camera-modal" class="modal-overlay">
+  <div class="camera-container">
+    <video id="webcam" autoplay playsinline></video>
+    <div class="capture-overlay"></div>
+  </div>
+  <div class="modal-actions">
+    <button class="btn btn-purple" onclick="takeSnapshot()">Сделать снимок</button>
+    <button class="btn" style="background:#334155" onclick="closeCamera()">Отмена</button>
+  </div>
+</div>
+
 <script>
-  // Данные из кадра (как на скриншоте)
-  const data = {
+  let activeTarget = null; // 'ref' или 'sam'
+  let stream = null;
+
+  // Исходные данные (по умолчанию как в макете)
+  const state = {
     ref: {
       target: { r: 168, g: 162, b: 163 },
       patches: {
         white: { r: 226, g: 217, b: 223 },
         gray:  { r: 181, g: 172, b: 177 },
-        black: { r: 125, g: 110, b: 111 }
+        black: { r: 125, g: 110, b: 111 },
+        cyan:  { r: 52,  g: 147, b: 194 }
       }
     },
     sam: {
@@ -229,19 +328,21 @@
       patches: {
         white: { r: 210, g: 203, b: 210 },
         gray:  { r: 188, g: 183, b: 188 },
-        black: { r: 84,  g: 73,  b: 73  }
+        black: { r: 84,  g: 73,  b: 73  },
+        cyan:  { r: 15,  g: 100, b: 148 }
       }
     }
   };
 
-  // Исправленная функция 1D-коррекции по ТРЕМ нейтральным точкам
-  function applyColorCorrection(rawTarget, patches) {
-    const IDEAL = {
-      white: { r: 255, g: 255, b: 255 },
-      gray:  { r: 128, g: 128, b: 128 },
-      black: { r: 20,  g: 20,  b: 20  }
-    };
+  const IDEAL = {
+    white: { r: 255, g: 255, b: 255 },
+    gray:  { r: 128, g: 128, b: 128 },
+    black: { r: 20,  g: 20,  b: 20  },
+    cyan:  { r: 0,   g: 160, b: 220 }
+  };
 
+  // Исправленный алгоритм 1D-коррекции strictly по 3 нейтральным плашкам
+  function applyColorCorrection(rawTarget, patches) {
     function interpolateChannel(val, ch) {
       let pts = [
         { x: 0, y: 0 },
@@ -279,43 +380,71 @@
     };
   }
 
-  // Расчет евклидова расстояния Delta RGB и % совпадения
   function calculateMatch(rgb1, rgb2) {
     const dr = rgb1.r - rgb2.r;
     const dg = rgb1.g - rgb2.g;
     const db = rgb1.b - rgb2.b;
     const delta = Math.round(Math.sqrt(dr * dr + dg * dg + db * db));
-    
-    // Процент совпадения (базовая формула от 0 до 100%)
     const matchPercent = Math.max(0, Math.min(100, Math.round(100 - (delta / 441.67) * 100)));
     return { delta, matchPercent };
   }
 
-  function render() {
-    // 1. Сырое совпадение
-    const rawMatch = calculateMatch(data.ref.target, data.sam.target);
-    document.getElementById('raw-match-val').innerText = `${rawMatch.matchPercent}% MATCH`;
-    document.getElementById('raw-status-badge').innerText = rawMatch.delta < 15 ? `ТОТ САМЫЙ ЦВЕТ (Δ = ${rawMatch.delta})` : `НЕ СОВПАДАЕТ (Δ = ${rawMatch.delta})`;
-    document.getElementById('raw-ref-swatch').style.backgroundColor = `rgb(${data.ref.target.r}, ${data.ref.target.g}, ${data.ref.target.b})`;
-    document.getElementById('raw-sam-swatch').style.backgroundColor = `rgb(${data.sam.target.r}, ${data.sam.target.g}, ${data.sam.target.b})`;
+  function formatDelta(actual, ideal) {
+    const dr = ideal.r - actual.r;
+    const dg = ideal.g - actual.g;
+    const db = ideal.b - actual.b;
+    const fmt = n => (n >= 0 ? `+${n}` : `${n}`);
+    return `${fmt(dr)}, ${fmt(dg)}, ${fmt(db)}`;
+  }
 
-    // 2. Скорректированное совпадение
-    const corrRef = applyColorCorrection(data.ref.target, data.ref.patches);
-    const corrSam = applyColorCorrection(data.sam.target, data.sam.patches);
+  function updateUI() {
+    ['ref', 'sam'].forEach(type => {
+      const item = state[type];
+      document.getElementById(`${type}-target-text`).innerText = `RGB ${item.target.r}, ${item.target.g}, ${item.target.b}`;
+      document.getElementById(`${type}-w-text`).innerText = `${item.patches.white.r}, ${item.patches.white.g}, ${item.patches.white.b}`;
+      document.getElementById(`${type}-g-text`).innerText = `${item.patches.gray.r}, ${item.patches.gray.g}, ${item.patches.gray.b}`;
+      document.getElementById(`${type}-b-text`).innerText = `${item.patches.black.r}, ${item.patches.black.g}, ${item.patches.black.b}`;
+      document.getElementById(`${type}-c-text`).innerText = `${item.patches.cyan.r}, ${item.patches.cyan.g}, ${item.patches.cyan.b}`;
+
+      document.getElementById(`${type}-dw-text`).innerText = formatDelta(item.patches.white, IDEAL.white);
+      document.getElementById(`${type}-dg-text`).innerText = formatDelta(item.patches.gray, IDEAL.gray);
+      document.getElementById(`${type}-db-text`).innerText = formatDelta(item.patches.black, IDEAL.black);
+      document.getElementById(`${type}-dc-text`).innerText = formatDelta(item.patches.cyan, IDEAL.cyan);
+    });
+
+    // Сырое совпадение
+    const rawMatch = calculateMatch(state.ref.target, state.sam.target);
+    document.getElementById('raw-match-val').innerText = `${rawMatch.matchPercent}% MATCH`;
+    const rawBadge = document.getElementById('raw-status-badge');
+    if (rawMatch.delta < 15) {
+      rawBadge.className = "status-badge badge-green";
+      rawBadge.innerText = `ТОТ САМЫЙ ЦВЕТ (Δ = ${rawMatch.delta})`;
+    } else {
+      rawBadge.className = "status-badge badge-red";
+      rawBadge.innerText = `СОВСЕМ НЕ ТОТ (Δ = ${rawMatch.delta})`;
+    }
+    document.getElementById('raw-ref-swatch').style.backgroundColor = `rgb(${state.ref.target.r}, ${state.ref.target.g}, ${state.ref.target.b})`;
+    document.getElementById('raw-sam-swatch').style.backgroundColor = `rgb(${state.sam.target.r}, ${state.sam.target.g}, ${state.sam.target.b})`;
+    document.getElementById('raw-ref-label').innerText = `Эталон (${state.ref.target.r}, ${state.ref.target.g}, ${state.ref.target.b})`;
+    document.getElementById('raw-sam-label').innerText = `Образец (${state.sam.target.r}, ${state.sam.target.g}, ${state.sam.target.b})`;
+
+    // Скорректированное совпадение
+    const corrRef = applyColorCorrection(state.ref.target, state.ref.patches);
+    const corrSam = applyColorCorrection(state.sam.target, state.sam.patches);
     const corrMatch = calculateMatch(corrRef, corrSam);
 
-    const corrValElem = document.getElementById('corr-match-val');
-    const corrBadgeElem = document.getElementById('corr-status-badge');
-
-    corrValElem.innerText = `${corrMatch.matchPercent}% MATCH`;
+    const corrVal = document.getElementById('corr-match-val');
+    const corrBadge = document.getElementById('corr-status-badge');
+    corrVal.innerText = `${corrMatch.matchPercent}% MATCH`;
+    
     if (corrMatch.delta < 15) {
-      corrValElem.className = "match-val match-green";
-      corrBadgeElem.className = "status-badge badge-green";
-      corrBadgeElem.innerText = `ТОТ САМЫЙ ЦВЕТ (Δ = ${corrMatch.delta})`;
+      corrVal.className = "match-val match-green";
+      corrBadge.className = "status-badge badge-green";
+      corrBadge.innerText = `ТОТ САМЫЙ ЦВЕТ (Δ = ${corrMatch.delta})`;
     } else {
-      corrValElem.className = "match-val match-red";
-      corrBadgeElem.className = "status-badge badge-red";
-      corrBadgeElem.innerText = `СОВСЕМ НЕ ТОТ (Δ = ${corrMatch.delta})`;
+      corrVal.className = "match-val match-red";
+      corrBadge.className = "status-badge badge-red";
+      corrBadge.innerText = `СОВСЕМ НЕ ТОТ (Δ = ${corrMatch.delta})`;
     }
 
     document.getElementById('corr-ref-swatch').style.backgroundColor = `rgb(${corrRef.r}, ${corrRef.g}, ${corrRef.b})`;
@@ -324,7 +453,75 @@
     document.getElementById('corr-sam-rgb').innerText = `${corrSam.r}, ${corrSam.g}, ${corrSam.b}`;
   }
 
-  render();
+  // Запуск камеры
+  async function openCamera(targetType) {
+    activeTarget = targetType;
+    const modal = document.getElementById('camera-modal');
+    const video = document.getElementById('webcam');
+
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 720 } }
+      });
+      video.srcObject = stream;
+      modal.classList.add('active');
+    } catch (err) {
+      alert("Не удалось получить доступ к камере: " + err.message);
+    }
+  }
+
+  function closeCamera() {
+    const modal = document.getElementById('camera-modal');
+    modal.classList.remove('active');
+    if (stream) {
+      stream.getTracks().forEach(track => track.stop());
+    }
+  }
+
+  function takeSnapshot() {
+    const video = document.getElementById('webcam');
+    const canvas = document.getElementById(`${activeTarget}-canvas`);
+    const ctx = canvas.getContext('2d');
+
+    canvas.width = video.videoWidth || 640;
+    canvas.height = video.videoHeight || 480;
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    // Извлечение пикселей из кадра по контрольным зонам
+    const getPixel = (xRatio, yRatio) => {
+      const x = Math.floor(canvas.width * xRatio);
+      const y = Math.floor(canvas.height * yRatio);
+      const p = ctx.getImageData(x, y, 1, 1).data;
+      return { r: p[0], g: p[1], b: p[2] };
+    };
+
+    state[activeTarget].target = getPixel(0.5, 0.5);   // Центр
+    state[activeTarget].patches.white = getPixel(0.2, 0.2);
+    state[activeTarget].patches.gray  = getPixel(0.2, 0.8);
+    state[activeTarget].patches.black = getPixel(0.8, 0.2);
+    state[activeTarget].patches.cyan  = getPixel(0.8, 0.8);
+
+    closeCamera();
+    updateUI();
+  }
+
+  // Отрисовка заглушек при старте
+  function initCanvases() {
+    ['ref', 'sam'].forEach(type => {
+      const cvs = document.getElementById(`${type}-canvas`);
+      const ctx = cvs.getContext('2d');
+      cvs.width = 200; cvs.height = 150;
+      ctx.fillStyle = '#0d1524';
+      ctx.fillRect(0, 0, 200, 150);
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = '12px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('Нет снимка', 100, 80);
+    });
+    updateUI();
+  }
+
+  initCanvases();
 </script>
 
 </body>
