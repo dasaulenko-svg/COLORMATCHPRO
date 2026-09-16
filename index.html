@@ -876,16 +876,16 @@
                 }
 
                 const colorPatches = [
-                    { key: 'white', x: Math.round(CARD_W * 0.175), y: Math.round(CARD_H * 0.38) },
-                    { key: 'gray',  x: Math.round(CARD_W * 0.175), y: Math.round(CARD_H * 0.68) },
-                    { key: 'black', x: Math.round(CARD_W * 0.825), y: Math.round(CARD_H * 0.38) },
-                    { key: 'cyan',  x: Math.round(CARD_W * 0.825), y: Math.round(CARD_H * 0.68) }
+                    { key: 'white', x: Math.round(CARD_W * 0.175), y: Math.round(CARD_H * 0.33) },
+                    { key: 'gray',  x: Math.round(CARD_W * 0.175), y: Math.round(CARD_H * 0.62) },
+                    { key: 'black', x: Math.round(CARD_W * 0.825), y: Math.round(CARD_H * 0.33) },
+                    { key: 'cyan',  x: Math.round(CARD_W * 0.825), y: Math.round(CARD_H * 0.62) }
                 ];
 
                 extractedData.main = getRegionColor(warped, holeCenterX, holeCenterY, Math.round(holeRadius * 0.7));
 
                 colorPatches.forEach(p => {
-                    extractedData.patches[p.key] = getRegionColor(warped, p.x, p.y, 14);
+                    extractedData.patches[p.key] = getRegionColor(warped, p.x, p.y, 6);
                 });
 
                 const greenColor = new cv.Scalar(0, 230, 118, 255);
