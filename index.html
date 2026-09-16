@@ -315,15 +315,39 @@
             text-align: center;
         }
 
-        .match-score-main { font-size: 30px; font-weight: 800; letter-spacing: -1px; }
+        /* Стили двойного блока сравнения */
+        .comparison-block {
+            padding: 12px;
+            border-radius: 14px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--card-border);
+            margin-bottom: 12px;
+            text-align: center;
+        }
+
+        .comparison-title {
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 6px;
+            color: var(--text-muted);
+        }
+
+        .comparison-title.corrected {
+            color: var(--accent-cyan);
+        }
+
+        .match-score-main { font-size: 28px; font-weight: 800; letter-spacing: -1px; }
+        .match-score-sub { font-size: 20px; font-weight: 800; letter-spacing: -0.5px; }
 
         .match-subtitle {
-            font-size: 12px;
+            font-size: 11px;
             font-weight: 700;
-            padding: 4px 12px;
+            padding: 3px 10px;
             border-radius: 20px;
             text-transform: uppercase;
-            margin-top: 6px;
+            margin-top: 4px;
             display: inline-block;
         }
 
@@ -341,8 +365,8 @@
             align-items: center;
             justify-content: center;
             gap: 16px;
-            margin-top: 12px;
-            padding: 10px;
+            margin-top: 10px;
+            padding: 8px;
             background: rgba(0, 0, 0, 0.25);
             border-radius: 12px;
             border: 1px solid rgba(255, 255, 255, 0.05);
@@ -352,15 +376,15 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 4px;
+            gap: 3px;
             font-size: 10px;
             color: var(--text-muted);
             font-weight: 600;
         }
 
         .swatch-circle {
-            width: 28px;
-            height: 28px;
+            width: 26px;
+            height: 26px;
             border-radius: 50%;
             border: 2px solid rgba(255,255,255,0.2);
         }
@@ -371,7 +395,7 @@
             border: 1px solid rgba(255, 82, 82, 0.3); 
             padding: 10px 20px; 
             border-radius: 10px; 
-            margin-top: 12px; 
+            margin-top: 4px; 
             cursor: pointer; 
             font-size: 12px; 
             font-weight: 700;
@@ -979,45 +1003,120 @@
             container.innerHTML = html;
         }
 
+        // Применение матрицы цветокоррекции
+        function applyColorCorrection(rawTarget, patches) {
+            const IDEAL = [
+                [255, 255, 255],
+                [128, 128, 128],
+                [20,  20,  20],
+                [0,   160, 220]
+            ];
+
+            const keys = ['white', 'gray', 'black', 'cyan'];
+            let A = keys.map(k => [
+                patches[k].r,
+                patches[k].g,
+                patches[k].b,
+                1
+            ]);
+
+            try {
+                let matA = cv.matFromArray(4, 4, cv.CV_64FC1, A.flat());
+                let matB = cv.matFromArray(4, 3, cv.CV_64FC1, IDEAL.flat());
+                let matX = new cv.Mat();
+
+                cv.solve(matA, matB, matX, cv.DECOMP_SVD);
+
+                let xData = matX.data64F;
+                let r = rawTarget.r, g = rawTarget.g, b = rawTarget.b;
+
+                let rCorr = r * xData[0] + g * xData[3] + b * xData[6] + xData[9];
+                let gCorr = r * xData[1] + g * xData[4] + b * xData[7] + xData[10];
+                let bCorr = r * xData[2] + g * xData[5] + b * xData[8] + xData[11];
+
+                matA.delete();
+                matB.delete();
+                matX.delete();
+
+                return {
+                    r: Math.max(0, Math.min(255, Math.round(rCorr))),
+                    g: Math.max(0, Math.min(255, Math.round(gCorr))),
+                    b: Math.max(0, Math.min(255, Math.round(bCorr)))
+                };
+            } catch (e) {
+                console.error('Ошибка расчета матрицы коррекции:', e);
+                return rawTarget;
+            }
+        }
+
+        function getStatusBadge(diff) {
+            if (diff >= 35) return { class: 'match-error', text: 'СОВСЕМ НЕ ТОТ' };
+            if (diff >= 15) return { class: 'match-warning', text: 'ПОЧТИ ТОТ' };
+            return { class: 'match-success', text: 'ТОТ САМЫЙ ЦВЕТ' };
+        }
+
+        // Сравнение цветов: Сырое и Скорректированное совпадение
         function compareColors() {
             if (!standardColorData || !sampleColorData) return;
 
-            const std = standardColorData.main;
-            const smp = sampleColorData.main;
+            // 1. Сырые цвета
+            const stdRaw = standardColorData.main;
+            const smpRaw = sampleColorData.main;
+            const diffRaw = Math.round((Math.abs(stdRaw.r - smpRaw.r) + 
+                                    Math.abs(stdRaw.g - smpRaw.g) + 
+                                    Math.abs(stdRaw.b - smpRaw.b)) / 3);
+            const percentRaw = Math.max(0, Math.min(100, Math.round(100 - (diffRaw / 255) * 100 * 2.5)));
+            const statusRaw = getStatusBadge(diffRaw);
 
-            const diff = Math.round((Math.abs(std.r - smp.r) + 
-                                    Math.abs(std.g - smp.g) + 
-                                    Math.abs(std.b - smp.b)) / 3);
+            // 2. Скорректированные цвета по матрицам
+            const stdCorr = applyColorCorrection(stdRaw, standardColorData.patches);
+            const smpCorr = applyColorCorrection(smpRaw, sampleColorData.patches);
+            const diffCorr = Math.round((Math.abs(stdCorr.r - smpCorr.r) + 
+                                     Math.abs(stdCorr.g - smpCorr.g) + 
+                                     Math.abs(stdCorr.b - smpCorr.b)) / 3);
+            const percentCorr = Math.max(0, Math.min(100, Math.round(100 - (diffCorr / 255) * 100 * 2.5)));
+            const statusCorr = getStatusBadge(diffCorr);
 
             infoCard.style.display = 'block';
 
-            const matchPercent = Math.max(0, Math.min(100, Math.round(100 - (diff / 255) * 100 * 2.5)));
-
-            let matchClass = 'match-success';
-            let statusText = 'ТОТ САМЫЙ ЦВЕТ';
-
-            if (diff >= 35) {
-                matchClass = 'match-error';
-                statusText = 'СОВСЕМ НЕ ТОТ';
-            } else if (diff >= 15) {
-                matchClass = 'match-warning';
-                statusText = 'ПОЧТИ ТОТ';
-            }
-
-            resultDiv.className = `result-badge ${matchClass}`;
             resultDiv.innerHTML = `
-                <div class="match-score-main">${matchPercent}% MATCH</div>
-                <div class="match-subtitle">${statusText} (Δ = ${diff})</div>
-                
-                <div class="swatch-comparison">
-                    <div class="swatch-item">
-                        <div class="swatch-circle" style="background: rgb(${std.r},${std.g},${std.b})"></div>
-                        <span>Эталон</span>
+                <!-- Скорректированное совпадение -->
+                <div class="comparison-block ${statusCorr.class}" style="border: 1px solid rgba(0, 229, 255, 0.35);">
+                    <div class="comparison-title corrected">✨ Скорректированное совпадение</div>
+                    <div class="match-score-main">${percentCorr}% MATCH</div>
+                    <div class="match-subtitle">${statusCorr.text} (Δ = ${diffCorr})</div>
+                    
+                    <div class="swatch-comparison">
+                        <div class="swatch-item">
+                            <div class="swatch-circle" style="background: rgb(${stdCorr.r},${stdCorr.g},${stdCorr.b})"></div>
+                            <span>Эталон</span>
+                            <span style="font-size:9px; opacity:0.8;">${stdCorr.r}, ${stdCorr.g}, ${stdCorr.b}</span>
+                        </div>
+                        <div style="font-weight:800; opacity:0.3; font-size:11px;">VS</div>
+                        <div class="swatch-item">
+                            <div class="swatch-circle" style="background: rgb(${smpCorr.r},${smpCorr.g},${smpCorr.b})"></div>
+                            <span>Образец</span>
+                            <span style="font-size:9px; opacity:0.8;">${smpCorr.r}, ${smpCorr.g}, ${smpCorr.b}</span>
+                        </div>
                     </div>
-                    <div style="font-weight:800; opacity:0.3; font-size:11px;">VS</div>
-                    <div class="swatch-item">
-                        <div class="swatch-circle" style="background: rgb(${smp.r},${smp.g},${smp.b})"></div>
-                        <span>Образец</span>
+                </div>
+
+                <!-- Сырое совпадение без обработки -->
+                <div class="comparison-block ${statusRaw.class}">
+                    <div class="comparison-title">📷 Сырое совпадение (без коррекции)</div>
+                    <div class="match-score-sub">${percentRaw}% MATCH</div>
+                    <div class="match-subtitle" style="font-size:10px;">${statusRaw.text} (Δ = ${diffRaw})</div>
+                    
+                    <div class="swatch-comparison" style="margin-top:6px; padding:6px;">
+                        <div class="swatch-item">
+                            <div class="swatch-circle" style="width:22px; height:22px; background: rgb(${stdRaw.r},${stdRaw.g},${stdRaw.b})"></div>
+                            <span>Эталон (${stdRaw.r}, ${stdRaw.g}, ${stdRaw.b})</span>
+                        </div>
+                        <div style="font-weight:800; opacity:0.3; font-size:10px;">VS</div>
+                        <div class="swatch-item">
+                            <div class="swatch-circle" style="width:22px; height:22px; background: rgb(${smpRaw.r},${smpRaw.g},${smpRaw.b})"></div>
+                            <span>Образец (${smpRaw.r}, ${smpRaw.g}, ${smpRaw.b})</span>
+                        </div>
                     </div>
                 </div>
             `;
