@@ -225,14 +225,15 @@
 
         canvas { max-width: 100%; max-height: 100%; object-fit: contain; }
 
-        /* INPUT BUTTONS */
-        .btn-label { 
+        /* BUTTONS */
+        .btn-action { 
             background: linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%); 
             color: white; 
             padding: 10px 6px; 
             font-size: 12px; 
             font-weight: 700; 
             border-radius: 10px; 
+            border: none;
             cursor: pointer; 
             display: flex;
             align-items: center;
@@ -243,18 +244,16 @@
             text-align: center;
         }
 
-        .btn-label.secondary { 
+        .btn-action.secondary { 
             background: linear-gradient(135deg, #00C6FF 0%, #0072FF 100%); 
             box-shadow: 0 4px 14px rgba(0, 198, 255, 0.25);
         }
 
-        .btn-label.disabled { 
+        .btn-action:disabled { 
             opacity: 0.3; 
             pointer-events: none; 
             filter: grayscale(1);
         }
-
-        input[type="file"] { display: none; }
 
         .info-text { 
             font-size: 11px; 
@@ -351,7 +350,81 @@
             width: 100%;
         }
 
-        /* STUB VIEW FOR CALIBRATION & CORRECTION */
+        /* MODAL CAMERA STYLES */
+        .camera-modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.9);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+            backdrop-filter: blur(8px);
+        }
+
+        .camera-modal.active { display: flex; }
+
+        .camera-card {
+            background: #121824;
+            border: 1px solid var(--card-border);
+            border-radius: 20px;
+            width: 100%;
+            max-width: 420px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.8);
+        }
+
+        .camera-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 14px;
+            font-weight: 700;
+        }
+
+        .close-btn {
+            background: rgba(255,255,255,0.1);
+            border: none;
+            color: #fff;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .camera-viewport {
+            position: relative;
+            width: 100%;
+            height: 320px;
+            background: #000;
+            border-radius: 14px;
+            overflow: hidden;
+        }
+
+        .camera-viewport video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .camera-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+
+        /* STUB VIEW */
         .view-pane { display: none; }
         .view-pane.active { display: block; }
         
@@ -381,7 +454,6 @@
                 <h1>COLORMATCH</h1>
             </div>
 
-            <!-- TOP RIGHT MENU -->
             <div class="menu-container">
                 <button class="menu-btn" onclick="toggleMenu()">
                     <span id="activeMenuLabel">🎯 Сравнение</span> ▾
@@ -404,7 +476,7 @@
             <span class="status-dot loading"></span> Загрузка ядра OpenCV...
         </div>
 
-        <!-- 1. РЕЖИМ СРАВНЕНИЯ (ОСНОВНОЙ) -->
+        <!-- 1. РЕЖИМ СРАВНЕНИЯ -->
         <div class="view-pane active" id="paneCompare">
             <div class="grid">
                 <!-- 1. ЭТАЛОН -->
@@ -416,10 +488,9 @@
                     <div class="preview-box">
                         <canvas id="canvasStandard"></canvas>
                     </div>
-                    <label class="btn-label disabled" id="labelStandard">
+                    <button class="btn-action" id="btnStandard" onclick="openCamera('standard')" disabled>
                         📷 Снять Эталон
-                        <input type="file" id="inputStandard" accept="image/*" capture="environment" disabled>
-                    </label>
+                    </button>
                     <div class="info-text" id="infoStandard">---</div>
                 </div>
 
@@ -432,10 +503,9 @@
                     <div class="preview-box">
                         <canvas id="canvasSample"></canvas>
                     </div>
-                    <label class="btn-label secondary disabled" id="labelSample">
+                    <button class="btn-action secondary" id="btnSample" onclick="openCamera('sample')" disabled>
                         📸 Снять Образец
-                        <input type="file" id="inputSample" accept="image/*" capture="environment" disabled>
-                    </label>
+                    </button>
                     <div class="info-text" id="infoSample">---</div>
                 </div>
             </div>
@@ -458,8 +528,53 @@
         <div class="view-pane" id="paneCorrect">
             <div class="stub-box">
                 🎨 <b>Цветокоррекция снимка</b><br><br>
-                Автоматическая выравнивание баланса белого и экспозиции кадра по серому полю карты.
+                Автоматическое выравнивание баланса белого и экспозиции кадра по серому полю карты.
             </div>
+        </div>
+    </div>
+
+    <!-- ВСПЛЫВАЮЩЕЕ ОКНО КАМЕРЫ С ПРИЦЕЛОМ -->
+    <div class="camera-modal" id="cameraModal">
+        <div class="camera-card">
+            <div class="camera-header">
+                <span id="cameraTitle">Сканирование карточки</span>
+                <button class="close-btn" onclick="closeCamera()">✕</button>
+            </div>
+            
+            <div class="camera-viewport">
+                <video id="webcam" autoplay playsinline></video>
+                
+                <!-- SVG ПРИЦЕЛ -->
+                <svg class="camera-overlay" viewBox="0 0 400 320">
+                    <defs>
+                        <mask id="card-mask">
+                            <rect width="100%" height="100%" fill="white"/>
+                            <rect x="50" y="55" width="300" height="190" rx="12" fill="black"/>
+                        </mask>
+                    </defs>
+
+                    <!-- Тёмная маска вокруг карточки -->
+                    <rect width="100%" height="100%" fill="rgba(0,0,0,0.55)" mask="url(#card-mask)"/>
+
+                    <!-- Внешний контур карточки -->
+                    <rect x="50" y="55" width="300" height="190" rx="12" fill="none" stroke="#00E5FF" stroke-width="2" stroke-dasharray="6 4"/>
+
+                    <!-- Прицельный кружок для отверстия -->
+                    <circle cx="200" cy="150" r="26" fill="none" stroke="#00E676" stroke-width="2"/>
+
+                    <!-- Перекрестье в центре -->
+                    <line x1="200" y1="115" x2="200" y2="185" stroke="#00E676" stroke-width="1.5"/>
+                    <line x1="165" y1="150" x2="235" y2="150" stroke="#00E676" stroke-width="1.5"/>
+
+                    <text x="200" y="32" fill="#FFFFFF" font-size="12" font-weight="600" text-anchor="middle">
+                        Совместите карту с рамкой
+                    </text>
+                </svg>
+            </div>
+
+            <button class="btn-action" onclick="takeSnapshot()">
+                📸 Сделать снимок
+            </button>
         </div>
     </div>
 
@@ -467,12 +582,12 @@
         let isOpenCvReady = false;
         let standardColor = null;
         let sampleColor = null;
+        let activeMode = 'standard';
+        let mediaStream = null;
 
         const cvStatus = document.getElementById('cvStatus');
-        const labelStandard = document.getElementById('labelStandard');
-        const inputStandard = document.getElementById('inputStandard');
-        const labelSample = document.getElementById('labelSample');
-        const inputSample = document.getElementById('inputSample');
+        const btnStandard = document.getElementById('btnStandard');
+        const btnSample = document.getElementById('btnSample');
 
         const infoStandard = document.getElementById('infoStandard');
         const infoSample = document.getElementById('infoSample');
@@ -480,7 +595,9 @@
         const resultDiv = document.getElementById('result');
         const resetBtn = document.getElementById('resetBtn');
 
-        // MENU CONTROLS
+        const cameraModal = document.getElementById('cameraModal');
+        const video = document.getElementById('webcam');
+
         function toggleMenu() {
             document.getElementById('menuDropdown').classList.toggle('active');
         }
@@ -498,7 +615,6 @@
             if (modeKey === 'correct') document.getElementById('paneCorrect').classList.add('active');
         }
 
-        // Close menu on click outside
         window.addEventListener('click', (e) => {
             if (!e.target.closest('.menu-container')) {
                 document.getElementById('menuDropdown').classList.remove('active');
@@ -509,54 +625,71 @@
             isOpenCvReady = true;
             cvStatus.innerHTML = '<span class="status-dot"></span> Готов к работе';
             
-            labelStandard.classList.remove('disabled');
-            inputStandard.disabled = false;
-
+            btnStandard.disabled = false;
             restoreState();
         }
 
-        // FAST FILE PROCESSING WITH INSTANT DOWNSCALE
-        inputStandard.addEventListener('change', (e) => processFileInput(e, 'standard'));
-        inputSample.addEventListener('change', (e) => processFileInput(e, 'sample'));
+        // РАБОТА С ВСПЛЫВАЮЩЕЙ КАМЕРОЙ (getUserMedia)
+        async function openCamera(mode) {
+            activeMode = mode;
+            document.getElementById('cameraTitle').innerText = mode === 'standard' ? 'Съемка Эталона' : 'Съемка Образца';
+            cameraModal.classList.add('active');
 
-        function processFileInput(event, mode) {
-            const file = event.target.files[0];
-            if (!file) return;
-
-            const url = URL.createObjectURL(file);
-            const img = new Image();
-
-            img.onload = () => {
-                // Создаем миниатюрную копию 300px ДО передачи в OpenCV
-                const maxDim = 300;
-                let w = img.width;
-                let h = img.height;
-
-                if (w > maxDim || h > maxDim) {
-                    if (w > h) {
-                        h = Math.round((h * maxDim) / w);
-                        w = maxDim;
-                    } else {
-                        w = Math.round((w * maxDim) / h);
-                        h = maxDim;
-                    }
+            try {
+                // Запрашиваем заднюю камеру
+                mediaStream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: { exact: "environment" } }
+                });
+            } catch (err) {
+                // Фолбэк для ноутбуков и систем без явной задней камеры
+                try {
+                    mediaStream = await navigator.mediaDevices.getUserMedia({ video: true });
+                } catch (fallbackErr) {
+                    alert('Не удалось получить доступ к камере: ' + fallbackErr.message);
+                    closeCamera();
+                    return;
                 }
+            }
 
-                const scaledCanvas = document.createElement('canvas');
-                scaledCanvas.width = w;
-                scaledCanvas.height = h;
-                const ctx = scaledCanvas.getContext('2d');
-                ctx.drawImage(img, 0, 0, w, h);
+            video.srcObject = mediaStream;
+        }
 
-                // Мгновенно очищаем память от исходника фото (12+ МП)
-                URL.revokeObjectURL(url);
-                event.target.value = '';
+        function closeCamera() {
+            if (mediaStream) {
+                mediaStream.getTracks().forEach(track => track.stop());
+                mediaStream = null;
+            }
+            video.srcObject = null;
+            cameraModal.classList.remove('active');
+        }
 
-                // Обрабатываем крошечный кадр
-                handleImageSource(scaledCanvas, mode);
-            };
+        // ЗАХВАТ КАДРА ИЗ ВИДЕОПОТОКА
+        function takeSnapshot() {
+            if (!video.videoWidth) return;
 
-            img.src = url;
+            // Сразу масштабируем кадр до макс. 300px для экономии памяти и быстродействия
+            const maxDim = 300;
+            let w = video.videoWidth;
+            let h = video.videoHeight;
+
+            if (w > maxDim || h > maxDim) {
+                if (w > h) {
+                    h = Math.round((h * maxDim) / w);
+                    w = maxDim;
+                } else {
+                    w = Math.round((w * maxDim) / h);
+                    h = maxDim;
+                }
+            }
+
+            const scaledCanvas = document.createElement('canvas');
+            scaledCanvas.width = w;
+            scaledCanvas.height = h;
+            const ctx = scaledCanvas.getContext('2d');
+            ctx.drawImage(video, 0, 0, w, h);
+
+            closeCamera();
+            handleImageSource(scaledCanvas, activeMode);
         }
 
         function handleImageSource(canvasSource, mode) {
@@ -568,8 +701,7 @@
                 renderInfoText(infoStandard, standardColor);
                 localStorage.setItem('cm_card_standard_color', JSON.stringify(standardColor));
 
-                labelSample.classList.remove('disabled');
-                inputSample.disabled = false;
+                btnSample.disabled = false;
                 if (sampleColor) compareColors();
             } else {
                 sampleColor = color;
@@ -578,7 +710,7 @@
             }
         }
 
-        // OPENCV ALGORITHM (RUNS ON 300px CANVAS ONLY)
+        // ALGORITHM OPENCV
         function processImageWithCard(canvasSource, canvasTargetId) {
             let src = null, gray = null, blurred = null, thresh = null;
             let contours = null, hierarchy = null, imgData = null;
@@ -699,8 +831,7 @@
             if (savedColor) {
                 standardColor = JSON.parse(savedColor);
                 renderInfoText(infoStandard, standardColor);
-                labelSample.classList.remove('disabled');
-                inputSample.disabled = false;
+                btnSample.disabled = false;
             }
         }
 
@@ -759,16 +890,12 @@
             infoCard.style.display = 'none';
             resultDiv.innerText = '';
 
-            labelSample.classList.add('disabled');
-            inputSample.disabled = true;
+            btnSample.disabled = true;
 
             const canvasStd = document.getElementById('canvasStandard');
             const canvasSmp = document.getElementById('canvasSample');
             canvasStd.getContext('2d').clearRect(0, 0, canvasStd.width, canvasStd.height);
             canvasSmp.getContext('2d').clearRect(0, 0, canvasSmp.width, canvasSmp.height);
-
-            inputStandard.value = '';
-            inputSample.value = '';
         });
     </script>
 </body>
