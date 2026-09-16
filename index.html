@@ -273,6 +273,37 @@
             white-space: nowrap;
         }
 
+        /* Блок профиля цветокоррекции */
+        .correction-profile {
+            margin-top: 8px;
+            padding-top: 6px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            font-size: 10px;
+        }
+
+        .profile-title {
+            font-size: 9px;
+            font-weight: 700;
+            color: var(--accent-cyan);
+            margin-bottom: 4px;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            text-align: left;
+        }
+
+        .profile-row {
+            display: flex;
+            justify-content: space-between;
+            color: var(--text-muted);
+            margin-bottom: 2px;
+        }
+
+        .profile-row strong {
+            color: #ffffff;
+            font-family: monospace;
+            font-size: 10px;
+        }
+
         .card { 
             background: var(--card-bg); 
             backdrop-filter: blur(16px);
@@ -880,7 +911,7 @@
             }
         }
 
-        // Рендер столбца со всеми 4 цветами + главным цветом под кнопкой
+        // Рендер столбца со всеми 4 цветами + главным цветом + ЦВЕТОКОРРЕКЦИЕЙ
         function renderPatchesList(elementId, dataObj) {
             const container = document.getElementById(elementId);
             if (!dataObj || !dataObj.main) {
@@ -894,6 +925,17 @@
                 black: 'Чёрный',
                 cyan: 'Циан'
             };
+
+            const IDEAL = {
+                white: { r: 255, g: 255, b: 255 },
+                gray:  { r: 128, g: 128, b: 128 },
+                black: { r: 20,  g: 20,  b: 20  },
+                cyan:  { r: 0,   g: 160, b: 220 }
+            };
+
+            const fmtDelta = (val) => (val > 0 ? `+${val}` : `${val}`);
+            const calcDelta = (actual, ideal) => 
+                `${fmtDelta(actual.r - ideal.r)}, ${fmtDelta(actual.g - ideal.g)}, ${fmtDelta(actual.b - ideal.b)}`;
 
             const m = dataObj.main;
             const p = dataObj.patches;
@@ -916,7 +958,24 @@
                 }
             }
 
-            html += `</div>`;
+            // Блок цветокоррекции под цветами
+            html += `
+                <div class="correction-profile">
+                    <div class="profile-title">Цветокоррекция (Δ RGB)</div>
+            `;
+
+            for (const key of ['white', 'gray', 'black', 'cyan']) {
+                if (p && p[key]) {
+                    html += `
+                        <div class="profile-row">
+                            <span>${patchNames[key]}:</span>
+                            <strong>${calcDelta(p[key], IDEAL[key])}</strong>
+                        </div>
+                    `;
+                }
+            }
+
+            html += `</div></div>`;
             container.innerHTML = html;
         }
 
