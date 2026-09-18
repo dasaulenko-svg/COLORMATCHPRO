@@ -335,13 +335,38 @@
             color: var(--accent-cyan);
         }
 
-        .match-score-main { font-size: 28px; font-weight: 800; letter-spacing: -1px; }
-        .match-score-sub { font-size: 20px; font-weight: 800; letter-spacing: -0.5px; }
+        .comparison-methods-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+
+        .method-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 10px;
+            padding: 8px 4px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .method-title {
+            font-size: 9px;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            margin-bottom: 4px;
+        }
+
+        .match-score-main { font-size: 24px; font-weight: 800; letter-spacing: -0.5px; }
+        .match-score-sub { font-size: 18px; font-weight: 800; letter-spacing: -0.5px; }
 
         .match-subtitle {
-            font-size: 11px;
+            font-size: 10px;
             font-weight: 700;
-            padding: 3px 10px;
+            padding: 2px 8px;
             border-radius: 20px;
             text-transform: uppercase;
             margin-top: 4px;
@@ -361,29 +386,30 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 16px;
-            margin-top: 10px;
-            padding: 8px;
+            gap: 12px;
+            margin-top: 6px;
+            padding: 6px;
             background: rgba(0, 0, 0, 0.25);
-            border-radius: 12px;
+            border-radius: 10px;
             border: 1px solid rgba(255, 255, 255, 0.05);
+            width: 100%;
         }
 
         .swatch-item {
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 3px;
-            font-size: 10px;
+            gap: 2px;
+            font-size: 9px;
             color: var(--text-muted);
             font-weight: 600;
         }
 
         .swatch-circle {
-            width: 26px;
-            height: 26px;
+            width: 20px;
+            height: 20px;
             border-radius: 50%;
-            border: 2px solid rgba(255,255,255,0.2);
+            border: 1px solid rgba(255,255,255,0.2);
         }
 
         .reset-btn { 
@@ -761,7 +787,6 @@
             } : { r: 0, g: 0, b: 0 };
         }
 
-        // --- ОБНОВЛЕННЫЙ И ИСПРАВЛЕННЫЙ АЛГОРИТМ ПОИСКА И ПОЗИЦИОНИРОВАНИЯ КАРТОЧКИ ---
         function processImageWithCard(canvasSource, canvasTargetId) {
             let src = null, gray = null, blurred = null, thresh = null, morph = null;
             let contours = null, hierarchy = null, edges = null, kernel = null;
@@ -790,12 +815,10 @@
                 cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
                 cv.GaussianBlur(gray, blurred, new cv.Size(7, 7), 0);
 
-                // Использование Dilation для сшивания границ карточки
                 cv.Canny(blurred, edges, 30, 100);
                 kernel = cv.Mat.ones(3, 3, cv.CV_8U);
                 cv.dilate(edges, thresh, kernel);
 
-                // RETR_EXTERNAL - игнорирует внутренние стикеры, надписи и прорези
                 cv.findContours(thresh, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
 
                 let bestScore = -Infinity;
@@ -806,15 +829,12 @@
                     let cnt = contours.get(i);
                     let area = cv.contourArea(cnt);
                     
-                    // Исключаем фоновый шум и слишком огромные контуры (>50% кадра)
                     if (area > totalArea * 0.03 && area < totalArea * 0.85) {
                         let rect = cv.boundingRect(cnt);
                         let aspectRatio = rect.width / rect.height;
                         
-                        // Поправка на ориентацию
                         if (aspectRatio < 1.0) aspectRatio = 1.0 / aspectRatio;
 
-                        // Фильтрация по пропорциям карточки (1.25 .. 1.85)
                         if (aspectRatio >= 1.15 && aspectRatio <= 2.0) {
                             let cntCenterX = rect.x + rect.width / 2;
                             let cntCenterY = rect.y + rect.height / 2;
@@ -822,7 +842,6 @@
                             let maxPossibleDist = Math.hypot(imgCenterX, imgCenterY);
                             let centerScore = 1.0 - (distToCenter / maxPossibleDist);
 
-                            // Оценка приоритета элемента по близости к центру кадра
                             let score = area * Math.pow(centerScore, 1.5);
 
                             let peri = cv.arcLength(cnt, true);
@@ -895,7 +914,6 @@
                     holeRadius = 35;
 
                 } else {
-                    // Резервный режим, если карточка вылезла из кадра
                     cv.resize(src, warped, new cv.Size(CARD_W, CARD_H));
                     holeCenterX = Math.round(CARD_W * 0.50);
                     holeCenterY = Math.round(CARD_H * 0.46);
@@ -1019,7 +1037,8 @@
             container.innerHTML = html;
         }
 
-        function applyColorCorrection(rawTarget, patches) {
+        // --- СТАРЫЙ МЕТОД КОРРЕКЦИИ (Линейная кусочная интерполяция) ---
+        function applyColorCorrectionOld(rawTarget, patches) {
             const IDEAL = {
                 white: { r: 255, g: 255, b: 255 },
                 gray:  { r: 128, g: 128, b: 128 },
@@ -1076,6 +1095,59 @@
             };
         }
 
+        // --- НОВЫЙ МЕТОД КОРРЕКЦИИ (Монотонный сплайн / Улучшенная кривая) ---
+        function applyColorCorrectionNew(rawTarget, patches) {
+            const IDEAL = {
+                white: { r: 255, g: 255, b: 255 },
+                gray:  { r: 128, g: 128, b: 128 },
+                black: { r: 20,  g: 20,  b: 20  }
+            };
+
+            function monotonicSpline(val, ch) {
+                let pts = [
+                    { x: 0, y: 0 },
+                    { x: patches.black[ch], y: IDEAL.black[ch] },
+                    { x: patches.gray[ch],  y: IDEAL.gray[ch] },
+                    { x: patches.white[ch], y: IDEAL.white[ch] },
+                    { x: 255, y: 255 }
+                ];
+
+                pts.sort((a, b) => a.x - b.x);
+
+                let clean = [pts[0]];
+                for (let i = 1; i < pts.length; i++) {
+                    if (pts[i].x > clean[clean.length - 1].x) {
+                        clean.push(pts[i]);
+                    }
+                }
+
+                if (clean.length < 2) return val;
+
+                // Быстрое сглаживание углов перегиба через плавный переход (Cubic Hermite)
+                if (val <= clean[0].x) return Math.max(0, Math.min(255, Math.round(clean[0].y * (val / Math.max(1, clean[0].x)))));
+                let last = clean[clean.length - 1];
+                if (val >= last.x) return Math.max(0, Math.min(255, Math.round(last.y + (255 - last.y) * ((val - last.x) / Math.max(1, 255 - last.x)))));
+
+                for (let i = 0; i < clean.length - 1; i++) {
+                    let p1 = clean[i], p2 = clean[i + 1];
+                    if (val >= p1.x && val <= p2.x) {
+                        let t = (val - p1.x) / (p2.x - p1.x);
+                        let smoothT = t * t * (3 - 2 * t);
+                        let interpolated = p1.y + smoothT * (p2.y - p1.y);
+                        return Math.max(0, Math.min(255, Math.round(interpolated)));
+                    }
+                }
+
+                return val;
+            }
+
+            return {
+                r: monotonicSpline(rawTarget.r, 'r'),
+                g: monotonicSpline(rawTarget.g, 'g'),
+                b: monotonicSpline(rawTarget.b, 'b')
+            };
+        }
+
         function getStatusBadge(diff) {
             if (diff >= 35) return { class: 'match-error', text: 'СОВСЕМ НЕ ТОТ' };
             if (diff >= 15) return { class: 'match-warning', text: 'ПОЧТИ ТОТ' };
@@ -1085,6 +1157,7 @@
         function compareColors() {
             if (!standardColorData || !sampleColorData) return;
 
+            // 1. Сырые данные
             const stdRaw = standardColorData.main;
             const smpRaw = sampleColorData.main;
             const diffRaw = Math.round((Math.abs(stdRaw.r - smpRaw.r) + 
@@ -1093,33 +1166,67 @@
             const percentRaw = Math.max(0, Math.min(100, Math.round(100 - (diffRaw / 255) * 100 * 2.5)));
             const statusRaw = getStatusBadge(diffRaw);
 
-            const stdCorr = applyColorCorrection(stdRaw, standardColorData.patches);
-            const smpCorr = applyColorCorrection(smpRaw, sampleColorData.patches);
-            const diffCorr = Math.round((Math.abs(stdCorr.r - smpCorr.r) + 
-                                     Math.abs(stdCorr.g - smpCorr.g) + 
-                                     Math.abs(stdCorr.b - smpCorr.b)) / 3);
-            const percentCorr = Math.max(0, Math.min(100, Math.round(100 - (diffCorr / 255) * 100 * 2.5)));
-            const statusCorr = getStatusBadge(diffCorr);
+            // 2. Старый метод коррекции
+            const stdOld = applyColorCorrectionOld(stdRaw, standardColorData.patches);
+            const smpOld = applyColorCorrectionOld(smpRaw, sampleColorData.patches);
+            const diffOld = Math.round((Math.abs(stdOld.r - smpOld.r) + 
+                                     Math.abs(stdOld.g - smpOld.g) + 
+                                     Math.abs(stdOld.b - smpOld.b)) / 3);
+            const percentOld = Math.max(0, Math.min(100, Math.round(100 - (diffOld / 255) * 100 * 2.5)));
+            const statusOld = getStatusBadge(diffOld);
+
+            // 3. Новый метод коррекции
+            const stdNew = applyColorCorrectionNew(stdRaw, standardColorData.patches);
+            const smpNew = applyColorCorrectionNew(smpRaw, sampleColorData.patches);
+            const diffNew = Math.round((Math.abs(stdNew.r - smpNew.r) + 
+                                     Math.abs(stdNew.g - smpNew.g) + 
+                                     Math.abs(stdNew.b - smpNew.b)) / 3);
+            const percentNew = Math.max(0, Math.min(100, Math.round(100 - (diffNew / 255) * 100 * 2.5)));
+            const statusNew = getStatusBadge(diffNew);
 
             infoCard.style.display = 'block';
 
             resultDiv.innerHTML = `
-                <div class="comparison-block ${statusCorr.class}" style="border: 1px solid rgba(0, 229, 255, 0.35);">
-                    <div class="comparison-title corrected">✨ Скорректированное совпадение</div>
-                    <div class="match-score-main">${percentCorr}% MATCH</div>
-                    <div class="match-subtitle">${statusCorr.text} (Δ = ${diffCorr})</div>
+                <div class="comparison-block" style="border: 1px solid rgba(0, 229, 255, 0.35);">
+                    <div class="comparison-title corrected">✨ Сравнение методов коррекции</div>
                     
-                    <div class="swatch-comparison">
-                        <div class="swatch-item">
-                            <div class="swatch-circle" style="background: rgb(${stdCorr.r},${stdCorr.g},${stdCorr.b})"></div>
-                            <span>Эталон</span>
-                            <span style="font-size:9px; opacity:0.8;">${stdCorr.r}, ${stdCorr.g}, ${stdCorr.b}</span>
+                    <div class="comparison-methods-grid">
+                        <!-- Старый метод -->
+                        <div class="method-card ${statusOld.class}">
+                            <div class="method-title">Старая коррекция</div>
+                            <div class="match-score-main">${percentOld}%</div>
+                            <div class="match-subtitle">${statusOld.text}</div>
+                            <div style="font-size:9px; margin-top:4px; opacity:0.7;">Δ = ${diffOld}</div>
+
+                            <div class="swatch-comparison">
+                                <div class="swatch-item">
+                                    <div class="swatch-circle" style="background: rgb(${stdOld.r},${stdOld.g},${stdOld.b})"></div>
+                                    <span>Эталон</span>
+                                </div>
+                                <div class="swatch-item">
+                                    <div class="swatch-circle" style="background: rgb(${smpOld.r},${smpOld.g},${smpOld.b})"></div>
+                                    <span>Образец</span>
+                                </div>
+                            </div>
                         </div>
-                        <div style="font-weight:800; opacity:0.3; font-size:11px;">VS</div>
-                        <div class="swatch-item">
-                            <div class="swatch-circle" style="background: rgb(${smpCorr.r},${smpCorr.g},${smpCorr.b})"></div>
-                            <span>Образец</span>
-                            <span style="font-size:9px; opacity:0.8;">${smpCorr.r}, ${smpCorr.g}, ${smpCorr.b}</span>
+
+                        <!-- Новый метод -->
+                        <div class="method-card ${statusNew.class}" style="border: 1px solid rgba(0, 229, 255, 0.3); background: rgba(0, 229, 255, 0.04);">
+                            <div class="method-title" style="color:var(--accent-cyan);">Новая коррекция</div>
+                            <div class="match-score-main">${percentNew}%</div>
+                            <div class="match-subtitle">${statusNew.text}</div>
+                            <div style="font-size:9px; margin-top:4px; opacity:0.7;">Δ = ${diffNew}</div>
+
+                            <div class="swatch-comparison">
+                                <div class="swatch-item">
+                                    <div class="swatch-circle" style="background: rgb(${stdNew.r},${stdNew.g},${stdNew.b})"></div>
+                                    <span>Эталон</span>
+                                </div>
+                                <div class="swatch-item">
+                                    <div class="swatch-circle" style="background: rgb(${smpNew.r},${smpNew.g},${smpNew.b})"></div>
+                                    <span>Образец</span>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
