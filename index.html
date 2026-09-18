@@ -897,17 +897,16 @@
                     cv.resize(src, warped, new cv.Size(CARD_W, CARD_H));
                 }
 
-                // ВЫРАВНЕННЫЕ КООРДИНАТЫ МИШЕНЕЙ:
-                // 1. Центральная цель (смотровое окно): сдвинута на 5px левее (0.540 -> 0.534)
-                const holeCenterX = Math.round(CARD_W * 0.534); 
-                const holeCenterY = Math.round(CARD_H * 0.490);
+                // ТОЧНО ВЫРАВНЕННЫЕ КООРДИНАТЫ МИШЕНЕЙ:
+                // 1. Центральная цель (смотровое окно): выровнена строго по центру отверстия
+                const holeCenterX = Math.round(CARD_W * 0.508); 
+                const holeCenterY = Math.round(CARD_H * 0.468);
                 const holeRadius = 35;
 
-                // 2. Левые плашки:
-                // Белая +10px вниз (0.310 -> 0.328), Серая +5px вниз (0.525 -> 0.534), Чёрная без изменений (0.740)
+                // 2. Левые плашки (вернуть высоту обратно):
                 const colorPatches = [
-                    { key: 'white', x: Math.round(CARD_W * 0.155), y: Math.round(CARD_H * 0.328) },
-                    { key: 'gray',  x: Math.round(CARD_W * 0.155), y: Math.round(CARD_H * 0.534) },
+                    { key: 'white', x: Math.round(CARD_W * 0.155), y: Math.round(CARD_H * 0.310) },
+                    { key: 'gray',  x: Math.round(CARD_W * 0.155), y: Math.round(CARD_H * 0.525) },
                     { key: 'black', x: Math.round(CARD_W * 0.155), y: Math.round(CARD_H * 0.740) }
                 ];
 
