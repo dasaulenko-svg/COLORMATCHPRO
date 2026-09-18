@@ -990,7 +990,7 @@
             container.innerHTML = html;
         }
 
-        // КУСОЧНО-ЛИНЕЙНАЯ ИНТЕРПОЛЯЦИЯ СТРОГО ПО 3 НЕЙТРАЛЬНЫМ ТОЧКАМ (БЕЗ ЦИАНА)
+        // ОБНОВЛЕННЫЙ АЛГОРИТМ №2: ТОНОВАЯ КОРРЕКЦИЯ С ВЫРАВНИВАНИЕМ СВЕТА И ТЕНЕЙ (БЕЗ ЦИАНА)
         function applyColorCorrection(rawTarget, patches) {
             const IDEAL = {
                 white: { r: 255, g: 255, b: 255 },
@@ -999,7 +999,7 @@
             };
 
             function interpolateChannel(val, ch) {
-                // Опорные точки построены строго по нейтральной шкале
+                // Точки построены строго по 3 нейтральным плашкам
                 let pts = [
                     { x: 0, y: 0 },
                     { x: patches.black[ch], y: IDEAL.black[ch] },
@@ -1008,10 +1008,8 @@
                     { x: 255, y: 255 }
                 ];
 
-                // Сортировка по возрастанию замеренных значений X
                 pts.sort((a, b) => a.x - b.x);
 
-                // Фильтрация дубликатов X во избежание деления на ноль
                 let clean = [pts[0]];
                 for (let i = 1; i < pts.length; i++) {
                     if (pts[i].x > clean[clean.length - 1].x) {
@@ -1019,7 +1017,22 @@
                     }
                 }
 
-                // Вычисление значения на интерполированном отрезке
+                // Сглаженная экстремальная обработка провалов в глубоких тенях
+                if (val < clean[0].x) {
+                    if (clean[0].x === 0) return 0;
+                    let slope = clean[0].y / clean[0].x;
+                    return Math.max(0, Math.min(255, Math.round(val * slope)));
+                }
+
+                // Сглаженная обработка пересветов
+                let last = clean[clean.length - 1];
+                if (val > last.x) {
+                    if (last.x === 255) return 255;
+                    let slope = (255 - last.y) / (255 - last.x);
+                    return Math.max(0, Math.min(255, Math.round(last.y + (val - last.x) * slope)));
+                }
+
+                // Стандартный кусочно-линейный отрезок
                 for (let i = 0; i < clean.length - 1; i++) {
                     let p1 = clean[i], p2 = clean[i + 1];
                     if (val >= p1.x && val <= p2.x) {
@@ -1029,7 +1042,7 @@
                     }
                 }
 
-                return val < clean[0].x ? clean[0].y : clean[clean.length - 1].y;
+                return Math.max(0, Math.min(255, Math.round(val)));
             }
 
             return {
@@ -1057,7 +1070,7 @@
             const percentRaw = Math.max(0, Math.min(100, Math.round(100 - (diffRaw / 255) * 100 * 2.5)));
             const statusRaw = getStatusBadge(diffRaw);
 
-            // 2. Скорректированные цвета по кусочной кривой
+            // 2. Скорректированные цвета по обновленному улучшенному алгоритму
             const stdCorr = applyColorCorrection(stdRaw, standardColorData.patches);
             const smpCorr = applyColorCorrection(smpRaw, sampleColorData.patches);
             const diffCorr = Math.round((Math.abs(stdCorr.r - smpCorr.r) + 
