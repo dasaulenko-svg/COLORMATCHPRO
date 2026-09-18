@@ -898,16 +898,17 @@
                 }
 
                 // ВЫРАВНЕННЫЕ КООРДИНАТЫ МИШЕНЕЙ:
-                // Центральная цель сдвинута правее и ниже, ровно по центру смотрового отверстия
-                const holeCenterX = Math.round(CARD_W * 0.525);
+                // 1. Центральная цель (смотровое окно): сдвинута правее к центру окошка
+                const holeCenterX = Math.round(CARD_W * 0.540); 
                 const holeCenterY = Math.round(CARD_H * 0.490);
                 const holeRadius = 35;
 
-                // Плашки сдвинуты чуть правее от края и выровнены по вертикальным центрам прямоугольников
+                // 2. Левые плашки: сдвинуты правее (X: 0.128 -> 0.155) 
+                // и раздвинуты по вертикали (Y: 0.345/0.525/0.705 -> 0.310/0.525/0.740)
                 const colorPatches = [
-                    { key: 'white', x: Math.round(CARD_W * 0.128), y: Math.round(CARD_H * 0.345) },
-                    { key: 'gray',  x: Math.round(CARD_W * 0.128), y: Math.round(CARD_H * 0.525) },
-                    { key: 'black', x: Math.round(CARD_W * 0.128), y: Math.round(CARD_H * 0.705) }
+                    { key: 'white', x: Math.round(CARD_W * 0.155), y: Math.round(CARD_H * 0.310) },
+                    { key: 'gray',  x: Math.round(CARD_W * 0.155), y: Math.round(CARD_H * 0.525) },
+                    { key: 'black', x: Math.round(CARD_W * 0.155), y: Math.round(CARD_H * 0.740) }
                 ];
 
                 extractedData.main = getRegionColor(warped, holeCenterX, holeCenterY, Math.round(holeRadius * 0.6));
