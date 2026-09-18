@@ -712,14 +712,12 @@
             cameraModal.classList.remove('active');
         }
 
-        // --- ИЗМЕНЕНИЕ: Захват strictly прямоугольной области прицела (50, 55, 300, 190) ---
         function takeSnapshot() {
             if (!video.videoWidth || !video.videoHeight) return;
 
             const viewportRect = video.getBoundingClientRect();
             if (!viewportRect.width || !viewportRect.height) return;
 
-            // Параметры прямоугольной рамки из SVG-оверлея (viewBox 0 0 400 320)
             const strokeOffset = 2;
             const overlayFrame = {
                 x: 50 + strokeOffset,
@@ -730,7 +728,6 @@
             const overlayW = 400;
             const overlayH = 320;
 
-            // Расчет реальных координат из-за object-fit: cover
             const videoRatio = video.videoWidth / video.videoHeight;
             const containerRatio = viewportRect.width / viewportRect.height;
 
@@ -751,7 +748,6 @@
             const scaleX = video.videoWidth / renderW;
             const scaleY = video.videoHeight / renderH;
 
-            // Перевод координат прямоугольника оверлея в пиксели исходного видеопотока
             const rectViewportX = (overlayFrame.x / overlayW) * viewportRect.width;
             const rectViewportY = (overlayFrame.y / overlayH) * viewportRect.height;
             const rectViewportW = (overlayFrame.w / overlayW) * viewportRect.width;
@@ -762,7 +758,6 @@
             const cropW = Math.min(video.videoWidth - cropX, Math.round(rectViewportW * scaleX));
             const cropH = Math.min(video.videoHeight - cropY, Math.round(rectViewportH * scaleY));
 
-            // Создаем canvas строго под область прямоугольного прицела
             const croppedCanvas = document.createElement('canvas');
             croppedCanvas.width = cropW;
             croppedCanvas.height = cropH;
@@ -824,8 +819,9 @@
 
         function processImageWithCard(canvasSource, canvasTargetId) {
             let src = null, gray = null, blurred = null, thresh = null;
-            let contours = null, hierarchy = null, edges = null, kernel = null;
+            let contours = null, hierarchy = null;
             let warped = null, srcMat = null, dstMat = null, M = null;
+
             let extractedData = {
                 main: { r: 0, g: 0, b: 0 },
                 patches: { white: {r:0,g:0,b:0}, gray: {r:0,g:0,b:0}, black: {r:0,g:0,b:0}, cyan: {r:0,g:0,b:0} }
@@ -836,78 +832,45 @@
                 gray = new cv.Mat();
                 blurred = new cv.Mat();
                 thresh = new cv.Mat();
-                edges = new cv.Mat();
                 contours = new cv.MatVector();
                 hierarchy = new cv.Mat();
 
                 const imgWidth = src.cols;
                 const imgHeight = src.rows;
                 const totalArea = imgWidth * imgHeight;
-                const imgCenterX = imgWidth / 2;
-                const imgCenterY = imgHeight / 2;
 
                 cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
-                cv.GaussianBlur(gray, blurred, new cv.Size(5, 5), 0);
+                cv.GaussianBlur(gray, blurred, new cv.Size(7, 7), 0);
 
-                cv.Canny(blurred, edges, 25, 110);
-                kernel = cv.Mat.ones(3, 3, cv.CV_8U);
-                cv.dilate(edges, thresh, kernel);
+                cv.adaptiveThreshold(blurred, thresh, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY_INV, 15, 3);
 
                 cv.findContours(thresh, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
 
-                let bestScore = -Infinity;
                 let bestQuad = null;
-                let bestBoundingRect = null;
+                let maxArea = 0;
 
                 for (let i = 0; i < contours.size(); ++i) {
                     let cnt = contours.get(i);
                     let area = cv.contourArea(cnt);
-                    
-                    if (area > totalArea * 0.02 && area < totalArea * 0.90) {
-                        let rect = cv.boundingRect(cnt);
-                        let aspectRatio = rect.width / rect.height;
-                        
-                        if (aspectRatio < 1.0) aspectRatio = 1.0 / aspectRatio;
 
-                        if (aspectRatio >= 1.15 && aspectRatio <= 2.2) {
-                            let cntCenterX = rect.x + rect.width / 2;
-                            let cntCenterY = rect.y + rect.height / 2;
-                            let distToCenter = Math.hypot(cntCenterX - imgCenterX, cntCenterY - imgCenterY);
-                            let maxPossibleDist = Math.hypot(imgCenterX, imgCenterY);
-                            let centerScore = 1.0 - (distToCenter / maxPossibleDist);
+                    if (area > totalArea * 0.20) {
+                        let peri = cv.arcLength(cnt, true);
+                        let approx = new cv.Mat();
+                        cv.approxPolyDP(cnt, approx, 0.03 * peri, true);
 
-                            let score = area * Math.pow(centerScore, 1.2);
-
-                            let peri = cv.arcLength(cnt, true);
-                            let quadFound = false;
-
-                            for (let epsScale = 0.015; epsScale <= 0.08; epsScale += 0.01) {
-                                let approx = new cv.Mat();
-                                cv.approxPolyDP(cnt, approx, epsScale * peri, true);
-
-                                if (approx.rows === 4 && cv.isContourConvex(approx)) {
-                                    if (score > bestScore) {
-                                        bestScore = score;
-                                        bestQuad = [];
-                                        for (let j = 0; j < 4; j++) {
-                                            bestQuad.push({
-                                                x: approx.data32S[j * 2],
-                                                y: approx.data32S[j * 2 + 1]
-                                            });
-                                        }
-                                    }
-                                    approx.delete();
-                                    quadFound = true;
-                                    break;
+                        if (approx.rows === 4 && cv.isContourConvex(approx)) {
+                            if (area > maxArea) {
+                                maxArea = area;
+                                bestQuad = [];
+                                for (let j = 0; j < 4; j++) {
+                                    bestQuad.push({
+                                        x: approx.data32S[j * 2],
+                                        y: approx.data32S[j * 2 + 1]
+                                    });
                                 }
-                                approx.delete();
-                            }
-
-                            if (!quadFound && !bestQuad && score > bestScore) {
-                                bestScore = score;
-                                bestBoundingRect = rect;
                             }
                         }
+                        approx.delete();
                     }
                     cnt.delete();
                 }
@@ -915,8 +878,6 @@
                 warped = new cv.Mat();
                 const CARD_W = 856;
                 const CARD_H = 540;
-
-                let holeCenterX, holeCenterY, holeRadius;
 
                 if (bestQuad) {
                     let add = bestQuad.map(p => p.x + p.y);
@@ -932,27 +893,13 @@
 
                     M = cv.getPerspectiveTransform(srcMat, dstMat);
                     cv.warpPerspective(src, warped, M, new cv.Size(CARD_W, CARD_H));
-
-                    holeCenterX = Math.round(CARD_W * 0.50);
-                    holeCenterY = Math.round(CARD_H * 0.46);
-                    holeRadius = 35;
-
-                } else if (bestBoundingRect) {
-                    let rect = bestBoundingRect;
-                    let roi = src.roi(rect);
-                    cv.resize(roi, warped, new cv.Size(CARD_W, CARD_H));
-                    roi.delete();
-
-                    holeCenterX = Math.round(CARD_W * 0.50);
-                    holeCenterY = Math.round(CARD_H * 0.46);
-                    holeRadius = 35;
-
                 } else {
                     cv.resize(src, warped, new cv.Size(CARD_W, CARD_H));
-                    holeCenterX = Math.round(CARD_W * 0.50);
-                    holeCenterY = Math.round(CARD_H * 0.46);
-                    holeRadius = 35;
                 }
+
+                const holeCenterX = Math.round(CARD_W * 0.50);
+                const holeCenterY = Math.round(CARD_H * 0.46);
+                const holeRadius = 35;
 
                 const colorPatches = [
                     { key: 'white', x: Math.round(CARD_W * 0.175), y: Math.round(CARD_H * 0.33) },
@@ -968,9 +915,7 @@
                 });
 
                 const greenColor = new cv.Scalar(0, 230, 118, 255);
-
                 drawTargetCrosshair(warped, holeCenterX, holeCenterY, greenColor, holeRadius);
-
                 colorPatches.forEach(p => {
                     drawTargetCrosshair(warped, p.x, p.y, greenColor, 18);
                 });
@@ -982,8 +927,6 @@
                 if (gray) gray.delete();
                 if (blurred) blurred.delete();
                 if (thresh) thresh.delete();
-                if (edges) edges.delete();
-                if (kernel) kernel.delete();
                 if (contours) contours.delete();
                 if (hierarchy) hierarchy.delete();
                 if (warped) warped.delete();
