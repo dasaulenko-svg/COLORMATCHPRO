@@ -897,19 +897,20 @@
                     cv.resize(src, warped, new cv.Size(CARD_W, CARD_H));
                 }
 
-                // Центральная дырка под цель
-                const holeCenterX = Math.round(CARD_W * 0.50);
-                const holeCenterY = Math.round(CARD_H * 0.46);
+                // ВЫРАВНЕННЫЕ КООРДИНАТЫ МИШЕНЕЙ:
+                // Центральная цель сдвинута правее и ниже, ровно по центру смотрового отверстия
+                const holeCenterX = Math.round(CARD_W * 0.525);
+                const holeCenterY = Math.round(CARD_H * 0.490);
                 const holeRadius = 35;
 
-                // Скорректированные координаты 3 плашек строго по их центрам на левой стороне
+                // Плашки сдвинуты чуть правее от края и выровнены по вертикальным центрам прямоугольников
                 const colorPatches = [
-                    { key: 'white', x: Math.round(CARD_W * 0.115), y: Math.round(CARD_H * 0.355) },
-                    { key: 'gray',  x: Math.round(CARD_W * 0.115), y: Math.round(CARD_H * 0.535) },
-                    { key: 'black', x: Math.round(CARD_W * 0.115), y: Math.round(CARD_H * 0.715) }
+                    { key: 'white', x: Math.round(CARD_W * 0.128), y: Math.round(CARD_H * 0.345) },
+                    { key: 'gray',  x: Math.round(CARD_W * 0.128), y: Math.round(CARD_H * 0.525) },
+                    { key: 'black', x: Math.round(CARD_W * 0.128), y: Math.round(CARD_H * 0.705) }
                 ];
 
-                extractedData.main = getRegionColor(warped, holeCenterX, holeCenterY, Math.round(holeRadius * 0.7));
+                extractedData.main = getRegionColor(warped, holeCenterX, holeCenterY, Math.round(holeRadius * 0.6));
 
                 colorPatches.forEach(p => {
                     extractedData.patches[p.key] = getRegionColor(warped, p.x, p.y, 6);
