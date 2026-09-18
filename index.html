@@ -902,11 +902,11 @@
                 const holeCenterY = Math.round(CARD_H * 0.46);
                 const holeRadius = 35;
 
-                // 3 ахроматических квадрата СЛЕВА
+                // Скорректированные координаты 3 плашек строго по их центрам на левой стороне
                 const colorPatches = [
-                    { key: 'white', x: Math.round(CARD_W * 0.175), y: Math.round(CARD_H * 0.33) },
-                    { key: 'gray',  x: Math.round(CARD_W * 0.175), y: Math.round(CARD_H * 0.62) },
-                    { key: 'black', x: Math.round(CARD_W * 0.175), y: Math.round(CARD_H * 0.90) }
+                    { key: 'white', x: Math.round(CARD_W * 0.115), y: Math.round(CARD_H * 0.355) },
+                    { key: 'gray',  x: Math.round(CARD_W * 0.115), y: Math.round(CARD_H * 0.535) },
+                    { key: 'black', x: Math.round(CARD_W * 0.115), y: Math.round(CARD_H * 0.715) }
                 ];
 
                 extractedData.main = getRegionColor(warped, holeCenterX, holeCenterY, Math.round(holeRadius * 0.7));
@@ -918,7 +918,7 @@
                 const greenColor = new cv.Scalar(0, 230, 118, 255);
                 drawTargetCrosshair(warped, holeCenterX, holeCenterY, greenColor, holeRadius);
                 colorPatches.forEach(p => {
-                    drawTargetCrosshair(warped, p.x, p.y, greenColor, 18);
+                    drawTargetCrosshair(warped, p.x, p.y, greenColor, 12);
                 });
 
                 cv.imshow(canvasTargetId, warped);
