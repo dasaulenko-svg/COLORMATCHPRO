@@ -824,7 +824,7 @@
 
             let extractedData = {
                 main: { r: 0, g: 0, b: 0 },
-                patches: { white: {r:0,g:0,b:0}, gray: {r:0,g:0,b:0}, black: {r:0,g:0,b:0}, cyan: {r:0,g:0,b:0} }
+                patches: { white: {r:0,g:0,b:0}, gray: {r:0,g:0,b:0}, black: {r:0,g:0,b:0} }
             };
 
             try {
@@ -897,15 +897,16 @@
                     cv.resize(src, warped, new cv.Size(CARD_W, CARD_H));
                 }
 
+                // Центральная дырка под цель
                 const holeCenterX = Math.round(CARD_W * 0.50);
                 const holeCenterY = Math.round(CARD_H * 0.46);
                 const holeRadius = 35;
 
+                // 3 ахроматических квадрата СЛЕВА
                 const colorPatches = [
                     { key: 'white', x: Math.round(CARD_W * 0.175), y: Math.round(CARD_H * 0.33) },
                     { key: 'gray',  x: Math.round(CARD_W * 0.175), y: Math.round(CARD_H * 0.62) },
-                    { key: 'black', x: Math.round(CARD_W * 0.825), y: Math.round(CARD_H * 0.33) },
-                    { key: 'cyan',  x: Math.round(CARD_W * 0.825), y: Math.round(CARD_H * 0.62) }
+                    { key: 'black', x: Math.round(CARD_W * 0.175), y: Math.round(CARD_H * 0.90) }
                 ];
 
                 extractedData.main = getRegionColor(warped, holeCenterX, holeCenterY, Math.round(holeRadius * 0.7));
@@ -957,15 +958,13 @@
             const patchNames = {
                 white: 'Белый',
                 gray: 'Серый',
-                black: 'Чёрный',
-                cyan: 'Циан'
+                black: 'Чёрный'
             };
 
             const IDEAL = {
                 white: { r: 255, g: 255, b: 255 },
                 gray:  { r: 128, g: 128, b: 128 },
-                black: { r: 20,  g: 20,  b: 20  },
-                cyan:  { r: 0,   g: 160, b: 220 }
+                black: { r: 20,  g: 20,  b: 20  }
             };
 
             const fmtDelta = (val) => (val > 0 ? `+${val}` : `${val}`);
@@ -981,7 +980,7 @@
                     <span class="patch-text"><b>Цель:</b> RGB ${m.r}, ${m.g}, ${m.b}</span>
                 </div>`;
 
-            for (const key of ['white', 'gray', 'black', 'cyan']) {
+            for (const key of ['white', 'gray', 'black']) {
                 if (p && p[key]) {
                     const c = p[key];
                     html += `
@@ -998,7 +997,7 @@
                     <div class="profile-title">Цветокоррекция (Δ RGB)</div>
             `;
 
-            for (const key of ['white', 'gray', 'black', 'cyan']) {
+            for (const key of ['white', 'gray', 'black']) {
                 if (p && p[key]) {
                     html += `
                         <div class="profile-row">
