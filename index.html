@@ -1,0 +1,1166 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ColorMatch Pro</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --bg-color: #0B0E14;
+            --card-bg: rgba(22, 28, 45, 0.75);
+            --card-border: rgba(255, 255, 255, 0.08);
+            --accent-cyan: #00E5FF;
+            --accent-purple: #8B5CF6;
+            --accent-purple-glow: rgba(139, 92, 246, 0.35);
+            --accent-green: #00E676;
+            --accent-warning: #FFB300;
+            --accent-red: #FF5252;
+            --text-main: #F3F4F6;
+            --text-muted: #9CA3AF;
+        }
+
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        
+        body { 
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; 
+            background: var(--bg-color); 
+            background-image: radial-gradient(circle at 50% 0%, #1A2035 0%, #0B0E14 80%);
+            color: var(--text-main); 
+            margin: 0; 
+            padding: 16px 12px; 
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .container { width: 100%; max-width: 480px; }
+
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+            padding: 4px 0;
+        }
+
+        .brand { display: flex; align-items: center; gap: 10px; }
+
+        .logo-badge {
+            width: 36px;
+            height: 36px;
+            background: linear-gradient(135deg, var(--accent-purple), var(--accent-cyan));
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0 16px var(--accent-purple-glow);
+        }
+
+        .logo-badge svg { width: 20px; height: 20px; fill: #fff; }
+
+        h1 { 
+            margin: 0; 
+            font-size: 18px; 
+            font-weight: 800; 
+            letter-spacing: -0.5px;
+            background: linear-gradient(135deg, #FFF 60%, var(--accent-cyan));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .menu-container { position: relative; }
+
+        .menu-btn {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            color: var(--text-main);
+            padding: 8px 12px;
+            border-radius: 12px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            backdrop-filter: blur(10px);
+        }
+
+        .menu-dropdown {
+            position: absolute;
+            right: 0;
+            top: 46px;
+            background: rgba(18, 24, 38, 0.95);
+            border: 1px solid var(--card-border);
+            border-radius: 14px;
+            padding: 6px;
+            width: 220px;
+            box-shadow: 0 12px 32px rgba(0,0,0,0.5);
+            backdrop-filter: blur(16px);
+            display: none;
+            z-index: 100;
+        }
+
+        .menu-dropdown.active { display: block; }
+
+        .menu-item {
+            padding: 10px 12px;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-muted);
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .menu-item:hover, .menu-item.active {
+            background: rgba(255, 255, 255, 0.08);
+            color: #fff;
+        }
+
+        .status-pill { 
+            font-size: 11px; 
+            font-weight: 600;
+            padding: 4px 10px;
+            border-radius: 20px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--card-border);
+            color: var(--accent-cyan);
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            margin-bottom: 14px;
+        }
+
+        .status-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background-color: var(--accent-cyan);
+            box-shadow: 0 0 8px var(--accent-cyan);
+        }
+
+        .status-dot.loading {
+            background-color: var(--accent-warning);
+            box-shadow: 0 0 8px var(--accent-warning);
+            animation: pulse 1.2s infinite alternate;
+        }
+
+        @keyframes pulse { 0% { opacity: 0.3; } 100% { opacity: 1; } }
+
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+        .col { 
+            background: var(--card-bg); 
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--card-border);
+            padding: 12px; 
+            border-radius: 16px; 
+            display: flex; 
+            flex-direction: column; 
+            justify-content: flex-start;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+        }
+
+        .col-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+
+        h3 { 
+            font-size: 12px; 
+            margin: 0; 
+            font-weight: 700; 
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-muted);
+        }
+
+        .step-tag {
+            font-size: 10px;
+            font-weight: 700;
+            padding: 2px 6px;
+            border-radius: 4px;
+            background: rgba(255,255,255,0.1);
+            color: #fff;
+        }
+
+        .preview-box { 
+            width: 100%; 
+            height: 130px; 
+            border: 1px dashed rgba(255, 255, 255, 0.15); 
+            border-radius: 12px; 
+            margin-bottom: 10px; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            overflow: hidden; 
+            background: #07090E; 
+        }
+
+        canvas { max-width: 100%; max-height: 100%; object-fit: contain; }
+
+        .btn-action { 
+            background: linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%); 
+            color: white; 
+            padding: 10px 6px; 
+            font-size: 12px; 
+            font-weight: 700; 
+            border-radius: 10px; 
+            border: none;
+            cursor: pointer; 
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            width: 100%; 
+            box-shadow: 0 4px 14px var(--accent-purple-glow);
+        }
+
+        .btn-action.secondary { 
+            background: linear-gradient(135deg, #00C6FF 0%, #0072FF 100%); 
+            box-shadow: 0 4px 14px rgba(0, 198, 255, 0.25);
+        }
+
+        .btn-action:disabled { opacity: 0.3; pointer-events: none; filter: grayscale(1); }
+
+        .patches-list {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            margin-top: 10px;
+            width: 100%;
+            background: rgba(0, 0, 0, 0.35);
+            padding: 8px;
+            border-radius: 10px;
+            border: 1px solid var(--card-border);
+        }
+
+        .patch-row {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 10px;
+            color: var(--text-muted);
+        }
+
+        .patch-row.main-patch {
+            border-bottom: 1px dashed rgba(255, 255, 255, 0.15);
+            padding-bottom: 4px;
+            margin-bottom: 2px;
+            color: var(--text-main);
+        }
+
+        .swatch-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            border: 1px solid rgba(255,255,255,0.3);
+            flex-shrink: 0;
+        }
+
+        .patch-text {
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        .correction-profile {
+            margin-top: 8px;
+            padding-top: 6px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            font-size: 10px;
+        }
+
+        .profile-title {
+            font-size: 9px;
+            font-weight: 700;
+            color: var(--accent-cyan);
+            margin-bottom: 4px;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            text-align: left;
+        }
+
+        .profile-row {
+            display: flex;
+            justify-content: space-between;
+            color: var(--text-muted);
+            margin-bottom: 2px;
+        }
+
+        .profile-row strong {
+            color: #ffffff;
+            font-family: monospace;
+            font-size: 10px;
+        }
+
+        .card { 
+            background: var(--card-bg); 
+            backdrop-filter: blur(16px);
+            border: 1px solid var(--card-border);
+            padding: 16px; 
+            border-radius: 18px; 
+            margin-top: 14px; 
+            box-shadow: 0 12px 32px rgba(0,0,0,0.4);
+            text-align: center;
+        }
+
+        .comparison-block {
+            padding: 12px;
+            border-radius: 14px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--card-border);
+            margin-bottom: 12px;
+            text-align: center;
+        }
+
+        .comparison-title {
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 6px;
+            color: var(--text-muted);
+        }
+
+        .comparison-title.corrected {
+            color: var(--accent-cyan);
+        }
+
+        .match-score-main { font-size: 28px; font-weight: 800; letter-spacing: -1px; }
+        .match-score-sub { font-size: 20px; font-weight: 800; letter-spacing: -0.5px; }
+
+        .match-subtitle {
+            font-size: 11px;
+            font-weight: 700;
+            padding: 3px 10px;
+            border-radius: 20px;
+            text-transform: uppercase;
+            margin-top: 4px;
+            display: inline-block;
+        }
+
+        .match-success { color: var(--accent-green); }
+        .match-success .match-subtitle { background: rgba(0, 230, 118, 0.12); color: var(--accent-green); }
+
+        .match-warning { color: var(--accent-warning); }
+        .match-warning .match-subtitle { background: rgba(255, 179, 0, 0.12); color: var(--accent-warning); }
+
+        .match-error { color: var(--accent-red); }
+        .match-error .match-subtitle { background: rgba(255, 82, 82, 0.12); color: var(--accent-red); }
+
+        .swatch-comparison {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            margin-top: 10px;
+            padding: 8px;
+            background: rgba(0, 0, 0, 0.25);
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .swatch-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 3px;
+            font-size: 10px;
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+
+        .swatch-circle {
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            border: 2px solid rgba(255,255,255,0.2);
+        }
+
+        .reset-btn { 
+            background: rgba(255, 82, 82, 0.12); 
+            color: var(--accent-red); 
+            border: 1px solid rgba(255, 82, 82, 0.3); 
+            padding: 10px 20px; 
+            border-radius: 10px; 
+            margin-top: 4px; 
+            cursor: pointer; 
+            font-size: 12px; 
+            font-weight: 700;
+            width: 100%;
+        }
+
+        .camera-modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.9);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+            backdrop-filter: blur(8px);
+        }
+
+        .camera-modal.active { display: flex; }
+
+        .camera-card {
+            background: #121824;
+            border: 1px solid var(--card-border);
+            border-radius: 20px;
+            width: 100%;
+            max-width: 420px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.8);
+        }
+
+        .camera-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 14px;
+            font-weight: 700;
+        }
+
+        .close-btn {
+            background: rgba(255,255,255,0.1);
+            border: none;
+            color: #fff;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .camera-viewport {
+            position: relative;
+            width: 100%;
+            height: 320px;
+            background: #000;
+            border-radius: 14px;
+            overflow: hidden;
+        }
+
+        .camera-viewport video { width: 100%; height: 100%; object-fit: cover; }
+
+        .camera-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+
+        .view-pane { display: none; }
+        .view-pane.active { display: block; }
+        
+        .stub-box {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            padding: 30px 16px;
+            border-radius: 16px;
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 13px;
+        }
+    </style>
+    <script async src="https://docs.opencv.org/4.5.5/opencv.js" onload="onOpenCvReady()"></script>
+</head>
+<body>
+
+    <div class="container">
+        <div class="header">
+            <div class="brand">
+                <div class="logo-badge">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z"/>
+                    </svg>
+                </div>
+                <h1>COLORMATCH</h1>
+            </div>
+
+            <div class="menu-container">
+                <button class="menu-btn" onclick="toggleMenu()">
+                    <span id="activeMenuLabel">🎯 Сравнение</span> ▾
+                </button>
+                <div class="menu-dropdown" id="menuDropdown">
+                    <div class="menu-item active" onclick="switchMode('compare', '🎯 Сравнение')">
+                        🎯 Сравнение цвета
+                    </div>
+                    <div class="menu-item" onclick="switchMode('calibrate', '🖥️ Калибровка')">
+                        🖥️ Калибровка экрана
+                    </div>
+                    <div class="menu-item" onclick="switchMode('correct', '🎨 Цветокоррекция')">
+                        🎨 Цветокоррекция снимка
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="status-pill" id="cvStatus">
+            <span class="status-dot loading"></span> Загрузка ядра OpenCV...
+        </div>
+
+        <div class="view-pane active" id="paneCompare">
+            <div class="grid">
+                <div class="col">
+                    <div class="col-header">
+                        <h3>1. Эталон</h3>
+                        <span class="step-tag">01</span>
+                    </div>
+                    <div class="preview-box">
+                        <canvas id="canvasStandard"></canvas>
+                    </div>
+                    <button class="btn-action" id="btnStandard" onclick="openCamera('standard')" disabled>
+                        📷 Снять Эталон
+                    </button>
+                    <div id="infoStandard"></div>
+                </div>
+
+                <div class="col">
+                    <div class="col-header">
+                        <h3>2. Образец</h3>
+                        <span class="step-tag">02</span>
+                    </div>
+                    <div class="preview-box">
+                        <canvas id="canvasSample"></canvas>
+                    </div>
+                    <button class="btn-action secondary" id="btnSample" onclick="openCamera('sample')" disabled>
+                        📸 Снять Образец
+                    </button>
+                    <div id="infoSample"></div>
+                </div>
+            </div>
+
+            <div class="card" id="infoCard" style="display:none;">
+                <div id="result"></div>
+                <button class="reset-btn" id="resetBtn">🔄 Начать новый тест</button>
+            </div>
+        </div>
+
+        <div class="view-pane" id="paneCalibrate">
+            <div class="stub-box">
+                🖥️ <b>Калибровка экрана</b><br><br>
+                Режим настройки яркости и цветового профиля дисплея.
+            </div>
+        </div>
+
+        <div class="view-pane" id="paneCorrect">
+            <div class="stub-box">
+                🎨 <b>Цветокоррекция снимка</b><br><br>
+                Выравнивание баланса белого и экспозиции.
+            </div>
+        </div>
+    </div>
+
+    <div class="camera-modal" id="cameraModal">
+        <div class="camera-card">
+            <div class="camera-header">
+                <span id="cameraTitle">Сканирование карточки</span>
+                <button class="close-btn" onclick="closeCamera()">✕</button>
+            </div>
+            
+            <div class="camera-viewport">
+                <video id="webcam" autoplay playsinline></video>
+                <svg class="camera-overlay" viewBox="0 0 400 320">
+                    <defs>
+                        <mask id="card-mask">
+                            <rect width="100%" height="100%" fill="white"/>
+                            <rect x="50" y="55" width="300" height="190" rx="12" fill="black"/>
+                        </mask>
+                    </defs>
+
+                    <rect width="100%" height="100%" fill="rgba(0,0,0,0.55)" mask="url(#card-mask)"/>
+                    <rect x="50" y="55" width="300" height="190" rx="12" fill="none" stroke="#00E5FF" stroke-width="2" stroke-dasharray="6 4"/>
+                    <circle cx="200" cy="150" r="26" fill="none" stroke="#00E676" stroke-width="2"/>
+                    <line x1="200" y1="115" x2="200" y2="185" stroke="#00E676" stroke-width="1.5"/>
+                    <line x1="165" y1="150" x2="235" y2="150" stroke="#00E676" stroke-width="1.5"/>
+
+                    <text x="200" y="32" fill="#FFFFFF" font-size="12" font-weight="600" text-anchor="middle">
+                        Совместите карту с рамкой
+                    </text>
+                </svg>
+            </div>
+
+            <button class="btn-action" onclick="takeSnapshot()">
+                📸 Сделать снимок
+            </button>
+        </div>
+    </div>
+
+    <script>
+        let isOpenCvReady = false;
+        let standardColorData = null;
+        let sampleColorData = null;
+        let activeMode = 'standard';
+        let mediaStream = null;
+
+        const cvStatus = document.getElementById('cvStatus');
+        const btnStandard = document.getElementById('btnStandard');
+        const btnSample = document.getElementById('btnSample');
+
+        const infoStandard = document.getElementById('infoStandard');
+        const infoSample = document.getElementById('infoSample');
+        const infoCard = document.getElementById('infoCard');
+        const resultDiv = document.getElementById('result');
+        const resetBtn = document.getElementById('resetBtn');
+
+        const cameraModal = document.getElementById('cameraModal');
+        const video = document.getElementById('webcam');
+
+        function toggleMenu() {
+            document.getElementById('menuDropdown').classList.toggle('active');
+        }
+
+        function switchMode(modeKey, labelText) {
+            document.getElementById('activeMenuLabel').innerText = labelText;
+            document.getElementById('menuDropdown').classList.remove('active');
+
+            document.querySelectorAll('.menu-item').forEach(el => el.classList.remove('active'));
+            event.target.classList.add('active');
+
+            document.querySelectorAll('.view-pane').forEach(el => el.classList.remove('active'));
+            if (modeKey === 'compare') document.getElementById('paneCompare').classList.add('active');
+            if (modeKey === 'calibrate') document.getElementById('paneCalibrate').classList.add('active');
+            if (modeKey === 'correct') document.getElementById('paneCorrect').classList.add('active');
+        }
+
+        window.addEventListener('click', (e) => {
+            if (!e.target.closest('.menu-container')) {
+                document.getElementById('menuDropdown').classList.remove('active');
+            }
+        });
+
+        function onOpenCvReady() {
+            isOpenCvReady = true;
+            cvStatus.innerHTML = '<span class="status-dot"></span> Готов к работе';
+            btnStandard.disabled = false;
+            restoreState();
+        }
+
+        async function openCamera(mode) {
+            activeMode = mode;
+            document.getElementById('cameraTitle').innerText = mode === 'standard' ? 'Съемка Эталона' : 'Съемка Образца';
+            cameraModal.classList.add('active');
+
+            try {
+                mediaStream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: { exact: "environment" } }
+                });
+            } catch (err) {
+                try {
+                    mediaStream = await navigator.mediaDevices.getUserMedia({ video: true });
+                } catch (fallbackErr) {
+                    alert('Ошибка доступа к камере: ' + fallbackErr.message);
+                    closeCamera();
+                    return;
+                }
+            }
+
+            video.srcObject = mediaStream;
+        }
+
+        function closeCamera() {
+            if (mediaStream) {
+                mediaStream.getTracks().forEach(track => track.stop());
+                mediaStream = null;
+            }
+            video.srcObject = null;
+            cameraModal.classList.remove('active');
+        }
+
+        function takeSnapshot() {
+            if (!video.videoWidth) return;
+
+            const maxDim = 900;
+            let w = video.videoWidth;
+            let h = video.videoHeight;
+
+            if (w > maxDim || h > maxDim) {
+                if (w > h) {
+                    h = Math.round((h * maxDim) / w);
+                    w = maxDim;
+                } else {
+                    w = Math.round((w * maxDim) / h);
+                    h = maxDim;
+                }
+            }
+
+            const scaledCanvas = document.createElement('canvas');
+            scaledCanvas.width = w;
+            scaledCanvas.height = h;
+            const ctx = scaledCanvas.getContext('2d');
+            ctx.drawImage(video, 0, 0, w, h);
+
+            closeCamera();
+            handleImageSource(scaledCanvas, activeMode);
+        }
+
+        function handleImageSource(canvasSource, mode) {
+            const canvasTargetId = mode === 'standard' ? 'canvasStandard' : 'canvasSample';
+            const colorData = processImageWithCard(canvasSource, canvasTargetId);
+
+            if (mode === 'standard') {
+                standardColorData = colorData;
+                renderPatchesList('infoStandard', standardColorData);
+                localStorage.setItem('cm_card_standard_data', JSON.stringify(standardColorData));
+
+                btnSample.disabled = false;
+                if (sampleColorData) compareColors();
+            } else {
+                sampleColorData = colorData;
+                renderPatchesList('infoSample', sampleColorData);
+                compareColors();
+            }
+        }
+
+        function drawTargetCrosshair(mat, cx, cy, colorScalar, radius = 18) {
+            let pCenter = new cv.Point(cx, cy);
+            cv.circle(mat, pCenter, radius, colorScalar, 2, cv.LINE_AA);
+            cv.circle(mat, pCenter, 2, colorScalar, -1, cv.LINE_AA);
+            
+            cv.line(mat, new cv.Point(cx - radius - 4, cy), new cv.Point(cx + radius + 4, cy), colorScalar, 1.5, cv.LINE_AA);
+            cv.line(mat, new cv.Point(cx, cy - radius - 4), new cv.Point(cx, cy + radius + 4), colorScalar, 1.5, cv.LINE_AA);
+        }
+
+        function getRegionColor(mat, cx, cy, radius = 12) {
+            let rSum = 0, gSum = 0, bSum = 0, count = 0;
+            for (let y = cy - radius; y <= cy + radius; y++) {
+                for (let x = cx - radius; x <= cx + radius; x++) {
+                    let dist = Math.sqrt(Math.pow(x - cx, 2) + Math.pow(y - cy, 2));
+                    if (dist <= radius && x >= 0 && x < mat.cols && y >= 0 && y < mat.rows) {
+                        let pixel = mat.ucharPtr(y, x);
+                        rSum += pixel[0];
+                        gSum += pixel[1];
+                        bSum += pixel[2];
+                        count++;
+                    }
+                }
+            }
+            return count > 0 ? {
+                r: Math.round(rSum / count),
+                g: Math.round(gSum / count),
+                b: Math.round(bSum / count)
+            } : { r: 0, g: 0, b: 0 };
+        }
+
+        // --- ОБНОВЛЕННЫЙ И ИСПРАВЛЕННЫЙ АЛГОРИТМ ПОИСКА И ПОЗИЦИОНИРОВАНИЯ КАРТОЧКИ ---
+        function processImageWithCard(canvasSource, canvasTargetId) {
+            let src = null, gray = null, blurred = null, thresh = null, morph = null;
+            let contours = null, hierarchy = null, edges = null, kernel = null;
+            let warped = null, srcMat = null, dstMat = null, M = null;
+            let extractedData = {
+                main: { r: 0, g: 0, b: 0 },
+                patches: { white: {r:0,g:0,b:0}, gray: {r:0,g:0,b:0}, black: {r:0,g:0,b:0}, cyan: {r:0,g:0,b:0} }
+            };
+
+            try {
+                src = cv.imread(canvasSource);
+                gray = new cv.Mat();
+                blurred = new cv.Mat();
+                thresh = new cv.Mat();
+                morph = new cv.Mat();
+                edges = new cv.Mat();
+                contours = new cv.MatVector();
+                hierarchy = new cv.Mat();
+
+                const imgWidth = src.cols;
+                const imgHeight = src.rows;
+                const totalArea = imgWidth * imgHeight;
+                const imgCenterX = imgWidth / 2;
+                const imgCenterY = imgHeight / 2;
+
+                cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
+                cv.GaussianBlur(gray, blurred, new cv.Size(7, 7), 0);
+
+                // Использование Dilation для сшивания границ карточки
+                cv.Canny(blurred, edges, 30, 100);
+                kernel = cv.Mat.ones(3, 3, cv.CV_8U);
+                cv.dilate(edges, thresh, kernel);
+
+                // RETR_EXTERNAL - игнорирует внутренние стикеры, надписи и прорези
+                cv.findContours(thresh, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
+
+                let bestScore = -Infinity;
+                let bestQuad = null;
+                let bestBoundingRect = null;
+
+                for (let i = 0; i < contours.size(); ++i) {
+                    let cnt = contours.get(i);
+                    let area = cv.contourArea(cnt);
+                    
+                    // Исключаем фоновый шум и слишком огромные контуры (>50% кадра)
+                    if (area > totalArea * 0.03 && area < totalArea * 0.85) {
+                        let rect = cv.boundingRect(cnt);
+                        let aspectRatio = rect.width / rect.height;
+                        
+                        // Поправка на ориентацию
+                        if (aspectRatio < 1.0) aspectRatio = 1.0 / aspectRatio;
+
+                        // Фильтрация по пропорциям карточки (1.25 .. 1.85)
+                        if (aspectRatio >= 1.15 && aspectRatio <= 2.0) {
+                            let cntCenterX = rect.x + rect.width / 2;
+                            let cntCenterY = rect.y + rect.height / 2;
+                            let distToCenter = Math.hypot(cntCenterX - imgCenterX, cntCenterY - imgCenterY);
+                            let maxPossibleDist = Math.hypot(imgCenterX, imgCenterY);
+                            let centerScore = 1.0 - (distToCenter / maxPossibleDist);
+
+                            // Оценка приоритета элемента по близости к центру кадра
+                            let score = area * Math.pow(centerScore, 1.5);
+
+                            let peri = cv.arcLength(cnt, true);
+                            let quadFound = false;
+
+                            for (let epsScale = 0.015; epsScale <= 0.08; epsScale += 0.01) {
+                                let approx = new cv.Mat();
+                                cv.approxPolyDP(cnt, approx, epsScale * peri, true);
+
+                                if (approx.rows === 4 && cv.isContourConvex(approx)) {
+                                    if (score > bestScore) {
+                                        bestScore = score;
+                                        bestQuad = [];
+                                        for (let j = 0; j < 4; j++) {
+                                            bestQuad.push({
+                                                x: approx.data32S[j * 2],
+                                                y: approx.data32S[j * 2 + 1]
+                                            });
+                                        }
+                                    }
+                                    approx.delete();
+                                    quadFound = true;
+                                    break;
+                                }
+                                approx.delete();
+                            }
+
+                            if (!quadFound && !bestQuad && score > bestScore) {
+                                bestScore = score;
+                                bestBoundingRect = rect;
+                            }
+                        }
+                    }
+                    cnt.delete();
+                }
+
+                warped = new cv.Mat();
+                const CARD_W = 856;
+                const CARD_H = 540;
+
+                let holeCenterX, holeCenterY, holeRadius;
+
+                if (bestQuad) {
+                    let add = bestQuad.map(p => p.x + p.y);
+                    let diff = bestQuad.map(p => p.y - p.x);
+
+                    let tl = bestQuad[add.indexOf(Math.min(...add))];
+                    let br = bestQuad[add.indexOf(Math.max(...add))];
+                    let tr = bestQuad[diff.indexOf(Math.min(...diff))];
+                    let bl = bestQuad[diff.indexOf(Math.max(...diff))];
+
+                    srcMat = cv.matFromArray(4, 1, cv.CV_32FC2, [tl.x, tl.y, tr.x, tr.y, br.x, br.y, bl.x, bl.y]);
+                    dstMat = cv.matFromArray(4, 1, cv.CV_32FC2, [0, 0, CARD_W, 0, CARD_W, CARD_H, 0, CARD_H]);
+
+                    M = cv.getPerspectiveTransform(srcMat, dstMat);
+                    cv.warpPerspective(src, warped, M, new cv.Size(CARD_W, CARD_H));
+
+                    holeCenterX = Math.round(CARD_W * 0.50);
+                    holeCenterY = Math.round(CARD_H * 0.46);
+                    holeRadius = 35;
+
+                } else if (bestBoundingRect) {
+                    let rect = bestBoundingRect;
+                    let roi = src.roi(rect);
+                    cv.resize(roi, warped, new cv.Size(CARD_W, CARD_H));
+                    roi.delete();
+
+                    holeCenterX = Math.round(CARD_W * 0.50);
+                    holeCenterY = Math.round(CARD_H * 0.46);
+                    holeRadius = 35;
+
+                } else {
+                    // Резервный режим, если карточка вылезла из кадра
+                    cv.resize(src, warped, new cv.Size(CARD_W, CARD_H));
+                    holeCenterX = Math.round(CARD_W * 0.50);
+                    holeCenterY = Math.round(CARD_H * 0.46);
+                    holeRadius = 35;
+                }
+
+                const colorPatches = [
+                    { key: 'white', x: Math.round(CARD_W * 0.175), y: Math.round(CARD_H * 0.33) },
+                    { key: 'gray',  x: Math.round(CARD_W * 0.175), y: Math.round(CARD_H * 0.62) },
+                    { key: 'black', x: Math.round(CARD_W * 0.825), y: Math.round(CARD_H * 0.33) },
+                    { key: 'cyan',  x: Math.round(CARD_W * 0.825), y: Math.round(CARD_H * 0.62) }
+                ];
+
+                extractedData.main = getRegionColor(warped, holeCenterX, holeCenterY, Math.round(holeRadius * 0.7));
+
+                colorPatches.forEach(p => {
+                    extractedData.patches[p.key] = getRegionColor(warped, p.x, p.y, 6);
+                });
+
+                const greenColor = new cv.Scalar(0, 230, 118, 255);
+
+                drawTargetCrosshair(warped, holeCenterX, holeCenterY, greenColor, holeRadius);
+
+                colorPatches.forEach(p => {
+                    drawTargetCrosshair(warped, p.x, p.y, greenColor, 18);
+                });
+
+                cv.imshow(canvasTargetId, warped);
+
+            } finally {
+                if (src) src.delete();
+                if (gray) gray.delete();
+                if (blurred) blurred.delete();
+                if (thresh) thresh.delete();
+                if (morph) morph.delete();
+                if (edges) edges.delete();
+                if (kernel) kernel.delete();
+                if (contours) contours.delete();
+                if (hierarchy) hierarchy.delete();
+                if (warped) warped.delete();
+                if (srcMat) srcMat.delete();
+                if (dstMat) dstMat.delete();
+                if (M) M.delete();
+            }
+
+            return extractedData;
+        }
+
+        function restoreState() {
+            const savedData = localStorage.getItem('cm_card_standard_data');
+            if (savedData) {
+                standardColorData = JSON.parse(savedData);
+                renderPatchesList('infoStandard', standardColorData);
+                btnSample.disabled = false;
+            }
+        }
+
+        function renderPatchesList(elementId, dataObj) {
+            const container = document.getElementById(elementId);
+            if (!dataObj || !dataObj.main) {
+                container.innerHTML = '';
+                return;
+            }
+
+            const patchNames = {
+                white: 'Белый',
+                gray: 'Серый',
+                black: 'Чёрный',
+                cyan: 'Циан'
+            };
+
+            const IDEAL = {
+                white: { r: 255, g: 255, b: 255 },
+                gray:  { r: 128, g: 128, b: 128 },
+                black: { r: 20,  g: 20,  b: 20  },
+                cyan:  { r: 0,   g: 160, b: 220 }
+            };
+
+            const fmtDelta = (val) => (val > 0 ? `+${val}` : `${val}`);
+            const calcDelta = (actual, ideal) => 
+                `${fmtDelta(actual.r - ideal.r)}, ${fmtDelta(actual.g - ideal.g)}, ${fmtDelta(actual.b - ideal.b)}`;
+
+            const m = dataObj.main;
+            const p = dataObj.patches;
+
+            let html = `<div class="patches-list">
+                <div class="patch-row main-patch">
+                    <span class="swatch-dot" style="background: rgb(${m.r},${m.g},${m.b});"></span>
+                    <span class="patch-text"><b>Цель:</b> RGB ${m.r}, ${m.g}, ${m.b}</span>
+                </div>`;
+
+            for (const key of ['white', 'gray', 'black', 'cyan']) {
+                if (p && p[key]) {
+                    const c = p[key];
+                    html += `
+                        <div class="patch-row">
+                            <span class="swatch-dot" style="background: rgb(${c.r},${c.g},${c.b});"></span>
+                            <span class="patch-text">${patchNames[key]}: ${c.r}, ${c.g}, ${c.b}</span>
+                        </div>
+                    `;
+                }
+            }
+
+            html += `
+                <div class="correction-profile">
+                    <div class="profile-title">Цветокоррекция (Δ RGB)</div>
+            `;
+
+            for (const key of ['white', 'gray', 'black', 'cyan']) {
+                if (p && p[key]) {
+                    html += `
+                        <div class="profile-row">
+                            <span>${patchNames[key]}:</span>
+                            <strong>${calcDelta(p[key], IDEAL[key])}</strong>
+                        </div>
+                    `;
+                }
+            }
+
+            html += `</div></div>`;
+            container.innerHTML = html;
+        }
+
+        function applyColorCorrection(rawTarget, patches) {
+            const IDEAL = {
+                white: { r: 255, g: 255, b: 255 },
+                gray:  { r: 128, g: 128, b: 128 },
+                black: { r: 20,  g: 20,  b: 20  }
+            };
+
+            function interpolateChannel(val, ch) {
+                let pts = [
+                    { x: 0, y: 0 },
+                    { x: patches.black[ch], y: IDEAL.black[ch] },
+                    { x: patches.gray[ch],  y: IDEAL.gray[ch] },
+                    { x: patches.white[ch], y: IDEAL.white[ch] },
+                    { x: 255, y: 255 }
+                ];
+
+                pts.sort((a, b) => a.x - b.x);
+
+                let clean = [pts[0]];
+                for (let i = 1; i < pts.length; i++) {
+                    if (pts[i].x > clean[clean.length - 1].x) {
+                        clean.push(pts[i]);
+                    }
+                }
+
+                if (val < clean[0].x) {
+                    if (clean[0].x === 0) return 0;
+                    let slope = clean[0].y / clean[0].x;
+                    return Math.max(0, Math.min(255, Math.round(val * slope)));
+                }
+
+                let last = clean[clean.length - 1];
+                if (val > last.x) {
+                    if (last.x === 255) return 255;
+                    let slope = (255 - last.y) / (255 - last.x);
+                    return Math.max(0, Math.min(255, Math.round(last.y + (val - last.x) * slope)));
+                }
+
+                for (let i = 0; i < clean.length - 1; i++) {
+                    let p1 = clean[i], p2 = clean[i + 1];
+                    if (val >= p1.x && val <= p2.x) {
+                        let ratio = (val - p1.x) / (p2.x - p1.x);
+                        let interpolated = p1.y + ratio * (p2.y - p1.y);
+                        return Math.max(0, Math.min(255, Math.round(interpolated)));
+                    }
+                }
+
+                return Math.max(0, Math.min(255, Math.round(val)));
+            }
+
+            return {
+                r: interpolateChannel(rawTarget.r, 'r'),
+                g: interpolateChannel(rawTarget.g, 'g'),
+                b: interpolateChannel(rawTarget.b, 'b')
+            };
+        }
+
+        function getStatusBadge(diff) {
+            if (diff >= 35) return { class: 'match-error', text: 'СОВСЕМ НЕ ТОТ' };
+            if (diff >= 15) return { class: 'match-warning', text: 'ПОЧТИ ТОТ' };
+            return { class: 'match-success', text: 'ТОТ САМЫЙ ЦВЕТ' };
+        }
+
+        function compareColors() {
+            if (!standardColorData || !sampleColorData) return;
+
+            const stdRaw = standardColorData.main;
+            const smpRaw = sampleColorData.main;
+            const diffRaw = Math.round((Math.abs(stdRaw.r - smpRaw.r) + 
+                                    Math.abs(stdRaw.g - smpRaw.g) + 
+                                    Math.abs(stdRaw.b - smpRaw.b)) / 3);
+            const percentRaw = Math.max(0, Math.min(100, Math.round(100 - (diffRaw / 255) * 100 * 2.5)));
+            const statusRaw = getStatusBadge(diffRaw);
+
+            const stdCorr = applyColorCorrection(stdRaw, standardColorData.patches);
+            const smpCorr = applyColorCorrection(smpRaw, sampleColorData.patches);
+            const diffCorr = Math.round((Math.abs(stdCorr.r - smpCorr.r) + 
+                                     Math.abs(stdCorr.g - smpCorr.g) + 
+                                     Math.abs(stdCorr.b - smpCorr.b)) / 3);
+            const percentCorr = Math.max(0, Math.min(100, Math.round(100 - (diffCorr / 255) * 100 * 2.5)));
+            const statusCorr = getStatusBadge(diffCorr);
+
+            infoCard.style.display = 'block';
+
+            resultDiv.innerHTML = `
+                <div class="comparison-block ${statusCorr.class}" style="border: 1px solid rgba(0, 229, 255, 0.35);">
+                    <div class="comparison-title corrected">✨ Скорректированное совпадение</div>
+                    <div class="match-score-main">${percentCorr}% MATCH</div>
+                    <div class="match-subtitle">${statusCorr.text} (Δ = ${diffCorr})</div>
+                    
+                    <div class="swatch-comparison">
+                        <div class="swatch-item">
+                            <div class="swatch-circle" style="background: rgb(${stdCorr.r},${stdCorr.g},${stdCorr.b})"></div>
+                            <span>Эталон</span>
+                            <span style="font-size:9px; opacity:0.8;">${stdCorr.r}, ${stdCorr.g}, ${stdCorr.b}</span>
+                        </div>
+                        <div style="font-weight:800; opacity:0.3; font-size:11px;">VS</div>
+                        <div class="swatch-item">
+                            <div class="swatch-circle" style="background: rgb(${smpCorr.r},${smpCorr.g},${smpCorr.b})"></div>
+                            <span>Образец</span>
+                            <span style="font-size:9px; opacity:0.8;">${smpCorr.r}, ${smpCorr.g}, ${smpCorr.b}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="comparison-block ${statusRaw.class}">
+                    <div class="comparison-title">📷 Сырое совпадение (без коррекции)</div>
+                    <div class="match-score-sub">${percentRaw}% MATCH</div>
+                    <div class="match-subtitle" style="font-size:10px;">${statusRaw.text} (Δ = ${diffRaw})</div>
+                    
+                    <div class="swatch-comparison" style="margin-top:6px; padding:6px;">
+                        <div class="swatch-item">
+                            <div class="swatch-circle" style="width:22px; height:22px; background: rgb(${stdRaw.r},${stdRaw.g},${stdRaw.b})"></div>
+                            <span>Эталон (${stdRaw.r}, ${stdRaw.g}, ${stdRaw.b})</span>
+                        </div>
+                        <div style="font-weight:800; opacity:0.3; font-size:10px;">VS</div>
+                        <div class="swatch-item">
+                            <div class="swatch-circle" style="width:22px; height:22px; background: rgb(${smpRaw.r},${smpRaw.g},${smpRaw.b})"></div>
+                            <span>Образец (${smpRaw.r}, ${smpRaw.g}, ${smpRaw.b})</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        resetBtn.addEventListener('click', () => {
+            localStorage.removeItem('cm_card_standard_data');
+            standardColorData = null;
+            sampleColorData = null;
+
+            infoStandard.innerHTML = '';
+            infoSample.innerHTML = '';
+            infoCard.style.display = 'none';
+            resultDiv.innerText = '';
+
+            btnSample.disabled = true;
+
+            const canvasStd = document.getElementById('canvasStandard');
+            const canvasSmp = document.getElementById('canvasSample');
+            canvasStd.getContext('2d').clearRect(0, 0, canvasStd.width, canvasStd.height);
+            canvasSmp.getContext('2d').clearRect(0, 0, canvasSmp.width, canvasSmp.height);
+        });
+    </script>
+</body>
+</html>
