@@ -712,31 +712,66 @@
             cameraModal.classList.remove('active');
         }
 
+        // --- ИЗМЕНЕНИЕ: Захват strictly прямоугольной области прицела (50, 55, 300, 190) ---
         function takeSnapshot() {
-            if (!video.videoWidth) return;
+            if (!video.videoWidth || !video.videoHeight) return;
 
-            const maxDim = 900;
-            let w = video.videoWidth;
-            let h = video.videoHeight;
+            const viewportRect = video.getBoundingClientRect();
+            if (!viewportRect.width || !viewportRect.height) return;
 
-            if (w > maxDim || h > maxDim) {
-                if (w > h) {
-                    h = Math.round((h * maxDim) / w);
-                    w = maxDim;
-                } else {
-                    w = Math.round((w * maxDim) / h);
-                    h = maxDim;
-                }
+            // Параметры прямоугольной рамки из SVG-оверлея (viewBox 0 0 400 320)
+            const strokeOffset = 2;
+            const overlayFrame = {
+                x: 50 + strokeOffset,
+                y: 55 + strokeOffset,
+                w: 300 - strokeOffset * 2,
+                h: 190 - strokeOffset * 2
+            };
+            const overlayW = 400;
+            const overlayH = 320;
+
+            // Расчет реальных координат из-за object-fit: cover
+            const videoRatio = video.videoWidth / video.videoHeight;
+            const containerRatio = viewportRect.width / viewportRect.height;
+
+            let renderW, renderH, offsetX, offsetY;
+
+            if (containerRatio > videoRatio) {
+                renderW = viewportRect.width;
+                renderH = viewportRect.width / videoRatio;
+                offsetX = 0;
+                offsetY = (renderH - viewportRect.height) / 2;
+            } else {
+                renderH = viewportRect.height;
+                renderW = viewportRect.height * videoRatio;
+                offsetX = (renderW - viewportRect.width) / 2;
+                offsetY = 0;
             }
 
-            const scaledCanvas = document.createElement('canvas');
-            scaledCanvas.width = w;
-            scaledCanvas.height = h;
-            const ctx = scaledCanvas.getContext('2d');
-            ctx.drawImage(video, 0, 0, w, h);
+            const scaleX = video.videoWidth / renderW;
+            const scaleY = video.videoHeight / renderH;
+
+            // Перевод координат прямоугольника оверлея в пиксели исходного видеопотока
+            const rectViewportX = (overlayFrame.x / overlayW) * viewportRect.width;
+            const rectViewportY = (overlayFrame.y / overlayH) * viewportRect.height;
+            const rectViewportW = (overlayFrame.w / overlayW) * viewportRect.width;
+            const rectViewportH = (overlayFrame.h / overlayH) * viewportRect.height;
+
+            const cropX = Math.max(0, Math.round((rectViewportX + offsetX) * scaleX));
+            const cropY = Math.max(0, Math.round((rectViewportY + offsetY) * scaleY));
+            const cropW = Math.min(video.videoWidth - cropX, Math.round(rectViewportW * scaleX));
+            const cropH = Math.min(video.videoHeight - cropY, Math.round(rectViewportH * scaleY));
+
+            // Создаем canvas строго под область прямоугольного прицела
+            const croppedCanvas = document.createElement('canvas');
+            croppedCanvas.width = cropW;
+            croppedCanvas.height = cropH;
+
+            const ctx = croppedCanvas.getContext('2d');
+            ctx.drawImage(video, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
 
             closeCamera();
-            handleImageSource(scaledCanvas, activeMode);
+            handleImageSource(croppedCanvas, activeMode);
         }
 
         function handleImageSource(canvasSource, mode) {
@@ -787,7 +822,6 @@
             } : { r: 0, g: 0, b: 0 };
         }
 
-        // --- УЛУЧШЕННЫЙ АЛГОРИТМ ЗАХВАТА КАРТОЧКИ ---
         function processImageWithCard(canvasSource, canvasTargetId) {
             let src = null, gray = null, blurred = null, thresh = null;
             let contours = null, hierarchy = null, edges = null, kernel = null;
@@ -812,11 +846,9 @@
                 const imgCenterX = imgWidth / 2;
                 const imgCenterY = imgHeight / 2;
 
-                // 1. Подавление шумов и текстуры дерева
                 cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
                 cv.GaussianBlur(gray, blurred, new cv.Size(5, 5), 0);
 
-                // 2. Детектирование с утолщением границ для компенсации теней
                 cv.Canny(blurred, edges, 25, 110);
                 kernel = cv.Mat.ones(3, 3, cv.CV_8U);
                 cv.dilate(edges, thresh, kernel);
@@ -831,7 +863,6 @@
                     let cnt = contours.get(i);
                     let area = cv.contourArea(cnt);
                     
-                    // Мягкий порог по площади (карточка от 2% до 90% кадра)
                     if (area > totalArea * 0.02 && area < totalArea * 0.90) {
                         let rect = cv.boundingRect(cnt);
                         let aspectRatio = rect.width / rect.height;
@@ -1039,7 +1070,6 @@
             container.innerHTML = html;
         }
 
-        // --- СТАРЫЙ МЕТОД КОРРЕКЦИИ (Линейная кусочная интерполяция) ---
         function applyColorCorrectionOld(rawTarget, patches) {
             const IDEAL = {
                 white: { r: 255, g: 255, b: 255 },
@@ -1097,7 +1127,6 @@
             };
         }
 
-        // --- НОВЫЙ МЕТОД КОРРЕКЦИИ (Монотонный сплайн / Улучшенная кривая) ---
         function applyColorCorrectionNew(rawTarget, patches) {
             const IDEAL = {
                 white: { r: 255, g: 255, b: 255 },
@@ -1158,7 +1187,6 @@
         function compareColors() {
             if (!standardColorData || !sampleColorData) return;
 
-            // 1. Сырые данные
             const stdRaw = standardColorData.main;
             const smpRaw = sampleColorData.main;
             const diffRaw = Math.round((Math.abs(stdRaw.r - smpRaw.r) + 
@@ -1167,7 +1195,6 @@
             const percentRaw = Math.max(0, Math.min(100, Math.round(100 - (diffRaw / 255) * 100 * 2.5)));
             const statusRaw = getStatusBadge(diffRaw);
 
-            // 2. Старый метод коррекции
             const stdOld = applyColorCorrectionOld(stdRaw, standardColorData.patches);
             const smpOld = applyColorCorrectionOld(smpRaw, sampleColorData.patches);
             const diffOld = Math.round((Math.abs(stdOld.r - smpOld.r) + 
@@ -1176,7 +1203,6 @@
             const percentOld = Math.max(0, Math.min(100, Math.round(100 - (diffOld / 255) * 100 * 2.5)));
             const statusOld = getStatusBadge(diffOld);
 
-            // 3. Новый метод коррекции
             const stdNew = applyColorCorrectionNew(stdRaw, standardColorData.patches);
             const smpNew = applyColorCorrectionNew(smpRaw, sampleColorData.patches);
             const diffNew = Math.round((Math.abs(stdNew.r - smpNew.r) + 
@@ -1192,7 +1218,6 @@
                     <div class="comparison-title corrected">✨ Сравнение методов коррекции</div>
                     
                     <div class="comparison-methods-grid">
-                        <!-- Старый метод -->
                         <div class="method-card ${statusOld.class}">
                             <div class="method-title">Старая коррекция</div>
                             <div class="match-score-main">${percentOld}%</div>
@@ -1211,7 +1236,6 @@
                             </div>
                         </div>
 
-                        <!-- Новый метод -->
                         <div class="method-card ${statusNew.class}" style="border: 1px solid rgba(0, 229, 255, 0.3); background: rgba(0, 229, 255, 0.04);">
                             <div class="method-title" style="color:var(--accent-cyan);">Новая коррекция</div>
                             <div class="match-score-main">${percentNew}%</div>
