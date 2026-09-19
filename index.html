@@ -903,9 +903,9 @@
                 const holeCenterY = Math.round(CARD_H * 0.468);
                 const holeRadius = 35;
 
-                // 2. Левые плашки (вернуть высоту обратно):
+                // 2. Левые плашки (прицел белого цвета смещен ещё на 10 пикселей выше):
                 const colorPatches = [
-                    { key: 'white', x: Math.round(CARD_W * 0.155), y: Math.round(CARD_H * 0.310) - 10 },
+                    { key: 'white', x: Math.round(CARD_W * 0.155), y: Math.round(CARD_H * 0.310) - 20 },
                     { key: 'gray',  x: Math.round(CARD_W * 0.155), y: Math.round(CARD_H * 0.525) - 5 },
                     { key: 'black', x: Math.round(CARD_W * 0.155), y: Math.round(CARD_H * 0.740) }
                 ];
