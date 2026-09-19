@@ -824,7 +824,14 @@
 
             let extractedData = {
                 main: { r: 0, g: 0, b: 0 },
-                patches: { white: {r:0,g:0,b:0}, gray: {r:0,g:0,b:0}, black: {r:0,g:0,b:0} }
+                patches: { 
+                    white: {r:0,g:0,b:0}, 
+                    gray: {r:0,g:0,b:0}, 
+                    black: {r:0,g:0,b:0},
+                    blue: {r:0,g:0,b:0},
+                    magenta: {r:0,g:0,b:0},
+                    yellow: {r:0,g:0,b:0}
+                }
             };
 
             try {
@@ -903,22 +910,36 @@
                 const holeCenterY = Math.round(CARD_H * 0.468);
                 const holeRadius = 35;
 
-                // 2. Левые плашки (вернуть высоту обратно):
-                const colorPatches = [
+                // 2. Левые плашки (ахроматические):
+                const leftPatches = [
                     { key: 'white', x: Math.round(CARD_W * 0.155), y: Math.round(CARD_H * 0.310) },
                     { key: 'gray',  x: Math.round(CARD_W * 0.155), y: Math.round(CARD_H * 0.525) },
                     { key: 'black', x: Math.round(CARD_W * 0.155), y: Math.round(CARD_H * 0.740) }
                 ];
 
+                // 3. Правые плашки (цветные):
+                const rightPatches = [
+                    { key: 'blue',    x: Math.round(CARD_W * 0.845), y: Math.round(CARD_H * 0.310) },
+                    { key: 'magenta', x: Math.round(CARD_W * 0.845), y: Math.round(CARD_H * 0.525) },
+                    { key: 'yellow',  x: Math.round(CARD_W * 0.845), y: Math.round(CARD_H * 0.740) }
+                ];
+
                 extractedData.main = getRegionColor(warped, holeCenterX, holeCenterY, Math.round(holeRadius * 0.6));
 
-                colorPatches.forEach(p => {
+                leftPatches.forEach(p => {
+                    extractedData.patches[p.key] = getRegionColor(warped, p.x, p.y, 6);
+                });
+
+                rightPatches.forEach(p => {
                     extractedData.patches[p.key] = getRegionColor(warped, p.x, p.y, 6);
                 });
 
                 const greenColor = new cv.Scalar(0, 230, 118, 255);
                 drawTargetCrosshair(warped, holeCenterX, holeCenterY, greenColor, holeRadius);
-                colorPatches.forEach(p => {
+                leftPatches.forEach(p => {
+                    drawTargetCrosshair(warped, p.x, p.y, greenColor, 12);
+                });
+                rightPatches.forEach(p => {
                     drawTargetCrosshair(warped, p.x, p.y, greenColor, 12);
                 });
 
@@ -959,7 +980,10 @@
             const patchNames = {
                 white: 'Белый',
                 gray: 'Серый',
-                black: 'Чёрный'
+                black: 'Чёрный',
+                blue: 'Синий',
+                magenta: 'Пурпурный',
+                yellow: 'Жёлтый'
             };
 
             const IDEAL = {
@@ -981,7 +1005,7 @@
                     <span class="patch-text"><b>Цель:</b> RGB ${m.r}, ${m.g}, ${m.b}</span>
                 </div>`;
 
-            for (const key of ['white', 'gray', 'black']) {
+            for (const key of ['white', 'gray', 'black', 'blue', 'magenta', 'yellow']) {
                 if (p && p[key]) {
                     const c = p[key];
                     html += `
