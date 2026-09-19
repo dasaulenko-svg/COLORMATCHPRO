@@ -402,61 +402,80 @@
 
   </div>
 
-  <!-- БЛОК СРАВНЕНИЯ МЕТОДОВ -->
+  <!-- БЛОК СРАВНЕНИЯ 4 МЕТОДОВ -->
   <div class="results-card">
     
-    <!-- 1. Сырое совпадение -->
+    <!-- 1. Линейный + Среднее (Старый) -->
     <div class="match-section">
-      <div class="section-title">Сырое совпадение (без коррекции)</div>
-      <div class="match-score" id="raw-score">90% MATCH</div>
-      <div class="match-label" id="raw-delta">(Δ = 10)</div>
+      <div class="section-title">1. Линейный + Среднее (Старый)</div>
+      <div class="match-score" id="lin-mean-score">92% MATCH</div>
+      <div class="match-label" id="lin-mean-delta">(Δ = 8)</div>
       
       <div class="comparison-circles">
         <div class="circle-wrap">
-          <div class="big-color-circle" id="raw-circle-etalon" style="background: rgb(110,43,52);"></div>
+          <div class="big-color-circle" id="lin-mean-circle-e" style="background: rgb(108,45,52);"></div>
           <span>Эталон</span>
         </div>
         <div style="color:#555; font-weight:bold;">VS</div>
         <div class="circle-wrap">
-          <div class="big-color-circle" id="raw-circle-sample" style="background: rgb(125,50,60);"></div>
+          <div class="big-color-circle" id="lin-mean-circle-s" style="background: rgb(112,48,55);"></div>
           <span>Образец</span>
         </div>
       </div>
     </div>
 
-    <!-- 2. 1D Линейная коррекция (Старая) -->
+    <!-- 2. Линейный + Медианное -->
     <div class="match-section">
-      <div class="section-title">1D Линейная коррекция (Старая)</div>
-      <div class="match-score" id="linear-score">94% MATCH</div>
-      <div class="match-label" id="linear-delta">(Δ = 6)</div>
+      <div class="section-title">2. Линейный + Медианное</div>
+      <div class="match-score" id="lin-med-score">95% MATCH</div>
+      <div class="match-label" id="lin-med-delta">(Δ = 5)</div>
       
       <div class="comparison-circles">
         <div class="circle-wrap">
-          <div class="big-color-circle" id="linear-circle-etalon" style="background: rgb(105,45,50);"></div>
+          <div class="big-color-circle" id="lin-med-circle-e" style="background: rgb(107,44,51);"></div>
           <span>Эталон</span>
         </div>
         <div style="color:#555; font-weight:bold;">VS</div>
         <div class="circle-wrap">
-          <div class="big-color-circle" id="linear-circle-sample" style="background: rgb(108,46,51);"></div>
+          <div class="big-color-circle" id="lin-med-circle-s" style="background: rgb(109,46,52);"></div>
           <span>Образец</span>
         </div>
       </div>
     </div>
 
-    <!-- 3. 1D Сплайновая / Кубическая коррекция (Новая) -->
+    <!-- 3. Сплайновый + Среднее -->
     <div class="match-section">
-      <div class="section-title">1D Сплайновая / Кубическая коррекция (Новая)</div>
-      <div class="match-score" id="spline-score">97% MATCH</div>
-      <div class="match-label" id="spline-delta">(Δ = 3)</div>
+      <div class="section-title">3. Сплайновый + Среднее</div>
+      <div class="match-score" id="spl-mean-score">96% MATCH</div>
+      <div class="match-label" id="spl-mean-delta">(Δ = 4)</div>
       
       <div class="comparison-circles">
         <div class="circle-wrap">
-          <div class="big-color-circle" id="spline-circle-etalon" style="background: rgb(107,44,51);"></div>
+          <div class="big-color-circle" id="spl-mean-circle-e" style="background: rgb(106,44,51);"></div>
           <span>Эталон</span>
         </div>
         <div style="color:#555; font-weight:bold;">VS</div>
         <div class="circle-wrap">
-          <div class="big-color-circle" id="spline-circle-sample" style="background: rgb(108,44,51);"></div>
+          <div class="big-color-circle" id="spl-mean-circle-s" style="background: rgb(108,45,52);"></div>
+          <span>Образец</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4. Сплайновый + Медианное (Новый) -->
+    <div class="match-section">
+      <div class="section-title">4. Сплайновый + Медианное (Новый)</div>
+      <div class="match-score" id="spl-med-score">98% MATCH</div>
+      <div class="match-label" id="spl-med-delta">(Δ = 2)</div>
+      
+      <div class="comparison-circles">
+        <div class="circle-wrap">
+          <div class="big-color-circle" id="spl-med-circle-e" style="background: rgb(107,44,51);"></div>
+          <span>Эталон</span>
+        </div>
+        <div style="color:#555; font-weight:bold;">VS</div>
+        <div class="circle-wrap">
+          <div class="big-color-circle" id="spl-med-circle-s" style="background: rgb(107,45,51);"></div>
           <span>Образец</span>
         </div>
       </div>
