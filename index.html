@@ -327,7 +327,7 @@
             font-weight: 700;
             text-transform: uppercase;
             letter-spacing: 0.5px;
-            margin-bottom: 6px;
+            margin-bottom: 8px;
             color: var(--text-muted);
         }
 
@@ -335,7 +335,8 @@
             color: var(--accent-cyan);
         }
 
-        .comparison-methods-grid {
+        /* СЕТКА 2х2 ДЛЯ МЕТОДОВ */
+        .comparison-methods-grid-2x2 {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 8px;
@@ -353,20 +354,22 @@
         }
 
         .method-title {
-            font-size: 9px;
+            font-size: 8.5px;
             font-weight: 700;
             color: var(--text-muted);
             text-transform: uppercase;
             margin-bottom: 4px;
+            text-align: center;
+            line-height: 1.1;
         }
 
-        .match-score-main { font-size: 24px; font-weight: 800; letter-spacing: -0.5px; }
+        .match-score-main { font-size: 20px; font-weight: 800; letter-spacing: -0.5px; }
         .match-score-sub { font-size: 18px; font-weight: 800; letter-spacing: -0.5px; }
 
         .match-subtitle {
-            font-size: 10px;
+            font-size: 9px;
             font-weight: 700;
-            padding: 2px 8px;
+            padding: 2px 6px;
             border-radius: 20px;
             text-transform: uppercase;
             margin-top: 4px;
@@ -386,11 +389,11 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 12px;
+            gap: 8px;
             margin-top: 6px;
-            padding: 6px;
+            padding: 4px;
             background: rgba(0, 0, 0, 0.25);
-            border-radius: 10px;
+            border-radius: 8px;
             border: 1px solid rgba(255, 255, 255, 0.05);
             width: 100%;
         }
@@ -400,14 +403,14 @@
             flex-direction: column;
             align-items: center;
             gap: 2px;
-            font-size: 9px;
+            font-size: 8px;
             color: var(--text-muted);
             font-weight: 600;
         }
 
         .swatch-circle {
-            width: 20px;
-            height: 20px;
+            width: 16px;
+            height: 16px;
             border-radius: 50%;
             border: 1px solid rgba(255,255,255,0.2);
         }
@@ -796,25 +799,44 @@
             cv.line(mat, new cv.Point(cx, cy - radius - 4), new cv.Point(cx, cy + radius + 4), colorScalar, 1.5, cv.LINE_AA);
         }
 
-        function getRegionColor(mat, cx, cy, radius = 12) {
-            let rSum = 0, gSum = 0, bSum = 0, count = 0;
+        function getRegionColor(mat, cx, cy, radius = 12, useMedian = false) {
+            let rVals = [], gVals = [], bVals = [];
             for (let y = cy - radius; y <= cy + radius; y++) {
                 for (let x = cx - radius; x <= cx + radius; x++) {
                     let dist = Math.sqrt(Math.pow(x - cx, 2) + Math.pow(y - cy, 2));
                     if (dist <= radius && x >= 0 && x < mat.cols && y >= 0 && y < mat.rows) {
                         let pixel = mat.ucharPtr(y, x);
-                        rSum += pixel[0];
-                        gSum += pixel[1];
-                        bSum += pixel[2];
-                        count++;
+                        rVals.push(pixel[0]);
+                        gVals.push(pixel[1]);
+                        bVals.push(pixel[2]);
                     }
                 }
             }
-            return count > 0 ? {
-                r: Math.round(rSum / count),
-                g: Math.round(gSum / count),
-                b: Math.round(bSum / count)
-            } : { r: 0, g: 0, b: 0 };
+            if (rVals.length === 0) return { r: 0, g: 0, b: 0 };
+
+            if (useMedian) {
+                const getTrimmedMedian = (arr) => {
+                    arr.sort((a, b) => a - b);
+                    const trim = Math.floor(arr.length * 0.15);
+                    const sliced = arr.slice(trim, arr.length - trim);
+                    const mid = Math.floor(sliced.length / 2);
+                    return sliced.length % 2 !== 0 
+                        ? sliced[mid] 
+                        : Math.round((sliced[mid - 1] + sliced[mid]) / 2);
+                };
+                return {
+                    r: getTrimmedMedian(rVals),
+                    g: getTrimmedMedian(gVals),
+                    b: getTrimmedMedian(bVals)
+                };
+            } else {
+                const sum = arr => arr.reduce((a, b) => a + b, 0);
+                return {
+                    r: Math.round(sum(rVals) / rVals.length),
+                    g: Math.round(sum(gVals) / gVals.length),
+                    b: Math.round(sum(bVals) / bVals.length)
+                };
+            }
         }
 
         function processImageWithCard(canvasSource, canvasTargetId) {
@@ -823,6 +845,11 @@
             let warped = null, srcMat = null, dstMat = null, M = null;
 
             let extractedData = {
+                mainMean: { r: 0, g: 0, b: 0 },
+                mainMedian: { r: 0, g: 0, b: 0 },
+                patchesMean: { white: {r:0,g:0,b:0}, gray: {r:0,g:0,b:0}, black: {r:0,g:0,b:0} },
+                patchesMedian: { white: {r:0,g:0,b:0}, gray: {r:0,g:0,b:0}, black: {r:0,g:0,b:0} },
+                // Для совместимости с UI списков карточки:
                 main: { r: 0, g: 0, b: 0 },
                 patches: { white: {r:0,g:0,b:0}, gray: {r:0,g:0,b:0}, black: {r:0,g:0,b:0} }
             };
@@ -841,9 +868,7 @@
 
                 cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
                 cv.GaussianBlur(gray, blurred, new cv.Size(7, 7), 0);
-
                 cv.adaptiveThreshold(blurred, thresh, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY_INV, 15, 3);
-
                 cv.findContours(thresh, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
 
                 let bestQuad = null;
@@ -897,24 +922,26 @@
                     cv.resize(src, warped, new cv.Size(CARD_W, CARD_H));
                 }
 
-                // ТОЧНО ВЫРАВНЕННЫЕ КООРДИНАТЫ МИШЕНЕЙ:
-                // 1. Центральная цель (смотровое окно): выровнена строго по центру отверстия
                 const holeCenterX = Math.round(CARD_W * 0.508); 
                 const holeCenterY = Math.round(CARD_H * 0.468);
                 const holeRadius = 35;
 
-                // 2. Левые плашки (прицел белого цвета смещен ещё на 10 пикселей выше):
                 const colorPatches = [
                     { key: 'white', x: Math.round(CARD_W * 0.155), y: Math.round(CARD_H * 0.310) - 20 },
                     { key: 'gray',  x: Math.round(CARD_W * 0.155), y: Math.round(CARD_H * 0.525) - 5 },
                     { key: 'black', x: Math.round(CARD_W * 0.155), y: Math.round(CARD_H * 0.740) }
                 ];
 
-                extractedData.main = getRegionColor(warped, holeCenterX, holeCenterY, Math.round(holeRadius * 0.6));
+                extractedData.mainMean = getRegionColor(warped, holeCenterX, holeCenterY, Math.round(holeRadius * 0.6), false);
+                extractedData.mainMedian = getRegionColor(warped, holeCenterX, holeCenterY, Math.round(holeRadius * 0.6), true);
 
                 colorPatches.forEach(p => {
-                    extractedData.patches[p.key] = getRegionColor(warped, p.x, p.y, 6);
+                    extractedData.patchesMean[p.key] = getRegionColor(warped, p.x, p.y, 6, false);
+                    extractedData.patchesMedian[p.key] = getRegionColor(warped, p.x, p.y, 6, true);
                 });
+
+                extractedData.main = extractedData.mainMean;
+                extractedData.patches = extractedData.patchesMean;
 
                 const greenColor = new cv.Scalar(0, 230, 118, 255);
                 drawTargetCrosshair(warped, holeCenterX, holeCenterY, greenColor, holeRadius);
@@ -1013,7 +1040,8 @@
             container.innerHTML = html;
         }
 
-        function applyColorCorrectionOld(rawTarget, patches) {
+        // 1. 1D ЛИНЕЙНАЯ КОРРЕКЦИЯ
+        function applyLinearCorrection(rawTarget, patches) {
             const IDEAL = {
                 white: { r: 255, g: 255, b: 255 },
                 gray:  { r: 128, g: 128, b: 128 },
@@ -1070,7 +1098,8 @@
             };
         }
 
-        function applyColorCorrectionNew(rawTarget, patches) {
+        // 2. 1D СПЛАЙНОВАЯ КОРРЕКЦИЯ
+        function applySplineCorrection(rawTarget, patches) {
             const IDEAL = {
                 white: { r: 255, g: 255, b: 255 },
                 gray:  { r: 128, g: 128, b: 128 },
@@ -1127,9 +1156,37 @@
             return { class: 'match-success', text: 'ТОТ САМЫЙ ЦВЕТ' };
         }
 
+        function computeMethodScore(stdRaw, smpRaw, patchesStd, patchesSmp, mathType, statType) {
+            const rawTargetStd = statType === 'mean' ? stdRaw.mainMean : (stdRaw.mainMedian || stdRaw.mainMean);
+            const rawTargetSmp = statType === 'mean' ? smpRaw.mainMean : (smpRaw.mainMedian || smpRaw.mainMean);
+            
+            const patchesDataStd = statType === 'mean' ? stdRaw.patchesMean : (stdRaw.patchesMedian || stdRaw.patchesMean);
+            const patchesDataSmp = statType === 'mean' ? smpRaw.patchesMean : (smpRaw.patchesMedian || smpRaw.patchesMean);
+
+            const corrector = mathType === 'linear' ? applyLinearCorrection : applySplineCorrection;
+
+            const stdCorr = corrector(rawTargetStd, patchesDataStd);
+            const smpCorr = corrector(rawTargetSmp, patchesDataSmp);
+
+            const diff = Math.round((Math.abs(stdCorr.r - smpCorr.r) + 
+                                     Math.abs(stdCorr.g - smpCorr.g) + 
+                                     Math.abs(stdCorr.b - smpCorr.b)) / 3);
+            const percent = Math.max(0, Math.min(100, Math.round(100 - (diff / 255) * 100 * 2.5)));
+            const status = getStatusBadge(diff);
+
+            return { stdCorr, smpCorr, diff, percent, status };
+        }
+
         function compareColors() {
             if (!standardColorData || !sampleColorData) return;
 
+            // Расчет 4 методов для сетки 2х2
+            const m1 = computeMethodScore(standardColorData, sampleColorData, null, null, 'linear', 'mean');
+            const m2 = computeMethodScore(standardColorData, sampleColorData, null, null, 'linear', 'median');
+            const m3 = computeMethodScore(standardColorData, sampleColorData, null, null, 'spline', 'mean');
+            const m4 = computeMethodScore(standardColorData, sampleColorData, null, null, 'spline', 'median');
+
+            // Сырое совпадение
             const stdRaw = standardColorData.main;
             const smpRaw = sampleColorData.main;
             const diffRaw = Math.round((Math.abs(stdRaw.r - smpRaw.r) + 
@@ -1138,64 +1195,37 @@
             const percentRaw = Math.max(0, Math.min(100, Math.round(100 - (diffRaw / 255) * 100 * 2.5)));
             const statusRaw = getStatusBadge(diffRaw);
 
-            const stdOld = applyColorCorrectionOld(stdRaw, standardColorData.patches);
-            const smpOld = applyColorCorrectionOld(smpRaw, sampleColorData.patches);
-            const diffOld = Math.round((Math.abs(stdOld.r - smpOld.r) + 
-                                     Math.abs(stdOld.g - smpOld.g) + 
-                                     Math.abs(stdOld.b - smpOld.b)) / 3);
-            const percentOld = Math.max(0, Math.min(100, Math.round(100 - (diffOld / 255) * 100 * 2.5)));
-            const statusOld = getStatusBadge(diffOld);
-
-            const stdNew = applyColorCorrectionNew(stdRaw, standardColorData.patches);
-            const smpNew = applyColorCorrectionNew(smpRaw, sampleColorData.patches);
-            const diffNew = Math.round((Math.abs(stdNew.r - smpNew.r) + 
-                                     Math.abs(stdNew.g - smpNew.g) + 
-                                     Math.abs(stdNew.b - smpNew.b)) / 3);
-            const percentNew = Math.max(0, Math.min(100, Math.round(100 - (diffNew / 255) * 100 * 2.5)));
-            const statusNew = getStatusBadge(diffNew);
-
             infoCard.style.display = 'block';
+
+            const renderMethodCard = (title, res) => `
+                <div class="method-card ${res.status.class}">
+                    <div class="method-title">${title}</div>
+                    <div class="match-score-main">${res.percent}%</div>
+                    <div class="match-subtitle">${res.status.text}</div>
+                    <div style="font-size:8.5px; margin-top:3px; opacity:0.7;">Δ = ${res.diff}</div>
+
+                    <div class="swatch-comparison">
+                        <div class="swatch-item">
+                            <div class="swatch-circle" style="background: rgb(${res.stdCorr.r},${res.stdCorr.g},${res.stdCorr.b})"></div>
+                            <span>Эталон</span>
+                        </div>
+                        <div class="swatch-item">
+                            <div class="swatch-circle" style="background: rgb(${res.smpCorr.r},${res.smpCorr.g},${res.smpCorr.b})"></div>
+                            <span>Образец</span>
+                        </div>
+                    </div>
+                </div>
+            `;
 
             resultDiv.innerHTML = `
                 <div class="comparison-block" style="border: 1px solid rgba(0, 229, 255, 0.35);">
-                    <div class="comparison-title corrected">✨ Сравнение методов коррекции</div>
+                    <div class="comparison-title corrected">✨ Сравнение методов коррекции (2х2)</div>
                     
-                    <div class="comparison-methods-grid">
-                        <div class="method-card ${statusOld.class}">
-                            <div class="method-title">Старая коррекция</div>
-                            <div class="match-score-main">${percentOld}%</div>
-                            <div class="match-subtitle">${statusOld.text}</div>
-                            <div style="font-size:9px; margin-top:4px; opacity:0.7;">Δ = ${diffOld}</div>
-
-                            <div class="swatch-comparison">
-                                <div class="swatch-item">
-                                    <div class="swatch-circle" style="background: rgb(${stdOld.r},${stdOld.g},${stdOld.b})"></div>
-                                    <span>Эталон</span>
-                                </div>
-                                <div class="swatch-item">
-                                    <div class="swatch-circle" style="background: rgb(${smpOld.r},${smpOld.g},${smpOld.b})"></div>
-                                    <span>Образец</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="method-card ${statusNew.class}" style="border: 1px solid rgba(0, 229, 255, 0.3); background: rgba(0, 229, 255, 0.04);">
-                            <div class="method-title" style="color:var(--accent-cyan);">Новая коррекция</div>
-                            <div class="match-score-main">${percentNew}%</div>
-                            <div class="match-subtitle">${statusNew.text}</div>
-                            <div style="font-size:9px; margin-top:4px; opacity:0.7;">Δ = ${diffNew}</div>
-
-                            <div class="swatch-comparison">
-                                <div class="swatch-item">
-                                    <div class="swatch-circle" style="background: rgb(${stdNew.r},${stdNew.g},${stdNew.b})"></div>
-                                    <span>Эталон</span>
-                                </div>
-                                <div class="swatch-item">
-                                    <div class="swatch-circle" style="background: rgb(${smpNew.r},${smpNew.g},${smpNew.b})"></div>
-                                    <span>Образец</span>
-                                </div>
-                            </div>
-                        </div>
+                    <div class="comparison-methods-grid-2x2">
+                        ${renderMethodCard('1D Линейное + Среднее', m1)}
+                        ${renderMethodCard('1D Линейное + Медианное', m2)}
+                        ${renderMethodCard('1D Сплайновое + Среднее', m3)}
+                        ${renderMethodCard('1D Сплайновое + Медианное', m4)}
                     </div>
                 </div>
 
