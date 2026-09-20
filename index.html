@@ -396,7 +396,6 @@
             padding: 2px 6px;
             border-radius: 4px;
             background: rgba(255, 255, 255, 0.08);
-
         }
 
         .summary-badge.active {
@@ -665,7 +664,6 @@
         const cameraModal = document.getElementById('cameraModal');
         const video = document.getElementById('webcam');
 
-        // Вспомогательная функция перевода LAB в RGB для красивого отображения иконок плашек
         function labToRgb(l, a, b) {
             let labMat = cv.matFromArray(1, 1, cv.CV_8UC3, [l, a, b]);
             let rgbMat = new cv.Mat();
@@ -820,7 +818,6 @@
             cv.line(mat, new cv.Point(cx, cy - radius - 4), new cv.Point(cx, cy + radius + 4), colorScalar, 1.5, cv.LINE_AA);
         }
 
-        // Считываем значения непосредственно из LAB матрицы OpenCV
         function getRegionColorLAB(labMat, cx, cy, radius = 12, useMedian = false) {
             let lVals = [], aVals = [], bVals = [];
             for (let y = cy - radius; y <= cy + radius; y++) {
@@ -964,7 +961,6 @@
                     cv.resize(src, warped, new cv.Size(CARD_W, CARD_H));
                 }
 
-                // Перевод изображения в LAB для последующих расчетов
                 warpedLab = new cv.Mat();
                 cv.cvtColor(warped, warpedLab, cv.COLOR_BGR2Lab);
 
@@ -1070,9 +1066,32 @@
             container.innerHTML = html;
         }
 
-        // ================= МЕТОДЫ 1D КОРРЕКЦИИ В LAB =================
+        // ================= МЕТОДЫ 1D КОРРЕКЦИИ В LAB (5 АЛГОРИТМОВ) =================
+        
+        // 1D Алгоритм 1: Двухточечное линейное масштабирование (Gain + Offset)
+        function applyGainOffsetCorrection(rawTarget, patches) {
+            const IDEAL = {
+                white: { l: 255, a: 128, b: 128 },
+                black: { l: 20,  a: 128, b: 128 }
+            };
+
+            function corrChannel(val, ch) {
+                let wIn = patches.white[ch], bIn = patches.black[ch];
+                let wOut = IDEAL.white[ch], bOut = IDEAL.black[ch];
+                let denom = (wIn - bIn) || 1;
+                let res = bOut + (val - bIn) * (wOut - bOut) / denom;
+                return Math.max(0, Math.min(255, Math.round(res)));
+            }
+
+            return {
+                l: corrChannel(rawTarget.l, 'l'),
+                a: corrChannel(rawTarget.a, 'a'),
+                b: corrChannel(rawTarget.b, 'b')
+            };
+        }
+
+        // 1D Алгоритм 2 и 3: Кусочно-линейная интерполяция
         function applyLinearCorrection(rawTarget, patches) {
-            // Идеальные эталоны плашек в формате OpenCV LAB (0..255)
             const IDEAL = {
                 white: { l: 255, a: 128, b: 128 },
                 gray:  { l: 128, a: 128, b: 128 },
@@ -1129,6 +1148,7 @@
             };
         }
 
+        // 1D Алгоритм 4 и 5: Сплайновая монотонная интерполяция
         function applySplineCorrection(rawTarget, patches) {
             const IDEAL = {
                 white: { l: 255, a: 128, b: 128 },
@@ -1180,16 +1200,54 @@
             };
         }
 
-        // ================= МЕТОДЫ 3D КОРРЕКЦИИ В LAB =================
-        function apply3DAffineCorrection(rawTarget, patches) {
-            // Идеальные LAB координаты плашек карт-мишени
+        // ================= МЕТОДЫ 3D КОРРЕКЦИИ В LAB (5 АЛГОРИТМОВ) =================
+
+        // 3D Алгоритм 1: IDW (Инверсно-взвешенные расстояния / Метод Шепарда)
+        function apply3DIDWCorrection(rawTarget, patches) {
             const IDEAL = {
                 white:  { l: 255, a: 128, b: 128 },
                 gray:   { l: 128, a: 128, b: 128 },
                 black:  { l: 20,  a: 128, b: 128 },
-                right1: { l: 232, a: 74,  b: 104 }, // Cyan
-                right2: { l: 123, a: 216, b: 102 }, // Magenta
-                right3: { l: 247, a: 110, b: 226 }  // Yellow
+                right1: { l: 232, a: 74,  b: 104 },
+                right2: { l: 123, a: 216, b: 102 },
+                right3: { l: 247, a: 110, b: 226 }
+            };
+
+            const keys = ['white', 'gray', 'black', 'right1', 'right2', 'right3'];
+            let sumW = 0, sumDL = 0, sumDA = 0, sumDB = 0;
+
+            for (let k of keys) {
+                let p = patches[k];
+                let target = IDEAL[k];
+                let dist = Math.sqrt((rawTarget.l - p.l)**2 + (rawTarget.a - p.a)**2 + (rawTarget.b - p.b)**2);
+                let w = 1.0 / (Math.pow(dist, 2) + 1e-4);
+                
+                sumW += w;
+                sumDL += w * (target.l - p.l);
+                sumDA += w * (target.a - p.a);
+                sumDB += w * (target.b - p.b);
+            }
+
+            let resL = rawTarget.l + sumDL / sumW;
+            let resA = rawTarget.a + sumDA / sumW;
+            let resB = rawTarget.b + sumDB / sumW;
+
+            return {
+                l: Math.max(0, Math.min(255, Math.round(resL))),
+                a: Math.max(0, Math.min(255, Math.round(resA))),
+                b: Math.max(0, Math.min(255, Math.round(resB)))
+            };
+        }
+
+        // 3D Алгоритм 2 и 3: Аффинное преобразование 3D
+        function apply3DAffineCorrection(rawTarget, patches) {
+            const IDEAL = {
+                white:  { l: 255, a: 128, b: 128 },
+                gray:   { l: 128, a: 128, b: 128 },
+                black:  { l: 20,  a: 128, b: 128 },
+                right1: { l: 232, a: 74,  b: 104 },
+                right2: { l: 123, a: 216, b: 102 },
+                right3: { l: 247, a: 110, b: 226 }
             };
 
             const keys = ['white', 'gray', 'black', 'right1', 'right2', 'right3'];
@@ -1224,6 +1282,7 @@
             };
         }
 
+        // 3D Алгоритм 4 и 5: TPS (Thin Plate Spline) Сплайн 3D
         function apply3DTPSCorrection(rawTarget, patches) {
             const IDEAL = {
                 white:  { l: 255, a: 128, b: 128 },
@@ -1309,12 +1368,10 @@
             return { class: 'match-success', text: 'ТОТ САМЫЙ ЦВЕТ' };
         }
 
-        // РАСЧЕТ ДЛЯ СЫРЫХ ДАННЫХ В LAB (Delta E)
         function computeRawScore(stdRaw, smpRaw, statType) {
             const stdColor = statType === 'mean' ? stdRaw.mainMean : (stdRaw.mainMedian || stdRaw.mainMean);
             const smpColor = statType === 'mean' ? smpRaw.mainMean : (smpRaw.mainMedian || smpRaw.mainMean);
 
-            // Вычисление евклидова расстояния ΔE в LAB пространства OpenCV
             const diff = Math.round(Math.sqrt(
                 Math.pow(stdColor.l - smpColor.l, 2) + 
                 Math.pow(stdColor.a - smpColor.a, 2) + 
@@ -1335,15 +1392,16 @@
             const patchesDataSmp = statType === 'mean' ? smpRaw.patchesMean : (smpRaw.patchesMedian || smpRaw.patchesMean);
 
             let corrector;
-            if (mathMethod === 'linear') corrector = applyLinearCorrection;
+            if (mathMethod === 'gain_offset') corrector = applyGainOffsetCorrection;
+            else if (mathMethod === 'linear') corrector = applyLinearCorrection;
             else if (mathMethod === 'spline') corrector = applySplineCorrection;
+            else if (mathMethod === '3d_idw') corrector = apply3DIDWCorrection;
             else if (mathMethod === '3d_affine') corrector = apply3DAffineCorrection;
             else if (mathMethod === '3d_tps') corrector = apply3DTPSCorrection;
 
             const stdCorr = corrector(rawTargetStd, patchesDataStd);
             const smpCorr = corrector(rawTargetSmp, patchesDataSmp);
 
-            // Вычисление ΔE в LAB
             const diff = Math.round(Math.sqrt(
                 Math.pow(stdCorr.l - smpCorr.l, 2) + 
                 Math.pow(stdCorr.a - smpCorr.a, 2) + 
@@ -1361,14 +1419,14 @@
             let valid = sorted;
             let hasOutliers = false;
 
-            if (sorted[0] - sorted[2] > 10) {
-                valid = sorted.slice(0, 2);
+            if (sorted[0] - sorted[sorted.length - 1] > 10) {
+                valid = sorted.filter(v => (sorted[0] - v) <= 10);
+                if (valid.length < 2) valid = sorted.slice(0, 2);
                 hasOutliers = true;
             }
 
             const avg = valid.reduce((sum, val) => sum + val, 0) / valid.length;
             
-            // Если отсекали данные, то бонус за консенсус не начисляем (0.0)
             const isConsensus = !hasOutliers && valid.every(v => v > 85);
             const bonus = isConsensus ? 1.0 : 0.0;
 
@@ -1388,26 +1446,27 @@
             const rawMean = computeRawScore(standardColorData, sampleColorData, 'mean');
             const rawMedian = computeRawScore(standardColorData, sampleColorData, 'median');
 
-            // Расчет 4 методов для 1D
-            const m1D_1 = computeMethodScore(standardColorData, sampleColorData, 'linear', 'mean');
-            const m1D_2 = computeMethodScore(standardColorData, sampleColorData, 'linear', 'median');
-            const m1D_3 = computeMethodScore(standardColorData, sampleColorData, 'spline', 'mean');
-            const m1D_4 = computeMethodScore(standardColorData, sampleColorData, 'spline', 'median');
+            // 5 методов для 1D коррекции
+            const m1D_1 = computeMethodScore(standardColorData, sampleColorData, 'gain_offset', 'mean');
+            const m1D_2 = computeMethodScore(standardColorData, sampleColorData, 'linear', 'mean');
+            const m1D_3 = computeMethodScore(standardColorData, sampleColorData, 'linear', 'median');
+            const m1D_4 = computeMethodScore(standardColorData, sampleColorData, 'spline', 'mean');
+            const m1D_5 = computeMethodScore(standardColorData, sampleColorData, 'spline', 'median');
 
-            // Расчет 4 методов для 3D
-            const m3D_1 = computeMethodScore(standardColorData, sampleColorData, '3d_affine', 'mean');
-            const m3D_2 = computeMethodScore(standardColorData, sampleColorData, '3d_affine', 'median');
-            const m3D_3 = computeMethodScore(standardColorData, sampleColorData, '3d_tps', 'mean');
-            const m3D_4 = computeMethodScore(standardColorData, sampleColorData, '3d_tps', 'median');
+            // 5 методов для 3D коррекции
+            const m3D_1 = computeMethodScore(standardColorData, sampleColorData, '3d_idw', 'mean');
+            const m3D_2 = computeMethodScore(standardColorData, sampleColorData, '3d_affine', 'mean');
+            const m3D_3 = computeMethodScore(standardColorData, sampleColorData, '3d_affine', 'median');
+            const m3D_4 = computeMethodScore(standardColorData, sampleColorData, '3d_tps', 'mean');
+            const m3D_5 = computeMethodScore(standardColorData, sampleColorData, '3d_tps', 'median');
 
             // Ансамблирование
             const rawAvg = (rawMean.percent + rawMedian.percent) / 2;
             const cameraBonus = rawAvg >= 90 ? 2.0 : 0.0;
 
-            const res1D = processBlockEnsemble([m1D_1.percent, m1D_2.percent, m1D_3.percent, m1D_4.percent]);
-            const res3D = processBlockEnsemble([m3D_1.percent, m3D_2.percent, m3D_3.percent, m3D_4.percent]);
+            const res1D = processBlockEnsemble([m1D_1.percent, m1D_2.percent, m1D_3.percent, m1D_4.percent, m1D_5.percent]);
+            const res3D = processBlockEnsemble([m3D_1.percent, m3D_2.percent, m3D_3.percent, m3D_4.percent, m3D_5.percent]);
 
-            // Простое среднее арифметическое между результатами групп 1D и 3D
             const ensembleAverage = (res1D.total + res3D.total) / 2;
             const finalScore = Math.min(99, Math.round((ensembleAverage + cameraBonus) * 10) / 10);
 
@@ -1449,27 +1508,29 @@
                     </div>
                 </div>
 
-                <!-- БЛОК 1: 1D КОРРЕКЦИЯ -->
+                <!-- БЛОК 1: 1D КОРРЕКЦИЯ (5 АЛГОРИТМОВ) -->
                 <div class="comparison-block" style="border: 1px solid rgba(0, 229, 255, 0.35);">
                     <div class="comparison-title corrected">✨ Сравнение методов 1D коррекции</div>
                     
                     <div class="methods-list">
-                        ${renderMethodRow('1D Линейное + Среднее', m1D_1)}
-                        ${renderMethodRow('1D Линейное + Медианное', m1D_2)}
-                        ${renderMethodRow('1D Сплайновое + Среднее', m1D_3)}
-                        ${renderMethodRow('1D Сплайновое + Медианное', m1D_4)}
+                        ${renderMethodRow('1D Gain + Offset (Черный/Белый)', m1D_1)}
+                        ${renderMethodRow('1D Линейное + Среднее', m1D_2)}
+                        ${renderMethodRow('1D Линейное + Медианное', m1D_3)}
+                        ${renderMethodRow('1D Сплайновое + Среднее', m1D_4)}
+                        ${renderMethodRow('1D Сплайновое + Медианное', m1D_5)}
                     </div>
                 </div>
 
-                <!-- БЛОК 2: 3D КОРРЕКЦИЯ -->
+                <!-- БЛОК 2: 3D КОРРЕКЦИЯ (5 АЛГОРИТМОВ) -->
                 <div class="comparison-block" style="border: 1px solid rgba(139, 92, 246, 0.35);">
                     <div class="comparison-title corrected-3d">🔮 Сравнение методов 3D коррекции</div>
                     
                     <div class="methods-list">
-                        ${renderMethodRow('3D Аффинное + Среднее', m3D_1)}
-                        ${renderMethodRow('3D Аффинное + Медианное', m3D_2)}
-                        ${renderMethodRow('3D TPS Сплайн + Среднее', m3D_3)}
-                        ${renderMethodRow('3D TPS Сплайн + Медианное', m3D_4)}
+                        ${renderMethodRow('3D IDW (Инверсно-взвешенное)', m3D_1)}
+                        ${renderMethodRow('3D Аффинное + Среднее', m3D_2)}
+                        ${renderMethodRow('3D Аффинное + Медианное', m3D_3)}
+                        ${renderMethodRow('3D TPS Сплайн + Среднее', m3D_4)}
+                        ${renderMethodRow('3D TPS Сплайн + Медианное', m3D_5)}
                     </div>
                 </div>
 
