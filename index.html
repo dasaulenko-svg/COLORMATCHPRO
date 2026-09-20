@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ColorMatch Pro (LAB Space)</title>
+    <title>ColorMatch Pro</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -386,7 +386,9 @@
             color: var(--text-muted);
         }
 
-        .summary-line b { color: #fff; }
+        .summary-line b {
+            color: #fff;
+        }
 
         .summary-badge {
             font-size: 10px;
@@ -394,6 +396,7 @@
             padding: 2px 6px;
             border-radius: 4px;
             background: rgba(255, 255, 255, 0.08);
+
         }
 
         .summary-badge.active {
@@ -530,7 +533,7 @@
                         <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z"/>
                     </svg>
                 </div>
-                <h1>COLORMATCH LAB</h1>
+                <h1>COLORMATCH</h1>
             </div>
 
             <div class="menu-container">
@@ -662,6 +665,16 @@
         const cameraModal = document.getElementById('cameraModal');
         const video = document.getElementById('webcam');
 
+        // Вспомогательная функция перевода LAB в RGB для красивого отображения иконок плашек
+        function labToRgb(l, a, b) {
+            let labMat = cv.matFromArray(1, 1, cv.CV_8UC3, [l, a, b]);
+            let rgbMat = new cv.Mat();
+            cv.cvtColor(labMat, rgbMat, cv.COLOR_Lab2RGB);
+            let r = rgbMat.data[0], g = rgbMat.data[1], b_val = rgbMat.data[2];
+            labMat.delete(); rgbMat.delete();
+            return { r, g, b: b_val };
+        }
+
         function toggleMenu() {
             document.getElementById('menuDropdown').classList.toggle('active');
         }
@@ -687,7 +700,7 @@
 
         function onOpenCvReady() {
             isOpenCvReady = true;
-            cvStatus.innerHTML = '<span class="status-dot"></span> Готов к работе (CIE LAB)';
+            cvStatus.innerHTML = '<span class="status-dot"></span> Готов к работе';
             btnStandard.disabled = false;
             restoreState();
         }
@@ -807,21 +820,21 @@
             cv.line(mat, new cv.Point(cx, cy - radius - 4), new cv.Point(cx, cy + radius + 4), colorScalar, 1.5, cv.LINE_AA);
         }
 
-        // Вычисление среднего/медианного цвета напрямую в LAB пространстве
-        function getRegionColorLab(matLab, cx, cy, radius = 12, useMedian = false) {
+        // Считываем значения непосредственно из LAB матрицы OpenCV
+        function getRegionColorLAB(labMat, cx, cy, radius = 12, useMedian = false) {
             let lVals = [], aVals = [], bVals = [];
             for (let y = cy - radius; y <= cy + radius; y++) {
                 for (let x = cx - radius; x <= cx + radius; x++) {
                     let dist = Math.sqrt(Math.pow(x - cx, 2) + Math.pow(y - cy, 2));
-                    if (dist <= radius && x >= 0 && x < matLab.cols && y >= 0 && y < matLab.rows) {
-                        let pixel = matLab.ucharPtr(y, x);
+                    if (dist <= radius && x >= 0 && x < labMat.cols && y >= 0 && y < labMat.rows) {
+                        let pixel = labMat.ucharPtr(y, x);
                         lVals.push(pixel[0]);
                         aVals.push(pixel[1]);
                         bVals.push(pixel[2]);
                     }
                 }
             }
-            if (lVals.length === 0) return { L: 0, a: 0, b: 0 };
+            if (lVals.length === 0) return { l: 0, a: 128, b: 128 };
 
             if (useMedian) {
                 const getTrimmedMedian = (arr) => {
@@ -834,14 +847,14 @@
                         : Math.round((sliced[mid - 1] + sliced[mid]) / 2);
                 };
                 return {
-                    L: getTrimmedMedian(lVals),
+                    l: getTrimmedMedian(lVals),
                     a: getTrimmedMedian(aVals),
                     b: getTrimmedMedian(bVals)
                 };
             } else {
-                const sum = arr => arr.reduce((a, b) => a + b, 0);
+                const sum = arr => arr.reduce((val, b) => val + b, 0);
                 return {
-                    L: Math.round(sum(lVals) / lVals.length),
+                    l: Math.round(sum(lVals) / lVals.length),
                     a: Math.round(sum(aVals) / aVals.length),
                     b: Math.round(sum(bVals) / bVals.length)
                 };
@@ -851,24 +864,35 @@
         function processImageWithCard(canvasSource, canvasTargetId) {
             let src = null, gray = null, blurred = null, thresh = null;
             let contours = null, hierarchy = null;
-            let warped = null, srcMat = null, dstMat = null, M = null;
-            let rgbMat = null, labMat = null;
+            let warped = null, warpedLab = null, srcMat = null, dstMat = null, M = null;
 
             let extractedData = {
-                mainMean: { L: 0, a: 0, b: 0 },
-                mainMedian: { L: 0, a: 0, b: 0 },
+                mainMean: { l: 0, a: 128, b: 128 },
+                mainMedian: { l: 0, a: 128, b: 128 },
                 patchesMean: { 
-                    white: {L:0,a:0,b:0}, gray: {L:0,a:0,b:0}, black: {L:0,a:0,b:0},
-                    right1: {L:0,a:0,b:0}, right2: {L:0,a:0,b:0}, right3: {L:0,a:0,b:0}
+                    white: {l:0,a:128,b:128}, 
+                    gray: {l:0,a:128,b:128}, 
+                    black: {l:0,a:128,b:128},
+                    right1: {l:0,a:128,b:128},
+                    right2: {l:0,a:128,b:128},
+                    right3: {l:0,a:128,b:128}
                 },
                 patchesMedian: { 
-                    white: {L:0,a:0,b:0}, gray: {L:0,a:0,b:0}, black: {L:0,a:0,b:0},
-                    right1: {L:0,a:0,b:0}, right2: {L:0,a:0,b:0}, right3: {L:0,a:0,b:0}
+                    white: {l:0,a:128,b:128}, 
+                    gray: {l:0,a:128,b:128}, 
+                    black: {l:0,a:128,b:128},
+                    right1: {l:0,a:128,b:128},
+                    right2: {l:0,a:128,b:128},
+                    right3: {l:0,a:128,b:128}
                 },
-                main: { L: 0, a: 0, b: 0 },
+                main: { l: 0, a: 128, b: 128 },
                 patches: { 
-                    white: {L:0,a:0,b:0}, gray: {L:0,a:0,b:0}, black: {L:0,a:0,b:0},
-                    right1: {L:0,a:0,b:0}, right2: {L:0,a:0,b:0}, right3: {L:0,a:0,b:0}
+                    white: {l:0,a:128,b:128}, 
+                    gray: {l:0,a:128,b:128}, 
+                    black: {l:0,a:128,b:128},
+                    right1: {l:0,a:128,b:128},
+                    right2: {l:0,a:128,b:128},
+                    right3: {l:0,a:128,b:128}
                 }
             };
 
@@ -940,11 +964,9 @@
                     cv.resize(src, warped, new cv.Size(CARD_W, CARD_H));
                 }
 
-                // Преобразование выровненного изображения в пространство CIE LAB
-                rgbMat = new cv.Mat();
-                labMat = new cv.Mat();
-                cv.cvtColor(warped, rgbMat, cv.COLOR_RGBA2RGB);
-                cv.cvtColor(rgbMat, labMat, cv.COLOR_RGB2Lab);
+                // Перевод изображения в LAB для последующих расчетов
+                warpedLab = new cv.Mat();
+                cv.cvtColor(warped, warpedLab, cv.COLOR_BGR2Lab);
 
                 const holeCenterX = Math.round(CARD_W * 0.508); 
                 const holeCenterY = Math.round(CARD_H * 0.468);
@@ -959,12 +981,12 @@
                     { key: 'right3', x: Math.round(CARD_W * 0.845), y: Math.round(CARD_H * 0.740) }
                 ];
 
-                extractedData.mainMean = getRegionColorLab(labMat, holeCenterX, holeCenterY, Math.round(holeRadius * 0.6), false);
-                extractedData.mainMedian = getRegionColorLab(labMat, holeCenterX, holeCenterY, Math.round(holeRadius * 0.6), true);
+                extractedData.mainMean = getRegionColorLAB(warpedLab, holeCenterX, holeCenterY, Math.round(holeRadius * 0.6), false);
+                extractedData.mainMedian = getRegionColorLAB(warpedLab, holeCenterX, holeCenterY, Math.round(holeRadius * 0.6), true);
 
                 colorPatches.forEach(p => {
-                    extractedData.patchesMean[p.key] = getRegionColorLab(labMat, p.x, p.y, 6, false);
-                    extractedData.patchesMedian[p.key] = getRegionColorLab(labMat, p.x, p.y, 6, true);
+                    extractedData.patchesMean[p.key] = getRegionColorLAB(warpedLab, p.x, p.y, 6, false);
+                    extractedData.patchesMedian[p.key] = getRegionColorLAB(warpedLab, p.x, p.y, 6, true);
                 });
 
                 extractedData.main = extractedData.mainMean;
@@ -986,11 +1008,10 @@
                 if (contours) contours.delete();
                 if (hierarchy) hierarchy.delete();
                 if (warped) warped.delete();
+                if (warpedLab) warpedLab.delete();
                 if (srcMat) srcMat.delete();
                 if (dstMat) dstMat.delete();
                 if (M) M.delete();
-                if (rgbMat) rgbMat.delete();
-                if (labMat) labMat.delete();
             }
 
             return extractedData;
@@ -1023,18 +1044,23 @@
 
             const m = dataObj.main;
             const p = dataObj.patches;
+            
+            const rgbMain = labToRgb(m.l, m.a, m.b);
 
             let html = `<div class="patches-list">
                 <div class="patch-row main-patch">
-                    <span class="patch-text"><b>Цель (LAB):</b> L:${m.L}, a:${m.a}, b:${m.b}</span>
+                    <span class="swatch-dot" style="background: rgb(${rgbMain.r},${rgbMain.g},${rgbMain.b});"></span>
+                    <span class="patch-text"><b>Цель (LAB):</b> ${m.l}, ${m.a}, ${m.b}</span>
                 </div>`;
 
             for (const key of ['white', 'gray', 'black', 'right1', 'right2', 'right3']) {
                 if (p && p[key]) {
                     const c = p[key];
+                    const rgbP = labToRgb(c.l, c.a, c.b);
                     html += `
                         <div class="patch-row">
-                            <span class="patch-text">${patchNames[key]}: L:${c.L}, a:${c.a}, b:${c.b}</span>
+                            <span class="swatch-dot" style="background: rgb(${rgbP.r},${rgbP.g},${rgbP.b});"></span>
+                            <span class="patch-text">${patchNames[key]}: ${c.l}, ${c.a}, ${c.b}</span>
                         </div>
                     `;
                 }
@@ -1044,16 +1070,126 @@
             container.innerHTML = html;
         }
 
-        // ================= МЕТОДЫ 3D КОРРЕКЦИИ B LAB =================
-        function apply3DAffineCorrectionLab(rawTarget, patches) {
-            // Идеальные ориентировочные LAB координаты патчей
+        // ================= МЕТОДЫ 1D КОРРЕКЦИИ В LAB =================
+        function applyLinearCorrection(rawTarget, patches) {
+            // Идеальные эталоны плашек в формате OpenCV LAB (0..255)
             const IDEAL = {
-                white: { L: 255, a: 128, b: 128 },
-                gray:  { L: 128, a: 128, b: 128 },
-                black: { L: 20,  a: 128, b: 128 },
-                right1: { L: 180, a: 80,  b: 100 },
-                right2: { L: 140, a: 200, b: 80  },
-                right3: { L: 220, a: 110, b: 200 }
+                white: { l: 255, a: 128, b: 128 },
+                gray:  { l: 128, a: 128, b: 128 },
+                black: { l: 20,  a: 128, b: 128 }
+            };
+
+            function interpolateChannel(val, ch) {
+                let pts = [
+                    { x: 0, y: 0 },
+                    { x: patches.black[ch], y: IDEAL.black[ch] },
+                    { x: patches.gray[ch],  y: IDEAL.gray[ch] },
+                    { x: patches.white[ch], y: IDEAL.white[ch] },
+                    { x: 255, y: 255 }
+                ];
+
+                pts.sort((a, b) => a.x - b.x);
+
+                let clean = [pts[0]];
+                for (let i = 1; i < pts.length; i++) {
+                    if (pts[i].x > clean[clean.length - 1].x) {
+                        clean.push(pts[i]);
+                    }
+                }
+
+                if (val < clean[0].x) {
+                    if (clean[0].x === 0) return 0;
+                    let slope = clean[0].y / clean[0].x;
+                    return Math.max(0, Math.min(255, Math.round(val * slope)));
+                }
+
+                let last = clean[clean.length - 1];
+                if (val > last.x) {
+                    if (last.x === 255) return 255;
+                    let slope = (255 - last.y) / (255 - last.x);
+                    return Math.max(0, Math.min(255, Math.round(last.y + (val - last.x) * slope)));
+                }
+
+                for (let i = 0; i < clean.length - 1; i++) {
+                    let p1 = clean[i], p2 = clean[i + 1];
+                    if (val >= p1.x && val <= p2.x) {
+                        let ratio = (val - p1.x) / (p2.x - p1.x);
+                        let interpolated = p1.y + ratio * (p2.y - p1.y);
+                        return Math.max(0, Math.min(255, Math.round(interpolated)));
+                    }
+                }
+
+                return Math.max(0, Math.min(255, Math.round(val)));
+            }
+
+            return {
+                l: interpolateChannel(rawTarget.l, 'l'),
+                a: interpolateChannel(rawTarget.a, 'a'),
+                b: interpolateChannel(rawTarget.b, 'b')
+            };
+        }
+
+        function applySplineCorrection(rawTarget, patches) {
+            const IDEAL = {
+                white: { l: 255, a: 128, b: 128 },
+                gray:  { l: 128, a: 128, b: 128 },
+                black: { l: 20,  a: 128, b: 128 }
+            };
+
+            function monotonicSpline(val, ch) {
+                let pts = [
+                    { x: 0, y: 0 },
+                    { x: patches.black[ch], y: IDEAL.black[ch] },
+                    { x: patches.gray[ch],  y: IDEAL.gray[ch] },
+                    { x: patches.white[ch], y: IDEAL.white[ch] },
+                    { x: 255, y: 255 }
+                ];
+
+                pts.sort((a, b) => a.x - b.x);
+
+                let clean = [pts[0]];
+                for (let i = 1; i < pts.length; i++) {
+                    if (pts[i].x > clean[clean.length - 1].x) {
+                        clean.push(pts[i]);
+                    }
+                }
+
+                if (clean.length < 2) return val;
+
+                if (val <= clean[0].x) return Math.max(0, Math.min(255, Math.round(clean[0].y * (val / Math.max(1, clean[0].x)))));
+                let last = clean[clean.length - 1];
+                if (val >= last.x) return Math.max(0, Math.min(255, Math.round(last.y + (255 - last.y) * ((val - last.x) / Math.max(1, 255 - last.x)))));
+
+                for (let i = 0; i < clean.length - 1; i++) {
+                    let p1 = clean[i], p2 = clean[i + 1];
+                    if (val >= p1.x && val <= p2.x) {
+                        let t = (val - p1.x) / (p2.x - p1.x);
+                        let smoothT = t * t * (3 - 2 * t);
+                        let interpolated = p1.y + smoothT * (p2.y - p1.y);
+                        return Math.max(0, Math.min(255, Math.round(interpolated)));
+                    }
+                }
+
+                return val;
+            }
+
+            return {
+                l: monotonicSpline(rawTarget.l, 'l'),
+                a: monotonicSpline(rawTarget.a, 'a'),
+                b: monotonicSpline(rawTarget.b, 'b')
+            };
+        }
+
+        // ================= МЕТОДЫ 3D КОРРЕКЦИИ В LAB =================
+        function apply3DAffineCorrection(rawTarget, patches) {
+            // Идеальные LAB координаты плашек карт-мишени
+            const IDEAL = {
+                white:  { l: 255, a: 128, b: 128 },
+                gray:   { l: 128, a: 128, b: 128 },
+                black:  { l: 20,  a: 128, b: 128 },
+                right1: { l: 232, a: 74,  b: 104 }, // Cyan
+                right2: { l: 123, a: 216, b: 102 }, // Magenta
+                right3: { l: 247, a: 110, b: 226 }  // Yellow
             };
 
             const keys = ['white', 'gray', 'black', 'right1', 'right2', 'right3'];
@@ -1062,12 +1198,12 @@
 
             for (let i = 0; i < keys.length; i++) {
                 let k = keys[i];
-                srcMat.doublePtr(i, 0)[0] = patches[k].L;
+                srcMat.doublePtr(i, 0)[0] = patches[k].l;
                 srcMat.doublePtr(i, 1)[0] = patches[k].a;
                 srcMat.doublePtr(i, 2)[0] = patches[k].b;
                 srcMat.doublePtr(i, 3)[0] = 1.0;
 
-                dstMat.doublePtr(i, 0)[0] = IDEAL[k].L;
+                dstMat.doublePtr(i, 0)[0] = IDEAL[k].l;
                 dstMat.doublePtr(i, 1)[0] = IDEAL[k].a;
                 dstMat.doublePtr(i, 2)[0] = IDEAL[k].b;
             }
@@ -1075,76 +1211,212 @@
             let M = new cv.Mat();
             cv.solve(srcMat, dstMat, M, cv.DECOMP_SVD);
 
-            let L = rawTarget.L * M.doublePtr(0, 0)[0] + rawTarget.a * M.doublePtr(1, 0)[0] + rawTarget.b * M.doublePtr(2, 0)[0] + M.doublePtr(3, 0)[0];
-            let a = rawTarget.L * M.doublePtr(0, 1)[0] + rawTarget.a * M.doublePtr(1, 1)[0] + rawTarget.b * M.doublePtr(2, 1)[0] + M.doublePtr(3, 1)[0];
-            let b = rawTarget.L * M.doublePtr(0, 2)[0] + rawTarget.a * M.doublePtr(1, 2)[0] + rawTarget.b * M.doublePtr(2, 2)[0] + M.doublePtr(3, 2)[0];
+            let resL = rawTarget.l * M.doublePtr(0, 0)[0] + rawTarget.a * M.doublePtr(1, 0)[0] + rawTarget.b * M.doublePtr(2, 0)[0] + M.doublePtr(3, 0)[0];
+            let resA = rawTarget.l * M.doublePtr(0, 1)[0] + rawTarget.a * M.doublePtr(1, 1)[0] + rawTarget.b * M.doublePtr(2, 1)[0] + M.doublePtr(3, 1)[0];
+            let resB = rawTarget.l * M.doublePtr(0, 2)[0] + rawTarget.a * M.doublePtr(1, 2)[0] + rawTarget.b * M.doublePtr(2, 2)[0] + M.doublePtr(3, 2)[0];
 
             srcMat.delete(); dstMat.delete(); M.delete();
 
             return {
-                L: Math.max(0, Math.min(255, Math.round(L))),
-                a: Math.max(0, Math.min(255, Math.round(a))),
-                b: Math.max(0, Math.min(255, Math.round(b)))
+                l: Math.max(0, Math.min(255, Math.round(resL))),
+                a: Math.max(0, Math.min(255, Math.round(resA))),
+                b: Math.max(0, Math.min(255, Math.round(resB)))
+            };
+        }
+
+        function apply3DTPSCorrection(rawTarget, patches) {
+            const IDEAL = {
+                white:  { l: 255, a: 128, b: 128 },
+                gray:   { l: 128, a: 128, b: 128 },
+                black:  { l: 20,  a: 128, b: 128 },
+                right1: { l: 232, a: 74,  b: 104 },
+                right2: { l: 123, a: 216, b: 102 },
+                right3: { l: 247, a: 110, b: 226 }
+            };
+
+            const keys = ['white', 'gray', 'black', 'right1', 'right2', 'right3'];
+            const N = keys.length;
+
+            const U = (dist) => (dist === 0 ? 0 : dist * dist * Math.log(dist));
+
+            let K = new cv.Mat(N, N, cv.CV_64F);
+            let P = new cv.Mat(N, 4, cv.CV_64F);
+
+            for (let i = 0; i < N; i++) {
+                let pi = patches[keys[i]];
+                P.doublePtr(i, 0)[0] = 1.0;
+                P.doublePtr(i, 1)[0] = pi.l;
+                P.doublePtr(i, 2)[0] = pi.a;
+                P.doublePtr(i, 3)[0] = pi.b;
+
+                for (let j = 0; j < N; j++) {
+                    let pj = patches[keys[j]];
+                    let dist = Math.sqrt((pi.l - pj.l)**2 + (pi.a - pj.a)**2 + (pi.b - pj.b)**2);
+                    K.doublePtr(i, j)[0] = U(dist);
+                }
+            }
+
+            let L = new cv.Mat(N + 4, N + 4, cv.CV_64F);
+            L.setTo(new cv.Scalar(0));
+
+            for (let i = 0; i < N; i++) {
+                for (let j = 0; j < N; j++) {
+                    L.doublePtr(i, j)[0] = K.doublePtr(i, j)[0];
+                }
+                for (let j = 0; j < 4; j++) {
+                    L.doublePtr(i, N + j)[0] = P.doublePtr(i, j)[0];
+                    L.doublePtr(N + j, i)[0] = P.doublePtr(i, j)[0];
+                }
+            }
+
+            let Y = new cv.Mat(N + 4, 3, cv.CV_64F);
+            Y.setTo(new cv.Scalar(0));
+            for (let i = 0; i < N; i++) {
+                let target = IDEAL[keys[i]];
+                Y.doublePtr(i, 0)[0] = target.l;
+                Y.doublePtr(i, 1)[0] = target.a;
+                Y.doublePtr(i, 2)[0] = target.b;
+            }
+
+            let W = new cv.Mat();
+            cv.solve(L, Y, W, cv.DECOMP_SVD);
+
+            let resL = W.doublePtr(N, 0)[0] + W.doublePtr(N+1, 0)[0]*rawTarget.l + W.doublePtr(N+2, 0)[0]*rawTarget.a + W.doublePtr(N+3, 0)[0]*rawTarget.b;
+            let resA = W.doublePtr(N, 1)[0] + W.doublePtr(N+1, 1)[0]*rawTarget.l + W.doublePtr(N+2, 1)[0]*rawTarget.a + W.doublePtr(N+3, 1)[0]*rawTarget.b;
+            let resB = W.doublePtr(N, 2)[0] + W.doublePtr(N+1, 2)[0]*rawTarget.l + W.doublePtr(N+2, 2)[0]*rawTarget.a + W.doublePtr(N+3, 2)[0]*rawTarget.b;
+
+            for (let i = 0; i < N; i++) {
+                let pi = patches[keys[i]];
+                let dist = Math.sqrt((rawTarget.l - pi.l)**2 + (rawTarget.a - pi.a)**2 + (rawTarget.b - pi.b)**2);
+                let uVal = U(dist);
+                resL += W.doublePtr(i, 0)[0] * uVal;
+                resA += W.doublePtr(i, 1)[0] * uVal;
+                resB += W.doublePtr(i, 2)[0] * uVal;
+            }
+
+            K.delete(); P.delete(); L.delete(); Y.delete(); W.delete();
+
+            return {
+                l: Math.max(0, Math.min(255, Math.round(resL))),
+                a: Math.max(0, Math.min(255, Math.round(resA))),
+                b: Math.max(0, Math.min(255, Math.round(resB)))
             };
         }
 
         function getStatusBadge(diff) {
-            if (diff >= 15) return { class: 'match-error', text: 'СОВСЕМ НЕ ТОТ' };
-            if (diff >= 6) return { class: 'match-warning', text: 'ПОЧТИ ТОТ' };
+            if (diff >= 35) return { class: 'match-error', text: 'СОВСЕМ НЕ ТОТ' };
+            if (diff >= 15) return { class: 'match-warning', text: 'ПОЧТИ ТОТ' };
             return { class: 'match-success', text: 'ТОТ САМЫЙ ЦВЕТ' };
         }
 
-        // Вычисление Delta E (Евклидово расстояние в пространстве CIE LAB)
-        function computeDeltaE(lab1, lab2) {
-            return Math.sqrt(
-                Math.pow(lab1.L - lab2.L, 2) +
-                Math.pow(lab1.a - lab2.a, 2) +
-                Math.pow(lab1.b - lab2.b, 2)
-            );
-        }
-
-        function computeRawScoreLab(stdRaw, smpRaw, statType) {
+        // РАСЧЕТ ДЛЯ СЫРЫХ ДАННЫХ В LAB (Delta E)
+        function computeRawScore(stdRaw, smpRaw, statType) {
             const stdColor = statType === 'mean' ? stdRaw.mainMean : (stdRaw.mainMedian || stdRaw.mainMean);
             const smpColor = statType === 'mean' ? smpRaw.mainMean : (smpRaw.mainMedian || smpRaw.mainMean);
 
-            const deltaE = Math.round(computeDeltaE(stdColor, smpColor) * 10) / 10;
-            const percent = Math.max(0, Math.min(100, Math.round(100 - deltaE * 2)));
-            const status = getStatusBadge(deltaE);
+            // Вычисление евклидова расстояния ΔE в LAB пространства OpenCV
+            const diff = Math.round(Math.sqrt(
+                Math.pow(stdColor.l - smpColor.l, 2) + 
+                Math.pow(stdColor.a - smpColor.a, 2) + 
+                Math.pow(stdColor.b - smpColor.b, 2)
+            ));
+            
+            const percent = Math.max(0, Math.min(100, Math.round(100 - (diff / 255) * 100 * 2.5)));
+            const status = getStatusBadge(diff);
 
-            return { stdColor, smpColor, diff: deltaE, percent, status };
+            return { stdColor, smpColor, diff, percent, status };
         }
 
-        function computeMethodScoreLab(stdRaw, smpRaw, mathMethod, statType) {
+        function computeMethodScore(stdRaw, smpRaw, mathMethod, statType) {
             const rawTargetStd = statType === 'mean' ? stdRaw.mainMean : (stdRaw.mainMedian || stdRaw.mainMean);
             const rawTargetSmp = statType === 'mean' ? smpRaw.mainMean : (smpRaw.mainMedian || smpRaw.mainMean);
             
             const patchesDataStd = statType === 'mean' ? stdRaw.patchesMean : (stdRaw.patchesMedian || stdRaw.patchesMean);
             const patchesDataSmp = statType === 'mean' ? smpRaw.patchesMean : (smpRaw.patchesMedian || smpRaw.patchesMean);
 
-            const stdCorr = apply3DAffineCorrectionLab(rawTargetStd, patchesDataStd);
-            const smpCorr = apply3DAffineCorrectionLab(rawTargetSmp, patchesDataSmp);
+            let corrector;
+            if (mathMethod === 'linear') corrector = applyLinearCorrection;
+            else if (mathMethod === 'spline') corrector = applySplineCorrection;
+            else if (mathMethod === '3d_affine') corrector = apply3DAffineCorrection;
+            else if (mathMethod === '3d_tps') corrector = apply3DTPSCorrection;
 
-            const deltaE = Math.round(computeDeltaE(stdCorr, smpCorr) * 10) / 10;
-            const percent = Math.max(0, Math.min(100, Math.round(100 - deltaE * 2)));
-            const status = getStatusBadge(deltaE);
+            const stdCorr = corrector(rawTargetStd, patchesDataStd);
+            const smpCorr = corrector(rawTargetSmp, patchesDataSmp);
 
-            return { stdCorr, smpCorr, diff: deltaE, percent, status };
+            // Вычисление ΔE в LAB
+            const diff = Math.round(Math.sqrt(
+                Math.pow(stdCorr.l - smpCorr.l, 2) + 
+                Math.pow(stdCorr.a - smpCorr.a, 2) + 
+                Math.pow(stdCorr.b - smpCorr.b, 2)
+            ));
+
+            const percent = Math.max(0, Math.min(100, Math.round(100 - (diff / 255) * 100 * 2.5)));
+            const status = getStatusBadge(diff);
+
+            return { stdCorr, smpCorr, diff, percent, status };
+        }
+
+        function processBlockEnsemble(scoresList) {
+            const sorted = [...scoresList].sort((a, b) => b - a);
+            let valid = sorted;
+            let hasOutliers = false;
+
+            if (sorted[0] - sorted[2] > 10) {
+                valid = sorted.slice(0, 2);
+                hasOutliers = true;
+            }
+
+            const avg = valid.reduce((sum, val) => sum + val, 0) / valid.length;
+            const isConsensus = valid.every(v => v > 85);
+            const bonus = isConsensus ? 1.0 : 0.0;
+
+            return {
+                avg: Math.round(avg * 10) / 10,
+                bonus,
+                total: Math.round((avg + bonus) * 10) / 10,
+                hasOutliers,
+                isConsensus
+            };
         }
 
         function compareColors() {
             if (!standardColorData || !sampleColorData) return;
 
-            const rawMean = computeRawScoreLab(standardColorData, sampleColorData, 'mean');
-            const rawMedian = computeRawScoreLab(standardColorData, sampleColorData, 'median');
+            // Сырое сравнение
+            const rawMean = computeRawScore(standardColorData, sampleColorData, 'mean');
+            const rawMedian = computeRawScore(standardColorData, sampleColorData, 'median');
 
-            const m3D_1 = computeMethodScoreLab(standardColorData, sampleColorData, '3d_affine', 'mean');
-            const m3D_2 = computeMethodScoreLab(standardColorData, sampleColorData, '3d_affine', 'median');
+            // Расчет 4 методов для 1D
+            const m1D_1 = computeMethodScore(standardColorData, sampleColorData, 'linear', 'mean');
+            const m1D_2 = computeMethodScore(standardColorData, sampleColorData, 'linear', 'median');
+            const m1D_3 = computeMethodScore(standardColorData, sampleColorData, 'spline', 'mean');
+            const m1D_4 = computeMethodScore(standardColorData, sampleColorData, 'spline', 'median');
 
-            const finalScore = Math.min(99, Math.round((m3D_1.percent + m3D_2.percent) / 2));
+            // Расчет 4 методов для 3D
+            const m3D_1 = computeMethodScore(standardColorData, sampleColorData, '3d_affine', 'mean');
+            const m3D_2 = computeMethodScore(standardColorData, sampleColorData, '3d_affine', 'median');
+            const m3D_3 = computeMethodScore(standardColorData, sampleColorData, '3d_tps', 'mean');
+            const m3D_4 = computeMethodScore(standardColorData, sampleColorData, '3d_tps', 'median');
+
+            // Ансамблирование
+            const rawAvg = (rawMean.percent + rawMedian.percent) / 2;
+            const cameraBonus = rawAvg >= 90 ? 2.0 : 0.0;
+
+            const res1D = processBlockEnsemble([m1D_1.percent, m1D_2.percent, m1D_3.percent, m1D_4.percent]);
+            const res3D = processBlockEnsemble([m3D_1.percent, m3D_2.percent, m3D_3.percent, m3D_4.percent]);
+
+            const bestBlockTotal = Math.max(res1D.total, res3D.total);
+            const finalScore = Math.min(99, Math.round((bestBlockTotal + cameraBonus) * 10) / 10);
 
             infoCard.style.display = 'block';
 
-            const renderMethodRow = (title, res) => `
+            const renderMethodRow = (title, res, isRaw = false) => {
+                const stdLab = isRaw ? res.stdColor : res.stdCorr;
+                const smpLab = isRaw ? res.smpColor : res.smpCorr;
+                const stdRgb = labToRgb(stdLab.l, stdLab.a, stdLab.b);
+                const smpRgb = labToRgb(smpLab.l, smpLab.a, smpLab.b);
+
+                return `
                 <div class="method-row">
                     <div class="method-info">
                         <span class="method-name">${title}</span>
@@ -1153,33 +1425,73 @@
                         </span>
                     </div>
                     <div class="method-score">
+                        <div class="swatches-pair">
+                            <div class="swatch-mini" style="background: rgb(${stdRgb.r},${stdRgb.g},${stdRgb.b})" title="Эталон"></div>
+                            <div class="swatch-mini" style="background: rgb(${smpRgb.r},${smpRgb.g},${smpRgb.b})" title="Образец"></div>
+                        </div>
                         <span class="score-val ${res.status.class}">${res.percent}%</span>
                     </div>
                 </div>
-            `;
+                `;
+            };
 
             resultDiv.innerHTML = `
+                <!-- БЛОК 0: СЫРОЕ СРАВНЕНИЕ (БЕЗ КОРРЕКЦИИ) -->
                 <div class="comparison-block" style="border: 1px solid rgba(255, 179, 0, 0.4);">
                     <div class="comparison-title raw">📷 Прямое сравнение в LAB (без коррекции)</div>
+                    
                     <div class="methods-list">
-                        ${renderMethodRow('Прямой LAB (Среднее)', rawMean)}
-                        ${renderMethodRow('Прямой LAB (Медиана)', rawMedian)}
+                        ${renderMethodRow('Сырые данные (Среднее)', rawMean, true)}
+                        ${renderMethodRow('Сырые данные (Медиана)', rawMedian, true)}
                     </div>
                 </div>
 
+                <!-- БЛОК 1: 1D КОРРЕКЦИЯ -->
+                <div class="comparison-block" style="border: 1px solid rgba(0, 229, 255, 0.35);">
+                    <div class="comparison-title corrected">✨ Сравнение методов 1D коррекции</div>
+                    
+                    <div class="methods-list">
+                        ${renderMethodRow('1D Линейное + Среднее', m1D_1)}
+                        ${renderMethodRow('1D Линейное + Медианное', m1D_2)}
+                        ${renderMethodRow('1D Сплайновое + Среднее', m1D_3)}
+                        ${renderMethodRow('1D Сплайновое + Медианное', m1D_4)}
+                    </div>
+                </div>
+
+                <!-- БЛОК 2: 3D КОРРЕКЦИЯ -->
                 <div class="comparison-block" style="border: 1px solid rgba(139, 92, 246, 0.35);">
-                    <div class="comparison-title corrected-3d">🔮 Коррекция в LAB пространстве</div>
+                    <div class="comparison-title corrected-3d">🔮 Сравнение методов 3D коррекции</div>
+                    
                     <div class="methods-list">
-                        ${renderMethodRow('LAB Аффинная + Среднее', m3D_1)}
-                        ${renderMethodRow('LAB Аффинная + Медианное', m3D_2)}
+                        ${renderMethodRow('3D Аффинное + Среднее', m3D_1)}
+                        ${renderMethodRow('3D Аффинное + Медианное', m3D_2)}
+                        ${renderMethodRow('3D TPS Сплайн + Среднее', m3D_3)}
+                        ${renderMethodRow('3D TPS Сплайн + Медианное', m3D_4)}
                     </div>
                 </div>
 
+                <!-- БЛОК 3: ИТОГОВЫЙ ВЕРДИКТ -->
                 <div class="comparison-block" style="border: 1px solid rgba(0, 230, 118, 0.4); background: rgba(0, 230, 118, 0.03);">
-                    <div class="comparison-title final">🏆 Итоговый результат в LAB</div>
+                    <div class="comparison-title final">🏆 Итоговый ансамблевый вердикт</div>
+                    
                     <div class="final-summary">
+                        <div class="summary-line">
+                            <span>📷 Бонус света камеры (Сырое > 90%):</span>
+                            <span class="summary-badge ${cameraBonus > 0 ? 'active' : ''}">+${cameraBonus}%</span>
+                        </div>
+
+                        <div class="summary-line">
+                            <span>✨ 1D Коррекция (среднее ${res1D.hasOutliers ? 'без артефактов' : ''}):</span>
+                            <span><b>${res1D.avg}%</b> <span class="summary-badge ${res1D.bonus > 0 ? 'active' : ''}">+${res1D.bonus}% консенсус</span></span>
+                        </div>
+
+                        <div class="summary-line">
+                            <span>🔮 3D Коррекция (среднее ${res3D.hasOutliers ? 'без артефактов' : ''}):</span>
+                            <span><b>${res3D.avg}%</b> <span class="summary-badge ${res3D.bonus > 0 ? 'active' : ''}">+${res3D.bonus}% консенсус</span></span>
+                        </div>
+
                         <div class="final-total-row">
-                            <span class="final-total-label">Сходство по CIE LAB (ΔE):</span>
+                            <span class="final-total-label">Окончательный результат:</span>
                             <span class="final-total-value">${finalScore}%</span>
                         </div>
                     </div>
