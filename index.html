@@ -1303,155 +1303,6 @@
             };
         }
 
-        function apply3DMatrixCorrection(rawTarget, patches) {
-            const IDEAL = {
-                white:  { l: 255, a: 128, b: 128 },
-                gray:   { l: 128, a: 128, b: 128 },
-                black:  { l: 20,  a: 128, b: 128 },
-                right1: { l: 232, a: 74,  b: 104 },
-                right2: { l: 123, a: 216, b: 102 },
-                right3: { l: 247, a: 110, b: 226 }
-            };
-
-            const keys = ['white', 'gray', 'black', 'right1', 'right2', 'right3'];
-            let srcMat = new cv.Mat(keys.length, 3, cv.CV_64F);
-            let dstMat = new cv.Mat(keys.length, 3, cv.CV_64F);
-
-            for (let i = 0; i < keys.length; i++) {
-                let k = keys[i];
-                srcMat.doublePtr(i, 0)[0] = patches[k].l;
-                srcMat.doublePtr(i, 1)[0] = patches[k].a;
-                srcMat.doublePtr(i, 2)[0] = patches[k].b;
-
-                dstMat.doublePtr(i, 0)[0] = IDEAL[k].l;
-                dstMat.doublePtr(i, 1)[0] = IDEAL[k].a;
-                dstMat.doublePtr(i, 2)[0] = IDEAL[k].b;
-            }
-
-            let M = new cv.Mat();
-            cv.solve(srcMat, dstMat, M, cv.DECOMP_SVD);
-
-            let resL = rawTarget.l * M.doublePtr(0, 0)[0] + rawTarget.a * M.doublePtr(1, 0)[0] + rawTarget.b * M.doublePtr(2, 0)[0];
-            let resA = rawTarget.l * M.doublePtr(0, 1)[0] + rawTarget.a * M.doublePtr(1, 1)[0] + rawTarget.b * M.doublePtr(2, 1)[0];
-            let resB = rawTarget.l * M.doublePtr(0, 2)[0] + rawTarget.a * M.doublePtr(1, 2)[0] + rawTarget.b * M.doublePtr(2, 2)[0];
-
-            srcMat.delete(); dstMat.delete(); M.delete();
-
-            return {
-                l: Math.max(0, Math.min(255, Math.round(resL))),
-                a: Math.max(0, Math.min(255, Math.round(resA))),
-                b: Math.max(0, Math.min(255, Math.round(resB)))
-            };
-        }
-
-        function apply3DPoly2Correction(rawTarget, patches) {
-            const IDEAL = {
-                white:  { l: 255, a: 128, b: 128 },
-                gray:   { l: 128, a: 128, b: 128 },
-                black:  { l: 20,  a: 128, b: 128 },
-                right1: { l: 232, a: 74,  b: 104 },
-                right2: { l: 123, a: 216, b: 102 },
-                right3: { l: 247, a: 110, b: 226 }
-            };
-
-            const keys = ['white', 'gray', 'black', 'right1', 'right2', 'right3'];
-            const numFeatures = 10;
-            let srcMat = new cv.Mat(keys.length, numFeatures, cv.CV_64F);
-            let dstMat = new cv.Mat(keys.length, 3, cv.CV_64F);
-
-            for (let i = 0; i < keys.length; i++) {
-                let k = keys[i];
-                let l = patches[k].l / 255.0;
-                let a = patches[k].a / 255.0;
-                let b = patches[k].b / 255.0;
-
-                let feats = [l, a, b, l*a, l*b, a*b, l*l, a*a, b*b, 1.0];
-                for (let j = 0; j < numFeatures; j++) {
-                    srcMat.doublePtr(i, j)[0] = feats[j];
-                }
-
-                dstMat.doublePtr(i, 0)[0] = IDEAL[k].l;
-                dstMat.doublePtr(i, 1)[0] = IDEAL[k].a;
-                dstMat.doublePtr(i, 2)[0] = IDEAL[k].b;
-            }
-
-            let M = new cv.Mat();
-            cv.solve(srcMat, dstMat, M, cv.DECOMP_SVD);
-
-            let tl = rawTarget.l / 255.0;
-            let ta = rawTarget.a / 255.0;
-            let tb = rawTarget.b / 255.0;
-            let targetFeats = [tl, ta, tb, tl*ta, tl*tb, ta*tb, tl*tl, ta*ta, tb*tb, 1.0];
-
-            let resL = 0, resA = 0, resB = 0;
-            for (let j = 0; j < numFeatures; j++) {
-                resL += targetFeats[j] * M.doublePtr(j, 0)[0];
-                resA += targetFeats[j] * M.doublePtr(j, 1)[0];
-                resB += targetFeats[j] * M.doublePtr(j, 2)[0];
-            }
-
-            srcMat.delete(); dstMat.delete(); M.delete();
-
-            return {
-                l: Math.max(0, Math.min(255, Math.round(resL))),
-                a: Math.max(0, Math.min(255, Math.round(resA))),
-                b: Math.max(0, Math.min(255, Math.round(resB)))
-            };
-        }
-
-        function apply3DRBFCorrection(rawTarget, patches) {
-            const IDEAL = {
-                white:  { l: 255, a: 128, b: 128 },
-                gray:   { l: 128, a: 128, b: 128 },
-                black:  { l: 20,  a: 128, b: 128 },
-                right1: { l: 232, a: 74,  b: 104 },
-                right2: { l: 123, a: 216, b: 102 },
-                right3: { l: 247, a: 110, b: 226 }
-            };
-
-            const keys = ['white', 'gray', 'black', 'right1', 'right2', 'right3'];
-            const N = keys.length;
-            const sigma = 60.0;
-
-            const rbf = (p1, p2) => {
-                let dist2 = (p1.l - p2.l)**2 + (p1.a - p2.a)**2 + (p1.b - p2.b)**2;
-                return Math.exp(-dist2 / (2 * sigma * sigma));
-            };
-
-            let K = new cv.Mat(N, N, cv.CV_64F);
-            let Y = new cv.Mat(N, 3, cv.CV_64F);
-
-            for (let i = 0; i < N; i++) {
-                let pi = patches[keys[i]];
-                for (let j = 0; j < N; j++) {
-                    let pj = patches[keys[j]];
-                    K.doublePtr(i, j)[0] = rbf(pi, pj);
-                }
-                Y.doublePtr(i, 0)[0] = IDEAL[keys[i]].l;
-                Y.doublePtr(i, 1)[0] = IDEAL[keys[i]].a;
-                Y.doublePtr(i, 2)[0] = IDEAL[keys[i]].b;
-            }
-
-            let W = new cv.Mat();
-            cv.solve(K, Y, W, cv.DECOMP_SVD);
-
-            let resL = 0, resA = 0, resB = 0;
-            for (let i = 0; i < N; i++) {
-                let phi = rbf(rawTarget, patches[keys[i]]);
-                resL += phi * W.doublePtr(i, 0)[0];
-                resA += phi * W.doublePtr(i, 1)[0];
-                resB += phi * W.doublePtr(i, 2)[0];
-            }
-
-            K.delete(); Y.delete(); W.delete();
-
-            return {
-                l: Math.max(0, Math.min(255, Math.round(resL))),
-                a: Math.max(0, Math.min(255, Math.round(resA))),
-                b: Math.max(0, Math.min(255, Math.round(resB)))
-            };
-        }
-
         function getStatusBadge(diff) {
             if (diff >= 35) return { class: 'match-error', text: 'СОВСЕМ НЕ ТОТ' };
             if (diff >= 15) return { class: 'match-warning', text: 'ПОЧТИ ТОТ' };
@@ -1488,9 +1339,6 @@
             else if (mathMethod === 'spline') corrector = applySplineCorrection;
             else if (mathMethod === '3d_affine') corrector = apply3DAffineCorrection;
             else if (mathMethod === '3d_tps') corrector = apply3DTPSCorrection;
-            else if (mathMethod === '3d_matrix') corrector = apply3DMatrixCorrection;
-            else if (mathMethod === '3d_poly2') corrector = apply3DPoly2Correction;
-            else if (mathMethod === '3d_rbf') corrector = apply3DRBFCorrection;
 
             const stdCorr = corrector(rawTargetStd, patchesDataStd);
             const smpCorr = corrector(rawTargetSmp, patchesDataSmp);
@@ -1546,30 +1394,18 @@
             const m1D_3 = computeMethodScore(standardColorData, sampleColorData, 'spline', 'mean');
             const m1D_4 = computeMethodScore(standardColorData, sampleColorData, 'spline', 'median');
 
-            // Расчет 10 методов для 3D
+            // Расчет 4 методов для 3D
             const m3D_1 = computeMethodScore(standardColorData, sampleColorData, '3d_affine', 'mean');
             const m3D_2 = computeMethodScore(standardColorData, sampleColorData, '3d_affine', 'median');
             const m3D_3 = computeMethodScore(standardColorData, sampleColorData, '3d_tps', 'mean');
             const m3D_4 = computeMethodScore(standardColorData, sampleColorData, '3d_tps', 'median');
-            const m3D_5 = computeMethodScore(standardColorData, sampleColorData, '3d_matrix', 'mean');
-            const m3D_6 = computeMethodScore(standardColorData, sampleColorData, '3d_matrix', 'median');
-            const m3D_7 = computeMethodScore(standardColorData, sampleColorData, '3d_poly2', 'mean');
-            const m3D_8 = computeMethodScore(standardColorData, sampleColorData, '3d_poly2', 'median');
-            const m3D_9 = computeMethodScore(standardColorData, sampleColorData, '3d_rbf', 'mean');
-            const m3D_10 = computeMethodScore(standardColorData, sampleColorData, '3d_rbf', 'median');
 
             // Ансамблирование
             const rawAvg = (rawMean.percent + rawMedian.percent) / 2;
             const cameraBonus = rawAvg >= 90 ? 2.0 : 0.0;
 
             const res1D = processBlockEnsemble([m1D_1.percent, m1D_2.percent, m1D_3.percent, m1D_4.percent]);
-            const res3D = processBlockEnsemble([
-                m3D_1.percent, m3D_2.percent, 
-                m3D_3.percent, m3D_4.percent,
-                m3D_5.percent, m3D_6.percent,
-                m3D_7.percent, m3D_8.percent,
-                m3D_9.percent, m3D_10.percent
-            ]);
+            const res3D = processBlockEnsemble([m3D_1.percent, m3D_2.percent, m3D_3.percent, m3D_4.percent]);
 
             // Простое среднее арифметическое между результатами групп 1D и 3D
             const ensembleAverage = (res1D.total + res3D.total) / 2;
@@ -1634,12 +1470,6 @@
                         ${renderMethodRow('3D Аффинное + Медианное', m3D_2)}
                         ${renderMethodRow('3D TPS Сплайн + Среднее', m3D_3)}
                         ${renderMethodRow('3D TPS Сплайн + Медианное', m3D_4)}
-                        ${renderMethodRow('3D Матрица 3×3 + Среднее', m3D_5)}
-                        ${renderMethodRow('3D Матрица 3×3 + Медианное', m3D_6)}
-                        ${renderMethodRow('3D Модель 2го порядка + Среднее', m3D_7)}
-                        ${renderMethodRow('3D Модель 2го порядка + Медианное', m3D_8)}
-                        ${renderMethodRow('3D RBF + Среднее', m3D_9)}
-                        ${renderMethodRow('3D RBF + Медианное', m3D_10)}
                     </div>
                 </div>
 
