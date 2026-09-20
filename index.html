@@ -847,11 +847,31 @@
             let extractedData = {
                 mainMean: { r: 0, g: 0, b: 0 },
                 mainMedian: { r: 0, g: 0, b: 0 },
-                patchesMean: { white: {r:0,g:0,b:0}, gray: {r:0,g:0,b:0}, black: {r:0,g:0,b:0} },
-                patchesMedian: { white: {r:0,g:0,b:0}, gray: {r:0,g:0,b:0}, black: {r:0,g:0,b:0} },
-                // Для совместимости с UI списков карточки:
+                patchesMean: { 
+                    white: {r:0,g:0,b:0}, 
+                    gray: {r:0,g:0,b:0}, 
+                    black: {r:0,g:0,b:0},
+                    right1: {r:0,g:0,b:0},
+                    right2: {r:0,g:0,b:0},
+                    right3: {r:0,g:0,b:0}
+                },
+                patchesMedian: { 
+                    white: {r:0,g:0,b:0}, 
+                    gray: {r:0,g:0,b:0}, 
+                    black: {r:0,g:0,b:0},
+                    right1: {r:0,g:0,b:0},
+                    right2: {r:0,g:0,b:0},
+                    right3: {r:0,g:0,b:0}
+                },
                 main: { r: 0, g: 0, b: 0 },
-                patches: { white: {r:0,g:0,b:0}, gray: {r:0,g:0,b:0}, black: {r:0,g:0,b:0} }
+                patches: { 
+                    white: {r:0,g:0,b:0}, 
+                    gray: {r:0,g:0,b:0}, 
+                    black: {r:0,g:0,b:0},
+                    right1: {r:0,g:0,b:0},
+                    right2: {r:0,g:0,b:0},
+                    right3: {r:0,g:0,b:0}
+                }
             };
 
             try {
@@ -927,9 +947,14 @@
                 const holeRadius = 35;
 
                 const colorPatches = [
-                    { key: 'white', x: Math.round(CARD_W * 0.155), y: Math.round(CARD_H * 0.310) - 20 },
-                    { key: 'gray',  x: Math.round(CARD_W * 0.155), y: Math.round(CARD_H * 0.525) - 5 },
-                    { key: 'black', x: Math.round(CARD_W * 0.155), y: Math.round(CARD_H * 0.740) }
+                    // Левые плашки (Белый, Серый, Чёрный)
+                    { key: 'white',  x: Math.round(CARD_W * 0.155), y: Math.round(CARD_H * 0.310) - 20 },
+                    { key: 'gray',   x: Math.round(CARD_W * 0.155), y: Math.round(CARD_H * 0.525) - 5 },
+                    { key: 'black',  x: Math.round(CARD_W * 0.155), y: Math.round(CARD_H * 0.740) },
+                    // Правые плашки
+                    { key: 'right1', x: Math.round(CARD_W * 0.845), y: Math.round(CARD_H * 0.310) - 20 },
+                    { key: 'right2', x: Math.round(CARD_W * 0.845), y: Math.round(CARD_H * 0.525) - 5 },
+                    { key: 'right3', x: Math.round(CARD_W * 0.845), y: Math.round(CARD_H * 0.740) }
                 ];
 
                 extractedData.mainMean = getRegionColor(warped, holeCenterX, holeCenterY, Math.round(holeRadius * 0.6), false);
@@ -986,7 +1011,10 @@
             const patchNames = {
                 white: 'Белый',
                 gray: 'Серый',
-                black: 'Чёрный'
+                black: 'Чёрный',
+                right1: 'Правый 1',
+                right2: 'Правый 2',
+                right3: 'Правый 3'
             };
 
             const IDEAL = {
@@ -1008,7 +1036,8 @@
                     <span class="patch-text"><b>Цель:</b> RGB ${m.r}, ${m.g}, ${m.b}</span>
                 </div>`;
 
-            for (const key of ['white', 'gray', 'black']) {
+            // Вывод всех 6 цветов в список
+            for (const key of ['white', 'gray', 'black', 'right1', 'right2', 'right3']) {
                 if (p && p[key]) {
                     const c = p[key];
                     html += `
