@@ -298,10 +298,10 @@
             text-align: center;
         }
 
+        .comparison-title.raw { color: var(--accent-warning); }
         .comparison-title.corrected { color: var(--accent-cyan); }
         .comparison-title.corrected-3d { color: var(--accent-purple); }
 
-        /* КОМПАКТНЫЙ СПИСОК МЕТОДОВ */
         .methods-list {
             display: flex;
             flex-direction: column;
@@ -950,7 +950,6 @@
             }
         }
 
-        // ВЫВОД ТОЛЬКО СЫРЫХ RGB ПЛАШЕК (БЕЗ ДЕЛЬТЫ RGB)
         function renderPatchesList(elementId, dataObj) {
             const container = document.getElementById(elementId);
             if (!dataObj || !dataObj.main) {
@@ -1229,6 +1228,20 @@
             return { class: 'match-success', text: 'ТОТ САМЫЙ ЦВЕТ' };
         }
 
+        // РАСЧЕТ ДЛЯ СЫРЫХ ДАННЫХ (БЕЗ КОРРЕКЦИИ)
+        function computeRawScore(stdRaw, smpRaw, statType) {
+            const stdColor = statType === 'mean' ? stdRaw.mainMean : (stdRaw.mainMedian || stdRaw.mainMean);
+            const smpColor = statType === 'mean' ? smpRaw.mainMean : (smpRaw.mainMedian || smpRaw.mainMean);
+
+            const diff = Math.round((Math.abs(stdColor.r - smpColor.r) + 
+                                     Math.abs(stdColor.g - smpColor.g) + 
+                                     Math.abs(stdColor.b - smpColor.b)) / 3);
+            const percent = Math.max(0, Math.min(100, Math.round(100 - (diff / 255) * 100 * 2.5)));
+            const status = getStatusBadge(diff);
+
+            return { stdColor, smpColor, diff, percent, status };
+        }
+
         function computeMethodScore(stdRaw, smpRaw, mathMethod, statType) {
             const rawTargetStd = statType === 'mean' ? stdRaw.mainMean : (stdRaw.mainMedian || stdRaw.mainMean);
             const rawTargetSmp = statType === 'mean' ? smpRaw.mainMean : (smpRaw.mainMedian || smpRaw.mainMean);
@@ -1257,6 +1270,10 @@
         function compareColors() {
             if (!standardColorData || !sampleColorData) return;
 
+            // Сырое сравнение
+            const rawMean = computeRawScore(standardColorData, sampleColorData, 'mean');
+            const rawMedian = computeRawScore(standardColorData, sampleColorData, 'median');
+
             // Расчет 4 методов для 1D
             const m1D_1 = computeMethodScore(standardColorData, sampleColorData, 'linear', 'mean');
             const m1D_2 = computeMethodScore(standardColorData, sampleColorData, 'linear', 'median');
@@ -1271,8 +1288,7 @@
 
             infoCard.style.display = 'block';
 
-            // КОМПАКТНЫЙ ВЫВОД СТРОКОЙ
-            const renderMethodRow = (title, res) => `
+            const renderMethodRow = (title, res, isRaw = false) => `
                 <div class="method-row">
                     <div class="method-info">
                         <span class="method-name">${title}</span>
@@ -1282,8 +1298,8 @@
                     </div>
                     <div class="method-score">
                         <div class="swatches-pair">
-                            <div class="swatch-mini" style="background: rgb(${res.stdCorr.r},${res.stdCorr.g},${res.stdCorr.b})" title="Эталон"></div>
-                            <div class="swatch-mini" style="background: rgb(${res.smpCorr.r},${res.smpCorr.g},${res.smpCorr.b})" title="Образец"></div>
+                            <div class="swatch-mini" style="background: rgb(${isRaw ? res.stdColor.r : res.stdCorr.r},${isRaw ? res.stdColor.g : res.stdCorr.g},${isRaw ? res.stdColor.b : res.stdCorr.b})" title="Эталон"></div>
+                            <div class="swatch-mini" style="background: rgb(${isRaw ? res.smpColor.r : res.smpCorr.r},${isRaw ? res.smpColor.g : res.smpCorr.g},${isRaw ? res.smpColor.b : res.smpCorr.b})" title="Образец"></div>
                         </div>
                         <span class="score-val ${res.status.class}">${res.percent}%</span>
                     </div>
@@ -1291,6 +1307,16 @@
             `;
 
             resultDiv.innerHTML = `
+                <!-- БЛОК 0: СЫРОЕ СРАВНЕНИЕ (БЕЗ КОРРЕКЦИИ) -->
+                <div class="comparison-block" style="border: 1px solid rgba(255, 179, 0, 0.4);">
+                    <div class="comparison-title raw">📷 Прямое сравнение (без коррекции)</div>
+                    
+                    <div class="methods-list">
+                        ${renderMethodRow('Сырые данные (Среднее)', rawMean, true)}
+                        ${renderMethodRow('Сырые данные (Медиана)', rawMedian, true)}
+                    </div>
+                </div>
+
                 <!-- БЛОК 1: 1D КОРРЕКЦИЯ -->
                 <div class="comparison-block" style="border: 1px solid rgba(0, 229, 255, 0.35);">
                     <div class="comparison-title corrected">✨ Сравнение методов 1D коррекции</div>
