@@ -253,9 +253,7 @@
         }
 
         .patch-row.main-patch {
-            border-bottom: 1px dashed rgba(255, 255, 255, 0.15);
-            padding-bottom: 4px;
-            margin-bottom: 2px;
+            padding-bottom: 2px;
             color: var(--text-main);
         }
 
@@ -272,36 +270,6 @@
             white-space: nowrap;
         }
 
-        .correction-profile {
-            margin-top: 8px;
-            padding-top: 6px;
-            border-top: 1px solid rgba(255, 255, 255, 0.1);
-            font-size: 10px;
-        }
-
-        .profile-title {
-            font-size: 9px;
-            font-weight: 700;
-            color: var(--accent-cyan);
-            margin-bottom: 4px;
-            letter-spacing: 0.5px;
-            text-transform: uppercase;
-            text-align: left;
-        }
-
-        .profile-row {
-            display: flex;
-            justify-content: space-between;
-            color: var(--text-muted);
-            margin-bottom: 2px;
-        }
-
-        .profile-row strong {
-            color: #ffffff;
-            font-family: monospace;
-            font-size: 10px;
-        }
-
         .card { 
             background: var(--card-bg); 
             backdrop-filter: blur(16px);
@@ -310,7 +278,6 @@
             border-radius: 18px; 
             margin-top: 14px; 
             box-shadow: 0 12px 32px rgba(0,0,0,0.4);
-            text-align: center;
         }
 
         .comparison-block {
@@ -319,104 +286,84 @@
             background: rgba(0, 0, 0, 0.3);
             border: 1px solid var(--card-border);
             margin-bottom: 12px;
-            text-align: center;
         }
 
         .comparison-title {
-            font-size: 10px;
+            font-size: 11px;
             font-weight: 700;
             text-transform: uppercase;
             letter-spacing: 0.5px;
-            margin-bottom: 8px;
+            margin-bottom: 10px;
             color: var(--text-muted);
+            text-align: center;
         }
 
-        .comparison-title.corrected {
-            color: var(--accent-cyan);
-        }
+        .comparison-title.corrected { color: var(--accent-cyan); }
+        .comparison-title.corrected-3d { color: var(--accent-purple); }
 
-        .comparison-title.corrected-3d {
-            color: var(--accent-purple);
-        }
-
-        /* СЕТКА 2х2 ДЛЯ МЕТОДОВ */
-        .comparison-methods-grid-2x2 {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 8px;
-            margin-bottom: 4px;
-        }
-
-        .method-card {
-            background: rgba(255, 255, 255, 0.03);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            border-radius: 10px;
-            padding: 8px 4px;
+        /* КОМПАКТНЫЙ СПИСОК МЕТОДОВ */
+        .methods-list {
             display: flex;
             flex-direction: column;
+            gap: 6px;
+        }
+
+        .method-row {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 8px;
+            padding: 6px 10px;
+            display: flex;
             align-items: center;
+            justify-content: space-between;
         }
 
-        .method-title {
-            font-size: 8.5px;
-            font-weight: 700;
-            color: var(--text-muted);
-            text-transform: uppercase;
-            margin-bottom: 4px;
-            text-align: center;
-            line-height: 1.1;
+        .method-info {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
         }
 
-        .match-score-main { font-size: 20px; font-weight: 800; letter-spacing: -0.5px; }
-        .match-score-sub { font-size: 18px; font-weight: 800; letter-spacing: -0.5px; }
+        .method-name {
+            font-size: 11px;
+            font-weight: 600;
+            color: #fff;
+        }
 
-        .match-subtitle {
+        .method-subtext {
             font-size: 9px;
-            font-weight: 700;
-            padding: 2px 6px;
-            border-radius: 20px;
-            text-transform: uppercase;
-            margin-top: 4px;
-            display: inline-block;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .method-score {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .score-val {
+            font-size: 15px;
+            font-weight: 800;
         }
 
         .match-success { color: var(--accent-green); }
-        .match-success .match-subtitle { background: rgba(0, 230, 118, 0.12); color: var(--accent-green); }
-
         .match-warning { color: var(--accent-warning); }
-        .match-warning .match-subtitle { background: rgba(255, 179, 0, 0.12); color: var(--accent-warning); }
-
         .match-error { color: var(--accent-red); }
-        .match-error .match-subtitle { background: rgba(255, 82, 82, 0.12); color: var(--accent-red); }
 
-        .swatch-comparison {
+        .swatches-pair {
             display: flex;
             align-items: center;
-            justify-content: center;
-            gap: 8px;
-            margin-top: 6px;
-            padding: 4px;
-            background: rgba(0, 0, 0, 0.25);
-            border-radius: 8px;
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            width: 100%;
+            gap: 4px;
         }
 
-        .swatch-item {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 2px;
-            font-size: 8px;
-            color: var(--text-muted);
-            font-weight: 600;
-        }
-
-        .swatch-circle {
-            width: 16px;
-            height: 16px;
+        .swatch-mini {
+            width: 14px;
+            height: 14px;
             border-radius: 50%;
-            border: 1px solid rgba(255,255,255,0.2);
+            border: 1px solid rgba(255,255,255,0.25);
         }
 
         .reset-btn { 
@@ -1003,6 +950,7 @@
             }
         }
 
+        // ВЫВОД ТОЛЬКО СЫРЫХ RGB ПЛАШЕК (БЕЗ ДЕЛЬТЫ RGB)
         function renderPatchesList(elementId, dataObj) {
             const container = document.getElementById(elementId);
             if (!dataObj || !dataObj.main) {
@@ -1018,16 +966,6 @@
                 right2: 'Magenta',
                 right3: 'Yellow'
             };
-
-            const IDEAL = {
-                white: { r: 255, g: 255, b: 255 },
-                gray:  { r: 128, g: 128, b: 128 },
-                black: { r: 20,  g: 20,  b: 20  }
-            };
-
-            const fmtDelta = (val) => (val > 0 ? `+${val}` : `${val}`);
-            const calcDelta = (actual, ideal) => 
-                `${fmtDelta(actual.r - ideal.r)}, ${fmtDelta(actual.g - ideal.g)}, ${fmtDelta(actual.b - ideal.b)}`;
 
             const m = dataObj.main;
             const p = dataObj.patches;
@@ -1050,23 +988,7 @@
                 }
             }
 
-            html += `
-                <div class="correction-profile">
-                    <div class="profile-title">Цветокоррекция (Δ RGB)</div>
-            `;
-
-            for (const key of ['white', 'gray', 'black']) {
-                if (p && p[key]) {
-                    html += `
-                        <div class="profile-row">
-                            <span>${patchNames[key]}:</span>
-                            <strong>${calcDelta(p[key], IDEAL[key])}</strong>
-                        </div>
-                    `;
-                }
-            }
-
-            html += `</div></div>`;
+            html += `</div>`;
             container.innerHTML = html;
         }
 
@@ -1180,15 +1102,14 @@
         }
 
         // ================= МЕТОДЫ 3D КОРРЕКЦИИ =================
-        // 1. 3D Аффинная Матрица (CCM 3x4)
         function apply3DAffineCorrection(rawTarget, patches) {
             const IDEAL = {
                 white: { r: 255, g: 255, b: 255 },
                 gray:  { r: 128, g: 128, b: 128 },
                 black: { r: 20,  g: 20,  b: 20  },
-                right1: { r: 0,   g: 255, b: 255 }, // Cyan
-                right2: { r: 255, g: 0,   b: 255 }, // Magenta
-                right3: { r: 255, g: 255, b: 0   }  // Yellow
+                right1: { r: 0,   g: 255, b: 255 },
+                right2: { r: 255, g: 0,   b: 255 },
+                right3: { r: 255, g: 255, b: 0   }
             };
 
             const keys = ['white', 'gray', 'black', 'right1', 'right2', 'right3'];
@@ -1223,7 +1144,6 @@
             };
         }
 
-        // 2. 3D Thin Plate Spline (TPS)
         function apply3DTPSCorrection(rawTarget, patches) {
             const IDEAL = {
                 white: { r: 255, g: 255, b: 255 },
@@ -1349,33 +1269,23 @@
             const m3D_3 = computeMethodScore(standardColorData, sampleColorData, '3d_tps', 'mean');
             const m3D_4 = computeMethodScore(standardColorData, sampleColorData, '3d_tps', 'median');
 
-            // Сырое совпадение
-            const stdRaw = standardColorData.main;
-            const smpRaw = sampleColorData.main;
-            const diffRaw = Math.round((Math.abs(stdRaw.r - smpRaw.r) + 
-                                    Math.abs(stdRaw.g - smpRaw.g) + 
-                                    Math.abs(stdRaw.b - smpRaw.b)) / 3);
-            const percentRaw = Math.max(0, Math.min(100, Math.round(100 - (diffRaw / 255) * 100 * 2.5)));
-            const statusRaw = getStatusBadge(diffRaw);
-
             infoCard.style.display = 'block';
 
-            const renderMethodCard = (title, res) => `
-                <div class="method-card ${res.status.class}">
-                    <div class="method-title">${title}</div>
-                    <div class="match-score-main">${res.percent}%</div>
-                    <div class="match-subtitle">${res.status.text}</div>
-                    <div style="font-size:8.5px; margin-top:3px; opacity:0.7;">Δ = ${res.diff}</div>
-
-                    <div class="swatch-comparison">
-                        <div class="swatch-item">
-                            <div class="swatch-circle" style="background: rgb(${res.stdCorr.r},${res.stdCorr.g},${res.stdCorr.b})"></div>
-                            <span>Эталон</span>
+            // КОМПАКТНЫЙ ВЫВОД СТРОКОЙ
+            const renderMethodRow = (title, res) => `
+                <div class="method-row">
+                    <div class="method-info">
+                        <span class="method-name">${title}</span>
+                        <span class="method-subtext">
+                            <span class="${res.status.class}">${res.status.text}</span> • Δ = ${res.diff}
+                        </span>
+                    </div>
+                    <div class="method-score">
+                        <div class="swatches-pair">
+                            <div class="swatch-mini" style="background: rgb(${res.stdCorr.r},${res.stdCorr.g},${res.stdCorr.b})" title="Эталон"></div>
+                            <div class="swatch-mini" style="background: rgb(${res.smpCorr.r},${res.smpCorr.g},${res.smpCorr.b})" title="Образец"></div>
                         </div>
-                        <div class="swatch-item">
-                            <div class="swatch-circle" style="background: rgb(${res.smpCorr.r},${res.smpCorr.g},${res.smpCorr.b})"></div>
-                            <span>Образец</span>
-                        </div>
+                        <span class="score-val ${res.status.class}">${res.percent}%</span>
                     </div>
                 </div>
             `;
@@ -1383,44 +1293,25 @@
             resultDiv.innerHTML = `
                 <!-- БЛОК 1: 1D КОРРЕКЦИЯ -->
                 <div class="comparison-block" style="border: 1px solid rgba(0, 229, 255, 0.35);">
-                    <div class="comparison-title corrected">✨ Сравнение методов 1D коррекции (2х2)</div>
+                    <div class="comparison-title corrected">✨ Сравнение методов 1D коррекции</div>
                     
-                    <div class="comparison-methods-grid-2x2">
-                        ${renderMethodCard('1D Линейное + Среднее', m1D_1)}
-                        ${renderMethodCard('1D Линейное + Медианное', m1D_2)}
-                        ${renderMethodCard('1D Сплайновое + Среднее', m1D_3)}
-                        ${renderMethodCard('1D Сплайновое + Медианное', m1D_4)}
+                    <div class="methods-list">
+                        ${renderMethodRow('1D Линейное + Среднее', m1D_1)}
+                        ${renderMethodRow('1D Линейное + Медианное', m1D_2)}
+                        ${renderMethodRow('1D Сплайновое + Среднее', m1D_3)}
+                        ${renderMethodRow('1D Сплайновое + Медианное', m1D_4)}
                     </div>
                 </div>
 
                 <!-- БЛОК 2: 3D КОРРЕКЦИЯ -->
                 <div class="comparison-block" style="border: 1px solid rgba(139, 92, 246, 0.35);">
-                    <div class="comparison-title corrected-3d">🔮 Сравнение методов 3D коррекции (2х2)</div>
+                    <div class="comparison-title corrected-3d">🔮 Сравнение методов 3D коррекции</div>
                     
-                    <div class="comparison-methods-grid-2x2">
-                        ${renderMethodCard('3D Аффинное + Среднее', m3D_1)}
-                        ${renderMethodCard('3D Аффинное + Медианное', m3D_2)}
-                        ${renderMethodCard('3D TPS Сплайн + Среднее', m3D_3)}
-                        ${renderMethodCard('3D TPS Сплайн + Медианное', m3D_4)}
-                    </div>
-                </div>
-
-                <!-- БЛОК 3: БЕЗ КОРРЕКЦИИ -->
-                <div class="comparison-block ${statusRaw.class}">
-                    <div class="comparison-title">📷 Сырое совпадение (без коррекции)</div>
-                    <div class="match-score-sub">${percentRaw}% MATCH</div>
-                    <div class="match-subtitle" style="font-size:10px;">${statusRaw.text} (Δ = ${diffRaw})</div>
-                    
-                    <div class="swatch-comparison" style="margin-top:6px; padding:6px;">
-                        <div class="swatch-item">
-                            <div class="swatch-circle" style="width:22px; height:22px; background: rgb(${stdRaw.r},${stdRaw.g},${stdRaw.b})"></div>
-                            <span>Эталон (${stdRaw.r}, ${stdRaw.g}, ${stdRaw.b})</span>
-                        </div>
-                        <div style="font-weight:800; opacity:0.3; font-size:10px;">VS</div>
-                        <div class="swatch-item">
-                            <div class="swatch-circle" style="width:22px; height:22px; background: rgb(${smpRaw.r},${smpRaw.g},${smpRaw.b})"></div>
-                            <span>Образец (${smpRaw.r}, ${smpRaw.g}, ${smpRaw.b})</span>
-                        </div>
+                    <div class="methods-list">
+                        ${renderMethodRow('3D Аффинное + Среднее', m3D_1)}
+                        ${renderMethodRow('3D Аффинное + Медианное', m3D_2)}
+                        ${renderMethodRow('3D TPS Сплайн + Среднее', m3D_3)}
+                        ${renderMethodRow('3D TPS Сплайн + Медианное', m3D_4)}
                     </div>
                 </div>
             `;
