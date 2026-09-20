@@ -335,12 +335,16 @@
             color: var(--accent-cyan);
         }
 
+        .comparison-title.corrected-3d {
+            color: var(--accent-purple);
+        }
+
         /* СЕТКА 2х2 ДЛЯ МЕТОДОВ */
         .comparison-methods-grid-2x2 {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 8px;
-            margin-bottom: 10px;
+            margin-bottom: 4px;
         }
 
         .method-card {
@@ -947,11 +951,9 @@
                 const holeRadius = 35;
 
                 const colorPatches = [
-                    // Левые плашки (Белый, Серый, Чёрный)
                     { key: 'white',  x: Math.round(CARD_W * 0.155), y: Math.round(CARD_H * 0.310) - 20 },
                     { key: 'gray',   x: Math.round(CARD_W * 0.155), y: Math.round(CARD_H * 0.525) - 5 },
                     { key: 'black',  x: Math.round(CARD_W * 0.155), y: Math.round(CARD_H * 0.740) },
-                    // Правые плашки
                     { key: 'right1', x: Math.round(CARD_W * 0.845), y: Math.round(CARD_H * 0.310) - 20 },
                     { key: 'right2', x: Math.round(CARD_W * 0.845), y: Math.round(CARD_H * 0.525) - 5 },
                     { key: 'right3', x: Math.round(CARD_W * 0.845), y: Math.round(CARD_H * 0.740) }
@@ -1068,7 +1070,7 @@
             container.innerHTML = html;
         }
 
-        // 1. 1D ЛИНЕЙНАЯ КОРРЕКЦИЯ
+        // ================= МЕТОДЫ 1D КОРРЕКЦИИ =================
         function applyLinearCorrection(rawTarget, patches) {
             const IDEAL = {
                 white: { r: 255, g: 255, b: 255 },
@@ -1126,7 +1128,6 @@
             };
         }
 
-        // 2. 1D СПЛАЙНОВАЯ КОРРЕКЦИЯ
         function applySplineCorrection(rawTarget, patches) {
             const IDEAL = {
                 white: { r: 255, g: 255, b: 255 },
@@ -1178,20 +1179,148 @@
             };
         }
 
+        // ================= МЕТОДЫ 3D КОРРЕКЦИИ =================
+        // 1. 3D Аффинная Матрица (CCM 3x4)
+        function apply3DAffineCorrection(rawTarget, patches) {
+            const IDEAL = {
+                white: { r: 255, g: 255, b: 255 },
+                gray:  { r: 128, g: 128, b: 128 },
+                black: { r: 20,  g: 20,  b: 20  },
+                right1: { r: 0,   g: 255, b: 255 }, // Cyan
+                right2: { r: 255, g: 0,   b: 255 }, // Magenta
+                right3: { r: 255, g: 255, b: 0   }  // Yellow
+            };
+
+            const keys = ['white', 'gray', 'black', 'right1', 'right2', 'right3'];
+            let srcMat = new cv.Mat(keys.length, 4, cv.CV_64F);
+            let dstMat = new cv.Mat(keys.length, 3, cv.CV_64F);
+
+            for (let i = 0; i < keys.length; i++) {
+                let k = keys[i];
+                srcMat.doublePtr(i, 0)[0] = patches[k].r;
+                srcMat.doublePtr(i, 1)[0] = patches[k].g;
+                srcMat.doublePtr(i, 2)[0] = patches[k].b;
+                srcMat.doublePtr(i, 3)[0] = 1.0;
+
+                dstMat.doublePtr(i, 0)[0] = IDEAL[k].r;
+                dstMat.doublePtr(i, 1)[0] = IDEAL[k].g;
+                dstMat.doublePtr(i, 2)[0] = IDEAL[k].b;
+            }
+
+            let M = new cv.Mat();
+            cv.solve(srcMat, dstMat, M, cv.DECOMP_SVD);
+
+            let r = rawTarget.r * M.doublePtr(0, 0)[0] + rawTarget.g * M.doublePtr(1, 0)[0] + rawTarget.b * M.doublePtr(2, 0)[0] + M.doublePtr(3, 0)[0];
+            let g = rawTarget.r * M.doublePtr(0, 1)[0] + rawTarget.g * M.doublePtr(1, 1)[0] + rawTarget.b * M.doublePtr(2, 1)[0] + M.doublePtr(3, 1)[0];
+            let b = rawTarget.r * M.doublePtr(0, 2)[0] + rawTarget.g * M.doublePtr(1, 2)[0] + rawTarget.b * M.doublePtr(2, 2)[0] + M.doublePtr(3, 2)[0];
+
+            srcMat.delete(); dstMat.delete(); M.delete();
+
+            return {
+                r: Math.max(0, Math.min(255, Math.round(r))),
+                g: Math.max(0, Math.min(255, Math.round(g))),
+                b: Math.max(0, Math.min(255, Math.round(b)))
+            };
+        }
+
+        // 2. 3D Thin Plate Spline (TPS)
+        function apply3DTPSCorrection(rawTarget, patches) {
+            const IDEAL = {
+                white: { r: 255, g: 255, b: 255 },
+                gray:  { r: 128, g: 128, b: 128 },
+                black: { r: 20,  g: 20,  b: 20  },
+                right1: { r: 0,   g: 255, b: 255 },
+                right2: { r: 255, g: 0,   b: 255 },
+                right3: { r: 255, g: 255, b: 0   }
+            };
+
+            const keys = ['white', 'gray', 'black', 'right1', 'right2', 'right3'];
+            const N = keys.length;
+
+            const U = (dist) => (dist === 0 ? 0 : dist * dist * Math.log(dist));
+
+            let K = new cv.Mat(N, N, cv.CV_64F);
+            let P = new cv.Mat(N, 4, cv.CV_64F);
+
+            for (let i = 0; i < N; i++) {
+                let pi = patches[keys[i]];
+                P.doublePtr(i, 0)[0] = 1.0;
+                P.doublePtr(i, 1)[0] = pi.r;
+                P.doublePtr(i, 2)[0] = pi.g;
+                P.doublePtr(i, 3)[0] = pi.b;
+
+                for (let j = 0; j < N; j++) {
+                    let pj = patches[keys[j]];
+                    let dist = Math.sqrt((pi.r - pj.r)**2 + (pi.g - pj.g)**2 + (pi.b - pj.b)**2);
+                    K.doublePtr(i, j)[0] = U(dist);
+                }
+            }
+
+            let L = new cv.Mat(N + 4, N + 4, cv.CV_64F);
+            L.setTo(new cv.Scalar(0));
+
+            for (let i = 0; i < N; i++) {
+                for (let j = 0; j < N; j++) {
+                    L.doublePtr(i, j)[0] = K.doublePtr(i, j)[0];
+                }
+                for (let j = 0; j < 4; j++) {
+                    L.doublePtr(i, N + j)[0] = P.doublePtr(i, j)[0];
+                    L.doublePtr(N + j, i)[0] = P.doublePtr(i, j)[0];
+                }
+            }
+
+            let Y = new cv.Mat(N + 4, 3, cv.CV_64F);
+            Y.setTo(new cv.Scalar(0));
+            for (let i = 0; i < N; i++) {
+                let target = IDEAL[keys[i]];
+                Y.doublePtr(i, 0)[0] = target.r;
+                Y.doublePtr(i, 1)[0] = target.g;
+                Y.doublePtr(i, 2)[0] = target.b;
+            }
+
+            let W = new cv.Mat();
+            cv.solve(L, Y, W, cv.DECOMP_SVD);
+
+            let resR = W.doublePtr(N, 0)[0] + W.doublePtr(N+1, 0)[0]*rawTarget.r + W.doublePtr(N+2, 0)[0]*rawTarget.g + W.doublePtr(N+3, 0)[0]*rawTarget.b;
+            let resG = W.doublePtr(N, 1)[0] + W.doublePtr(N+1, 1)[0]*rawTarget.r + W.doublePtr(N+2, 1)[0]*rawTarget.g + W.doublePtr(N+3, 1)[0]*rawTarget.b;
+            let resB = W.doublePtr(N, 2)[0] + W.doublePtr(N+1, 2)[0]*rawTarget.r + W.doublePtr(N+2, 2)[0]*rawTarget.g + W.doublePtr(N+3, 2)[0]*rawTarget.b;
+
+            for (let i = 0; i < N; i++) {
+                let pi = patches[keys[i]];
+                let dist = Math.sqrt((rawTarget.r - pi.r)**2 + (rawTarget.g - pi.g)**2 + (rawTarget.b - pi.b)**2);
+                let uVal = U(dist);
+                resR += W.doublePtr(i, 0)[0] * uVal;
+                resG += W.doublePtr(i, 1)[0] * uVal;
+                resB += W.doublePtr(i, 2)[0] * uVal;
+            }
+
+            K.delete(); P.delete(); L.delete(); Y.delete(); W.delete();
+
+            return {
+                r: Math.max(0, Math.min(255, Math.round(resR))),
+                g: Math.max(0, Math.min(255, Math.round(resG))),
+                b: Math.max(0, Math.min(255, Math.round(resB)))
+            };
+        }
+
         function getStatusBadge(diff) {
             if (diff >= 35) return { class: 'match-error', text: 'СОВСЕМ НЕ ТОТ' };
             if (diff >= 15) return { class: 'match-warning', text: 'ПОЧТИ ТОТ' };
             return { class: 'match-success', text: 'ТОТ САМЫЙ ЦВЕТ' };
         }
 
-        function computeMethodScore(stdRaw, smpRaw, patchesStd, patchesSmp, mathType, statType) {
+        function computeMethodScore(stdRaw, smpRaw, mathMethod, statType) {
             const rawTargetStd = statType === 'mean' ? stdRaw.mainMean : (stdRaw.mainMedian || stdRaw.mainMean);
             const rawTargetSmp = statType === 'mean' ? smpRaw.mainMean : (smpRaw.mainMedian || smpRaw.mainMean);
             
             const patchesDataStd = statType === 'mean' ? stdRaw.patchesMean : (stdRaw.patchesMedian || stdRaw.patchesMean);
             const patchesDataSmp = statType === 'mean' ? smpRaw.patchesMean : (smpRaw.patchesMedian || smpRaw.patchesMean);
 
-            const corrector = mathType === 'linear' ? applyLinearCorrection : applySplineCorrection;
+            let corrector;
+            if (mathMethod === 'linear') corrector = applyLinearCorrection;
+            else if (mathMethod === 'spline') corrector = applySplineCorrection;
+            else if (mathMethod === '3d_affine') corrector = apply3DAffineCorrection;
+            else if (mathMethod === '3d_tps') corrector = apply3DTPSCorrection;
 
             const stdCorr = corrector(rawTargetStd, patchesDataStd);
             const smpCorr = corrector(rawTargetSmp, patchesDataSmp);
@@ -1208,11 +1337,17 @@
         function compareColors() {
             if (!standardColorData || !sampleColorData) return;
 
-            // Расчет 4 методов для сетки 2х2
-            const m1 = computeMethodScore(standardColorData, sampleColorData, null, null, 'linear', 'mean');
-            const m2 = computeMethodScore(standardColorData, sampleColorData, null, null, 'linear', 'median');
-            const m3 = computeMethodScore(standardColorData, sampleColorData, null, null, 'spline', 'mean');
-            const m4 = computeMethodScore(standardColorData, sampleColorData, null, null, 'spline', 'median');
+            // Расчет 4 методов для 1D
+            const m1D_1 = computeMethodScore(standardColorData, sampleColorData, 'linear', 'mean');
+            const m1D_2 = computeMethodScore(standardColorData, sampleColorData, 'linear', 'median');
+            const m1D_3 = computeMethodScore(standardColorData, sampleColorData, 'spline', 'mean');
+            const m1D_4 = computeMethodScore(standardColorData, sampleColorData, 'spline', 'median');
+
+            // Расчет 4 методов для 3D
+            const m3D_1 = computeMethodScore(standardColorData, sampleColorData, '3d_affine', 'mean');
+            const m3D_2 = computeMethodScore(standardColorData, sampleColorData, '3d_affine', 'median');
+            const m3D_3 = computeMethodScore(standardColorData, sampleColorData, '3d_tps', 'mean');
+            const m3D_4 = computeMethodScore(standardColorData, sampleColorData, '3d_tps', 'median');
 
             // Сырое совпадение
             const stdRaw = standardColorData.main;
@@ -1246,17 +1381,31 @@
             `;
 
             resultDiv.innerHTML = `
+                <!-- БЛОК 1: 1D КОРРЕКЦИЯ -->
                 <div class="comparison-block" style="border: 1px solid rgba(0, 229, 255, 0.35);">
-                    <div class="comparison-title corrected">✨ Сравнение методов коррекции (2х2)</div>
+                    <div class="comparison-title corrected">✨ Сравнение методов 1D коррекции (2х2)</div>
                     
                     <div class="comparison-methods-grid-2x2">
-                        ${renderMethodCard('1D Линейное + Среднее', m1)}
-                        ${renderMethodCard('1D Линейное + Медианное', m2)}
-                        ${renderMethodCard('1D Сплайновое + Среднее', m3)}
-                        ${renderMethodCard('1D Сплайновое + Медианное', m4)}
+                        ${renderMethodCard('1D Линейное + Среднее', m1D_1)}
+                        ${renderMethodCard('1D Линейное + Медианное', m1D_2)}
+                        ${renderMethodCard('1D Сплайновое + Среднее', m1D_3)}
+                        ${renderMethodCard('1D Сплайновое + Медианное', m1D_4)}
                     </div>
                 </div>
 
+                <!-- БЛОК 2: 3D КОРРЕКЦИЯ -->
+                <div class="comparison-block" style="border: 1px solid rgba(139, 92, 246, 0.35);">
+                    <div class="comparison-title corrected-3d">🔮 Сравнение методов 3D коррекции (2х2)</div>
+                    
+                    <div class="comparison-methods-grid-2x2">
+                        ${renderMethodCard('3D Аффинное + Среднее', m3D_1)}
+                        ${renderMethodCard('3D Аффинное + Медианное', m3D_2)}
+                        ${renderMethodCard('3D TPS Сплайн + Среднее', m3D_3)}
+                        ${renderMethodCard('3D TPS Сплайн + Медианное', m3D_4)}
+                    </div>
+                </div>
+
+                <!-- БЛОК 3: БЕЗ КОРРЕКЦИИ -->
                 <div class="comparison-block ${statusRaw.class}">
                     <div class="comparison-title">📷 Сырое совпадение (без коррекции)</div>
                     <div class="match-score-sub">${percentRaw}% MATCH</div>
