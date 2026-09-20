@@ -301,6 +301,7 @@
         .comparison-title.raw { color: var(--accent-warning); }
         .comparison-title.corrected { color: var(--accent-cyan); }
         .comparison-title.corrected-3d { color: var(--accent-purple); }
+        .comparison-title.final { color: var(--accent-green); }
 
         .methods-list {
             display: flex;
@@ -364,6 +365,66 @@
             height: 14px;
             border-radius: 50%;
             border: 1px solid rgba(255,255,255,0.25);
+        }
+
+        /* Стиль для плашки итогового вердикта */
+        .final-summary {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            margin-top: 4px;
+            padding: 10px;
+            background: rgba(0, 230, 118, 0.05);
+            border-radius: 10px;
+            border: 1px solid rgba(0, 230, 118, 0.2);
+        }
+
+        .summary-line {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 11px;
+            color: var(--text-muted);
+        }
+
+        .summary-line b {
+            color: #fff;
+        }
+
+        .summary-badge {
+            font-size: 10px;
+            font-weight: 700;
+            padding: 2px 6px;
+            border-radius: 4px;
+            background: rgba(255, 255, 255, 0.08);
+
+        }
+
+        .summary-badge.active {
+            background: rgba(0, 230, 118, 0.2);
+            color: var(--accent-green);
+        }
+
+        .final-total-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 6px;
+            padding-top: 8px;
+            border-top: 1px dashed rgba(255, 255, 255, 0.15);
+        }
+
+        .final-total-label {
+            font-size: 13px;
+            font-weight: 800;
+            color: #fff;
+        }
+
+        .final-total-value {
+            font-size: 22px;
+            font-weight: 900;
+            color: var(--accent-green);
+            text-shadow: 0 0 12px rgba(0, 230, 118, 0.4);
         }
 
         .reset-btn { 
@@ -1267,6 +1328,31 @@
             return { stdCorr, smpCorr, diff, percent, status };
         }
 
+        // Вспомогательная функция фильтрации артефактов и расчета бонусов блока
+        function processBlockEnsemble(scoresList) {
+            const sorted = [...scoresList].sort((a, b) => b - a);
+            let valid = sorted;
+            let hasOutliers = false;
+
+            // Если 2 нижних значения оторвались от лучших на > 10%, отсекаем их как артефакт
+            if (sorted[0] - sorted[2] > 10) {
+                valid = sorted.slice(0, 2);
+                hasOutliers = true;
+            }
+
+            const avg = valid.reduce((sum, val) => sum + val, 0) / valid.length;
+            const isConsensus = valid.every(v => v > 85);
+            const bonus = isConsensus ? 1.0 : 0.0;
+
+            return {
+                avg: Math.round(avg * 10) / 10,
+                bonus,
+                total: Math.round((avg + bonus) * 10) / 10,
+                hasOutliers,
+                isConsensus
+            };
+        }
+
         function compareColors() {
             if (!standardColorData || !sampleColorData) return;
 
@@ -1285,6 +1371,17 @@
             const m3D_2 = computeMethodScore(standardColorData, sampleColorData, '3d_affine', 'median');
             const m3D_3 = computeMethodScore(standardColorData, sampleColorData, '3d_tps', 'mean');
             const m3D_4 = computeMethodScore(standardColorData, sampleColorData, '3d_tps', 'median');
+
+            // --- Расчет Ансамблевой Логики ---
+            const rawAvg = (rawMean.percent + rawMedian.percent) / 2;
+            const cameraBonus = rawAvg >= 90 ? 2.0 : 0.0;
+
+            const res1D = processBlockEnsemble([m1D_1.percent, m1D_2.percent, m1D_3.percent, m1D_4.percent]);
+            const res3D = processBlockEnsemble([m3D_1.percent, m3D_2.percent, m3D_3.percent, m3D_4.percent]);
+
+            const bestBlockTotal = Math.max(res1D.total, res3D.total);
+            const finalScore = Math.min(99, Math.round((bestBlockTotal + cameraBonus) * 10) / 10);
+            const finalStatus = getStatusBadge(Math.round((100 - finalScore) / 2.5));
 
             infoCard.style.display = 'block';
 
@@ -1338,6 +1435,33 @@
                         ${renderMethodRow('3D Аффинное + Медианное', m3D_2)}
                         ${renderMethodRow('3D TPS Сплайн + Среднее', m3D_3)}
                         ${renderMethodRow('3D TPS Сплайн + Медианное', m3D_4)}
+                    </div>
+                </div>
+
+                <!-- БЛОК 3: ИТОГОВЫЙ ВЕРДИКТ -->
+                <div class="comparison-block" style="border: 1px solid rgba(0, 230, 118, 0.4); background: rgba(0, 230, 118, 0.03);">
+                    <div class="comparison-title final">🏆 Итоговый ансамблевый вердикт</div>
+                    
+                    <div class="final-summary">
+                        <div class="summary-line">
+                            <span>📷 Бонус света камеры (Сырое > 90%):</span>
+                            <span class="summary-badge ${cameraBonus > 0 ? 'active' : ''}">+${cameraBonus}%</span>
+                        </div>
+
+                        <div class="summary-line">
+                            <span>✨ 1D Коррекция (среднее ${res1D.hasOutliers ? 'без артефактов' : ''}):</span>
+                            <span><b>${res1D.avg}%</b> <span class="summary-badge ${res1D.bonus > 0 ? 'active' : ''}">+${res1D.bonus}% консенсус</span></span>
+                        </div>
+
+                        <div class="summary-line">
+                            <span>🔮 3D Коррекция (среднее ${res3D.hasOutliers ? 'без артефактов' : ''}):</span>
+                            <span><b>${res3D.avg}%</b> <span class="summary-badge ${res3D.bonus > 0 ? 'active' : ''}">+${res3D.bonus}% консенсус</span></span>
+                        </div>
+
+                        <div class="final-total-row">
+                            <span class="final-total-label">Окончательный результат:</span>
+                            <span class="final-total-value">${finalScore}%</span>
+                        </div>
                     </div>
                 </div>
             `;
