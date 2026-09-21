@@ -195,7 +195,7 @@
 
         .preview-box { 
             width: 100%; 
-            height: 130px; 
+            height: 140px; 
             border: 1px dashed rgba(255, 255, 255, 0.15); 
             border-radius: 12px; 
             margin-bottom: 10px; 
@@ -204,6 +204,23 @@
             justify-content: center; 
             overflow: hidden; 
             background: #07090E; 
+            cursor: pointer;
+            position: relative;
+        }
+
+        .preview-box::after {
+            content: '🔍';
+            position: absolute;
+            bottom: 6px;
+            right: 6px;
+            font-size: 11px;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(4px);
+            padding: 2px 6px;
+            border-radius: 6px;
+            pointer-events: none;
+            opacity: 0.8;
+            border: 1px solid var(--card-border);
         }
 
         canvas { max-width: 100%; max-height: 100%; object-fit: contain; }
@@ -507,6 +524,59 @@
             pointer-events: none;
         }
 
+        /* ZOOM MODAL STYLES */
+        .zoom-modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(5, 7, 12, 0.96);
+            z-index: 2000;
+            flex-direction: column;
+            backdrop-filter: blur(12px);
+        }
+
+        .zoom-modal.active { display: flex; }
+
+        .zoom-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 14px 16px;
+            background: rgba(18, 24, 38, 0.8);
+            border-bottom: 1px solid var(--card-border);
+            font-size: 14px;
+            font-weight: 700;
+        }
+
+        .zoom-viewport {
+            flex: 1;
+            overflow: hidden;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            touch-action: none;
+            user-select: none;
+        }
+
+        #zoomCanvas {
+            max-width: 90%;
+            max-height: 80%;
+            object-fit: contain;
+            transform-origin: center center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+            border-radius: 8px;
+        }
+
+        .zoom-hint {
+            text-align: center;
+            padding: 10px;
+            font-size: 11px;
+            color: var(--text-muted);
+            background: rgba(0, 0, 0, 0.4);
+            border-top: 1px solid var(--card-border);
+        }
+
         .view-pane { display: none; }
         .view-pane.active { display: block; }
         
@@ -564,7 +634,7 @@
                         <h3>1. Эталон</h3>
                         <span class="step-tag">01</span>
                     </div>
-                    <div class="preview-box">
+                    <div class="preview-box" onclick="openZoomModal('canvasStandard')">
                         <canvas id="canvasStandard"></canvas>
                     </div>
                     <button class="btn-action" id="btnStandard" onclick="openCamera('standard')" disabled>
@@ -578,7 +648,7 @@
                         <h3>2. Образец</h3>
                         <span class="step-tag">02</span>
                     </div>
-                    <div class="preview-box">
+                    <div class="preview-box" onclick="openZoomModal('canvasSample')">
                         <canvas id="canvasSample"></canvas>
                     </div>
                     <button class="btn-action secondary" id="btnSample" onclick="openCamera('sample')" disabled>
@@ -642,6 +712,18 @@
                 📸 Сделать снимок
             </button>
         </div>
+    </div>
+
+    <!-- МОДАЛЬНОЕ ОКНО ZOOM ПРОСМОТРА -->
+    <div class="zoom-modal" id="zoomModal">
+        <div class="zoom-header">
+            <span id="zoomTitle">Просмотр снимка</span>
+            <button class="close-btn" onclick="closeZoomModal()">✕</button>
+        </div>
+        <div class="zoom-viewport" id="zoomViewport">
+            <canvas id="zoomCanvas"></canvas>
+        </div>
+        <div class="zoom-hint">🤏 Используйте Pinch-to-zoom для детального просмотра</div>
     </div>
 
     <script>
@@ -837,16 +919,16 @@
             }
         }
 
-        function drawTargetCrosshair(mat, cx, cy, colorScalar, radius = 18) {
+        function drawTargetCrosshair(mat, cx, cy, colorScalar, radius = 27) {
             let pCenter = new cv.Point(cx, cy);
-            cv.circle(mat, pCenter, radius, colorScalar, 2, cv.LINE_AA);
-            cv.circle(mat, pCenter, 2, colorScalar, -1, cv.LINE_AA);
+            cv.circle(mat, pCenter, radius, colorScalar, 3, cv.LINE_AA);
+            cv.circle(mat, pCenter, 3, colorScalar, -1, cv.LINE_AA);
             
-            cv.line(mat, new cv.Point(cx - radius - 4, cy), new cv.Point(cx + radius + 4, cy), colorScalar, 1.5, cv.LINE_AA);
-            cv.line(mat, new cv.Point(cx, cy - radius - 4), new cv.Point(cx, cy + radius + 4), colorScalar, 1.5, cv.LINE_AA);
+            cv.line(mat, new cv.Point(cx - radius - 6, cy), new cv.Point(cx + radius + 6, cy), colorScalar, 2, cv.LINE_AA);
+            cv.line(mat, new cv.Point(cx, cy - radius - 6), new cv.Point(cx, cy + radius + 6), colorScalar, 2, cv.LINE_AA);
         }
 
-        function getRegionColorLAB(labMat, cx, cy, radius = 12, useMedian = false) {
+        function getRegionColorLAB(labMat, cx, cy, radius = 18, useMedian = false) {
             let lVals = [], aVals = [], bVals = [];
             for (let y = cy - radius; y <= cy + radius; y++) {
                 for (let x = cx - radius; x <= cx + radius; x++) {
@@ -968,8 +1050,10 @@
                 }
 
                 warped = new cv.Mat();
-                const CARD_W = 856;
-                const CARD_H = 540;
+                // Повышенное разрешение трансформированной карточки (1.5x)
+                const scaleFactor = 1.5;
+                const CARD_W = Math.round(856 * scaleFactor);
+                const CARD_H = Math.round(540 * scaleFactor);
 
                 if (bestQuad) {
                     let add = bestQuad.map(p => p.x + p.y);
@@ -994,14 +1078,14 @@
 
                 const holeCenterX = Math.round(CARD_W * 0.508); 
                 const holeCenterY = Math.round(CARD_H * 0.468);
-                const holeRadius = 35;
+                const holeRadius = Math.round(35 * scaleFactor);
 
                 const colorPatches = [
-                    { key: 'white',  x: Math.round(CARD_W * 0.155), y: Math.round(CARD_H * 0.310) - 20 },
-                    { key: 'gray',   x: Math.round(CARD_W * 0.155), y: Math.round(CARD_H * 0.525) - 5 },
+                    { key: 'white',  x: Math.round(CARD_W * 0.155), y: Math.round(CARD_H * 0.310) - Math.round(20 * scaleFactor) },
+                    { key: 'gray',   x: Math.round(CARD_W * 0.155), y: Math.round(CARD_H * 0.525) - Math.round(5 * scaleFactor) },
                     { key: 'black',  x: Math.round(CARD_W * 0.155), y: Math.round(CARD_H * 0.740) },
-                    { key: 'right1', x: Math.round(CARD_W * 0.845), y: Math.round(CARD_H * 0.310) - 20 },
-                    { key: 'right2', x: Math.round(CARD_W * 0.845), y: Math.round(CARD_H * 0.525) - 5 },
+                    { key: 'right1', x: Math.round(CARD_W * 0.845), y: Math.round(CARD_H * 0.310) - Math.round(20 * scaleFactor) },
+                    { key: 'right2', x: Math.round(CARD_W * 0.845), y: Math.round(CARD_H * 0.525) - Math.round(5 * scaleFactor) },
                     { key: 'right3', x: Math.round(CARD_W * 0.845), y: Math.round(CARD_H * 0.740) }
                 ];
 
@@ -1009,8 +1093,8 @@
                 extractedData.mainMedian = getRegionColorLAB(warpedLab, holeCenterX, holeCenterY, Math.round(holeRadius * 0.6), true);
 
                 colorPatches.forEach(p => {
-                    extractedData.patchesMean[p.key] = getRegionColorLAB(warpedLab, p.x, p.y, 6, false);
-                    extractedData.patchesMedian[p.key] = getRegionColorLAB(warpedLab, p.x, p.y, 6, true);
+                    extractedData.patchesMean[p.key] = getRegionColorLAB(warpedLab, p.x, p.y, Math.round(6 * scaleFactor), false);
+                    extractedData.patchesMedian[p.key] = getRegionColorLAB(warpedLab, p.x, p.y, Math.round(6 * scaleFactor), true);
                 });
 
                 extractedData.main = extractedData.mainMean;
@@ -1019,7 +1103,7 @@
                 const greenColor = new cv.Scalar(0, 230, 118, 255);
                 drawTargetCrosshair(warped, holeCenterX, holeCenterY, greenColor, holeRadius);
                 colorPatches.forEach(p => {
-                    drawTargetCrosshair(warped, p.x, p.y, greenColor, 12);
+                    drawTargetCrosshair(warped, p.x, p.y, greenColor, Math.round(12 * scaleFactor));
                 });
 
                 cv.imshow(canvasTargetId, warped);
@@ -1096,7 +1180,6 @@
 
         // ================= МЕТОДЫ 1D КОРРЕКЦИИ В LAB (5 АЛГОРИТМОВ) =================
         
-        // 1D Алгоритм 1: Двухточечное линейное масштабирование (Gain + Offset)
         function applyGainOffsetCorrection(rawTarget, patches) {
             const IDEAL = {
                 white: { l: 255, a: 128, b: 128 },
@@ -1118,7 +1201,6 @@
             };
         }
 
-        // 1D Алгоритм 2 и 3: Кусочно-линейная интерполяция
         function applyLinearCorrection(rawTarget, patches) {
             const IDEAL = {
                 white: { l: 255, a: 128, b: 128 },
@@ -1176,7 +1258,6 @@
             };
         }
 
-        // 1D Алгоритм 4 и 5: Сплайновая монотонная интерполяция
         function applySplineCorrection(rawTarget, patches) {
             const IDEAL = {
                 white: { l: 255, a: 128, b: 128 },
@@ -1230,7 +1311,6 @@
 
         // ================= МЕТОДЫ 3D КОРРЕКЦИИ В LAB (5 АЛГОРИТМОВ) =================
 
-        // 3D Алгоритм 1: IDW (Инверсно-взвешенные расстояния / Метод Шепарда)
         function apply3DIDWCorrection(rawTarget, patches) {
             const IDEAL = {
                 white:  { l: 255, a: 128, b: 128 },
@@ -1267,7 +1347,6 @@
             };
         }
 
-        // 3D Алгоритм 2 и 3: Аффинное преобразование 3D
         function apply3DAffineCorrection(rawTarget, patches) {
             const IDEAL = {
                 white:  { l: 255, a: 128, b: 128 },
@@ -1310,7 +1389,6 @@
             };
         }
 
-        // 3D Алгоритм 4 и 5: TPS (Thin Plate Spline) Сплайн 3D
         function apply3DTPSCorrection(rawTarget, patches) {
             const IDEAL = {
                 white:  { l: 255, a: 128, b: 128 },
@@ -1590,6 +1668,98 @@
                 </div>
             `;
         }
+
+        // ================= ЛОГИКА PINCH TO ZOOM ПРОСМОТРА =================
+        let zoomScale = 1;
+        let zoomPosX = 0;
+        let zoomPosY = 0;
+        let initialDist = 0;
+        let initialScale = 1;
+        let isDragging = false;
+        let startX = 0, startY = 0;
+
+        function openZoomModal(canvasId) {
+            const sourceCanvas = document.getElementById(canvasId);
+            if (!sourceCanvas || sourceCanvas.width === 0) return;
+
+            const zoomCanvas = document.getElementById('zoomCanvas');
+            zoomCanvas.width = sourceCanvas.width;
+            zoomCanvas.height = sourceCanvas.height;
+            const ctx = zoomCanvas.getContext('2d');
+            ctx.drawImage(sourceCanvas, 0, 0);
+
+            document.getElementById('zoomTitle').innerText = canvasId === 'canvasStandard' ? 'Превью: Эталон' : 'Превью: Образец';
+
+            zoomScale = 1;
+            zoomPosX = 0;
+            zoomPosY = 0;
+            updateZoomTransform();
+
+            document.getElementById('zoomModal').classList.add('active');
+        }
+
+        function closeZoomModal() {
+            document.getElementById('zoomModal').classList.remove('active');
+        }
+
+        function updateZoomTransform() {
+            const zoomCanvas = document.getElementById('zoomCanvas');
+            zoomCanvas.style.transform = `translate(${zoomPosX}px, ${zoomPosY}px) scale(${zoomScale})`;
+        }
+
+        const zoomViewport = document.getElementById('zoomViewport');
+
+        zoomViewport.addEventListener('touchstart', (e) => {
+            if (e.touches.length === 2) {
+                isDragging = false;
+                initialDist = Math.hypot(
+                    e.touches[0].clientX - e.touches[1].clientX,
+                    e.touches[0].clientY - e.touches[1].clientY
+                );
+                initialScale = zoomScale;
+            } else if (e.touches.length === 1) {
+                isDragging = true;
+                startX = e.touches[0].clientX - zoomPosX;
+                startY = e.touches[0].clientY - zoomPosY;
+            }
+        });
+
+        zoomViewport.addEventListener('touchmove', (e) => {
+            if (e.touches.length === 2) {
+                e.preventDefault();
+                const currentDist = Math.hypot(
+                    e.touches[0].clientX - e.touches[1].clientX,
+                    e.touches[0].clientY - e.touches[1].clientY
+                );
+                if (initialDist > 0) {
+                    zoomScale = Math.min(Math.max(1, initialScale * (currentDist / initialDist)), 5);
+                    updateZoomTransform();
+                }
+            } else if (e.touches.length === 1 && isDragging) {
+                e.preventDefault();
+                if (zoomScale > 1) {
+                    zoomPosX = e.touches[0].clientX - startX;
+                    zoomPosY = e.touches[0].clientY - startY;
+                    updateZoomTransform();
+                }
+            }
+        }, { passive: false });
+
+        zoomViewport.addEventListener('touchend', (e) => {
+            if (e.touches.length < 2) initialDist = 0;
+            if (e.touches.length === 0) isDragging = false;
+        });
+
+        zoomViewport.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            const delta = e.deltaY < 0 ? 0.2 : -0.2;
+            zoomScale = Math.min(Math.max(1, zoomScale + delta), 5);
+            if (zoomScale === 1) {
+                zoomPosX = 0;
+                zoomPosY = 0;
+            }
+            updateZoomTransform();
+        }, { passive: false });
 
         resetBtn.addEventListener('click', () => {
             localStorage.removeItem('cm_card_standard_data');
