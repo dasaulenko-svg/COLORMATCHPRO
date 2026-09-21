@@ -710,11 +710,20 @@
 
             try {
                 mediaStream = await navigator.mediaDevices.getUserMedia({
-                    video: { facingMode: { exact: "environment" } }
+                    video: { 
+                        facingMode: { exact: "environment" },
+                        width: { ideal: 3840 },
+                        height: { ideal: 2160 }
+                    }
                 });
             } catch (err) {
                 try {
-                    mediaStream = await navigator.mediaDevices.getUserMedia({ video: true });
+                    mediaStream = await navigator.mediaDevices.getUserMedia({ 
+                        video: { 
+                            width: { ideal: 3840 },
+                            height: { ideal: 2160 }
+                        } 
+                    });
                 } catch (fallbackErr) {
                     alert('Ошибка доступа к камере: ' + fallbackErr.message);
                     closeCamera();
@@ -734,11 +743,30 @@
             cameraModal.classList.remove('active');
         }
 
-        function takeSnapshot() {
+        async function takeSnapshot() {
             if (!video.videoWidth || !video.videoHeight) return;
 
             const viewportRect = video.getBoundingClientRect();
             if (!viewportRect.width || !viewportRect.height) return;
+
+            let sourceElement = video;
+            let imgW = video.videoWidth;
+            let imgH = video.videoHeight;
+
+            const track = mediaStream ? mediaStream.getVideoTracks()[0] : null;
+
+            if ('ImageCapture' in window && track) {
+                try {
+                    const imageCapture = new ImageCapture(track);
+                    const blob = await imageCapture.takePhoto();
+                    const bitmap = await createImageBitmap(blob);
+                    sourceElement = bitmap;
+                    imgW = bitmap.width;
+                    imgH = bitmap.height;
+                } catch (err) {
+                    console.warn('ImageCapture не сработал, фоллбэк на кадр из видео:', err);
+                }
+            }
 
             const strokeOffset = 2;
             const overlayFrame = {
@@ -750,25 +778,25 @@
             const overlayW = 400;
             const overlayH = 320;
 
-            const videoRatio = video.videoWidth / video.videoHeight;
+            const imgRatio = imgW / imgH;
             const containerRatio = viewportRect.width / viewportRect.height;
 
             let renderW, renderH, offsetX, offsetY;
 
-            if (containerRatio > videoRatio) {
+            if (containerRatio > imgRatio) {
                 renderW = viewportRect.width;
-                renderH = viewportRect.width / videoRatio;
+                renderH = viewportRect.width / imgRatio;
                 offsetX = 0;
                 offsetY = (renderH - viewportRect.height) / 2;
             } else {
                 renderH = viewportRect.height;
-                renderW = viewportRect.height * videoRatio;
+                renderW = viewportRect.height * imgRatio;
                 offsetX = (renderW - viewportRect.width) / 2;
                 offsetY = 0;
             }
 
-            const scaleX = video.videoWidth / renderW;
-            const scaleY = video.videoHeight / renderH;
+            const scaleX = imgW / renderW;
+            const scaleY = imgH / renderH;
 
             const rectViewportX = (overlayFrame.x / overlayW) * viewportRect.width;
             const rectViewportY = (overlayFrame.y / overlayH) * viewportRect.height;
@@ -777,15 +805,15 @@
 
             const cropX = Math.max(0, Math.round((rectViewportX + offsetX) * scaleX));
             const cropY = Math.max(0, Math.round((rectViewportY + offsetY) * scaleY));
-            const cropW = Math.min(video.videoWidth - cropX, Math.round(rectViewportW * scaleX));
-            const cropH = Math.min(video.videoHeight - cropY, Math.round(rectViewportH * scaleY));
+            const cropW = Math.min(imgW - cropX, Math.round(rectViewportW * scaleX));
+            const cropH = Math.min(imgH - cropY, Math.round(rectViewportH * scaleY));
 
             const croppedCanvas = document.createElement('canvas');
             croppedCanvas.width = cropW;
             croppedCanvas.height = cropH;
 
             const ctx = croppedCanvas.getContext('2d');
-            ctx.drawImage(video, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
+            ctx.drawImage(sourceElement, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
 
             closeCamera();
             handleImageSource(croppedCanvas, activeMode);
