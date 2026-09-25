@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ColorBank / ColorMatchPro</title>
+  <title>ColorBank Calibration</title>
   <style>
     :root {
       --bg-color: #0b1320;
@@ -22,7 +22,7 @@
       background-color: var(--bg-color);
       color: var(--text-main);
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      padding: 16px;
+      padding: 12px;
       display: flex;
       justify-content: center;
     }
@@ -32,57 +32,72 @@
       max-width: 480px;
       display: flex;
       flex-direction: column;
-      gap: 16px;
+      gap: 14px;
     }
 
     .cards-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 12px;
+      gap: 8px;
     }
 
     .card {
       background: var(--card-bg);
-      border-radius: 16px;
-      padding: 12px;
+      border-radius: 14px;
+      padding: 10px 8px;
       border: 1px solid var(--border-color);
       display: flex;
       flex-direction: column;
-      gap: 10px;
+      gap: 8px;
     }
 
     .btn {
       width: 100%;
-      padding: 10px 14px;
-      border-radius: 12px;
+      padding: 10px 6px;
+      border-radius: 10px;
       border: none;
       color: #fff;
       font-weight: 600;
-      font-size: 14px;
+      font-size: 13px;
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 6px;
+      gap: 4px;
     }
     .btn-purple { background: linear-gradient(135deg, #6366f1, #8b5cf6); }
     .btn-cyan { background: linear-gradient(135deg, #06b6d4, #3b82f6); }
 
-    .section-title {
+    .preview-box {
+      width: 100%;
+      height: 110px;
+      background: #000;
+      border-radius: 8px;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid var(--border-color);
+      position: relative;
+    }
+    .preview-box img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .preview-placeholder {
       font-size: 11px;
-      font-weight: 700;
-      letter-spacing: 0.5px;
       color: var(--text-muted);
-      text-transform: uppercase;
-      margin-top: 4px;
+      text-align: center;
     }
 
     .info-list {
-      font-size: 12px;
+      font-size: 11px;
       display: flex;
       flex-direction: column;
-      gap: 4px;
+      gap: 3px;
       color: var(--text-muted);
+      white-space: nowrap;
     }
     .info-list span { color: var(--text-main); font-weight: 600; }
 
@@ -96,6 +111,14 @@
       align-items: center;
       gap: 8px;
       text-align: center;
+    }
+
+    .section-title {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      color: var(--text-muted);
+      text-transform: uppercase;
     }
 
     .match-val {
@@ -121,7 +144,7 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 24px;
+      gap: 20px;
       margin-top: 8px;
       width: 100%;
     }
@@ -140,41 +163,56 @@
       border: 2px solid rgba(255,255,255,0.1);
       background-color: #000;
     }
+
+    /* Скрытые элементы камеры и обработки */
+    input[type="file"] { display: none; }
+    canvas { display: none; }
   </style>
 </head>
 <body>
 
 <div class="app-container">
-  
+
+  <!-- Скрытые элементы управления камерой -->
+  <input type="file" id="input-ref" accept="image/*" capture="environment">
+  <input type="file" id="input-sam" accept="image/*" capture="environment">
+  <canvas id="process-canvas"></canvas>
+
   <div class="cards-grid">
     <!-- Эталон -->
     <div class="card">
-      <button class="btn btn-purple">📷 Эталон</button>
+      <button class="btn btn-purple" onclick="document.getElementById('input-ref').click()">📷 Снять Эталон</button>
+      <div class="preview-box" id="box-ref">
+        <span class="preview-placeholder">Нет снимка</span>
+      </div>
       <div class="info-list">
-        <div>⚪ <b>Цель:</b> <span id="ref-target-text">RGB 168, 162, 163</span></div>
-        <div>⚪ Белый: <span>226, 217, 223</span></div>
-        <div>⚪ Серый: <span>181, 172, 177</span></div>
-        <div>⚪ Чёрный: <span>125, 110, 111</span></div>
+        <div>⚪ <b>Цель:</b> <span id="ref-target">---</span></div>
+        <div>⚪ Белый: <span id="ref-white">---</span></div>
+        <div>⚪ Серый: <span id="ref-gray">---</span></div>
+        <div>⚪ Чёрный: <span id="ref-black">---</span></div>
       </div>
     </div>
 
     <!-- Образец -->
     <div class="card">
-      <button class="btn btn-cyan">📷 Образец</button>
+      <button class="btn btn-cyan" onclick="document.getElementById('input-sam').click()">📷 Снять Образец</button>
+      <div class="preview-box" id="box-sam">
+        <span class="preview-placeholder">Нет снимка</span>
+      </div>
       <div class="info-list">
-        <div>⚪ <b>Цель:</b> <span id="sam-target-text">RGB 159, 156, 156</span></div>
-        <div>⚪ Белый: <span>210, 203, 210</span></div>
-        <div>⚪ Серый: <span>188, 183, 188</span></div>
-        <div>⚪ Чёрный: <span>84, 73, 73</span></div>
+        <div>⚪ <b>Цель:</b> <span id="sam-target">---</span></div>
+        <div>⚪ Белый: <span id="sam-white">---</span></div>
+        <div>⚪ Серый: <span id="sam-gray">---</span></div>
+        <div>⚪ Чёрный: <span id="sam-black">---</span></div>
       </div>
     </div>
   </div>
 
-  <!-- Блок Скорректированного совпадения (от сервера) -->
+  <!-- Блок Скорректированного совпадения (от Vercel) -->
   <div class="result-block">
     <div class="section-title">✨ СКОРРЕКТИРОВАННОЕ СОВПАДЕНИЕ (VERCEL API)</div>
     <div id="corr-match-val" class="match-val match-green">--% MATCH</div>
-    <div id="corr-status-badge" class="status-badge badge-wait">ОЖИДАНИЕ СЕРВЕРА</div>
+    <div id="corr-status-badge" class="status-badge badge-wait">СДЕЛАЙТЕ СНИМКИ</div>
     
     <div class="swatch-compare">
       <div class="swatch-item">
@@ -191,66 +229,94 @@
     </div>
   </div>
 
-  <!-- Блок Сырого совпадения (от сервера) -->
-  <div class="result-block">
-    <div class="section-title">📷 СЫРОЕ СОВПАДЕНИЕ (БЕЗ КОРРЕКЦИИ)</div>
-    <div id="raw-match-val" class="match-val match-green">--% MATCH</div>
-    <div id="raw-status-badge" class="status-badge badge-wait">ОЖИДАНИЕ СЕРВЕРА</div>
-
-    <div class="swatch-compare">
-      <div class="swatch-item">
-        <div id="raw-ref-swatch" class="swatch-circle"></div>
-        <span>Эталон (168, 162, 163)</span>
-      </div>
-      <span style="font-weight:700; color:var(--text-muted)">VS</span>
-      <div class="swatch-item">
-        <div id="raw-sam-swatch" class="swatch-circle"></div>
-        <span>Образец (159, 156, 156)</span>
-      </div>
-    </div>
-  </div>
-
 </div>
 
 <script>
-  // Входные данные кадров
-  const frameData = {
-    refTarget: { r: 168, g: 162, b: 163 },
-    refPatches: {
-      white: { r: 226, g: 217, b: 223 },
-      gray:  { r: 181, g: 172, b: 177 },
-      black: { r: 125, g: 110, b: 111 }
-    },
-    samTarget: { r: 159, g: 156, b: 156 },
-    samPatches: {
-      white: { r: 210, g: 203, b: 210 },
-      gray:  { r: 188, g: 183, b: 188 },
-      black: { r: 84,  g: 73,  b: 73  }
-    }
+  // Хранилище распознанных цветов с кадров
+  const state = {
+    refTarget: null,
+    refPatches: null,
+    samTarget: null,
+    samPatches: null
   };
 
-  // Функция отправки данных на Vercel API
-  async function runCalibrationOnServer() {
+  const canvas = document.getElementById('process-canvas');
+  const ctx = canvas.getContext('2d');
+
+  // Слушатели открытия камеры
+  document.getElementById('input-ref').addEventListener('change', (e) => handleImageUpload(e, 'ref'));
+  document.getElementById('input-sam').addEventListener('change', (e) => handleImageUpload(e, 'sam'));
+
+  function handleImageUpload(event, type) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const img = new Image();
+    img.onload = () => {
+      // Отрисовываем фото во внутренний Canvas
+      canvas.width = img.width;
+      canvas.height = img.height;
+      ctx.drawImage(img, 0, 0);
+
+      // Отображаем превью в UI
+      const box = document.getElementById(`box-${type}`);
+      box.innerHTML = `<img src="${img.src}">`;
+
+      // Автоматически считываем значения точки в центре кадра (Цель)
+      // и предполагаемых участков (заглушка для авто-сканирования кадра)
+      const centerX = Math.floor(img.width / 2);
+      const centerY = Math.floor(img.height / 2);
+
+      const targetRgb = getPixelRgb(centerX, centerY);
+      const whiteRgb = getPixelRgb(Math.floor(img.width * 0.2), Math.floor(img.height * 0.2));
+      const grayRgb  = getPixelRgb(Math.floor(img.width * 0.5), Math.floor(img.height * 0.2));
+      const blackRgb = getPixelRgb(Math.floor(img.width * 0.8), Math.floor(img.height * 0.2));
+
+      if (type === 'ref') {
+        state.refTarget = targetRgb;
+        state.refPatches = { white: whiteRgb, gray: grayRgb, black: blackRgb };
+
+        document.getElementById('ref-target').innerText = `${targetRgb.r}, ${targetRgb.g}, ${targetRgb.b}`;
+        document.getElementById('ref-white').innerText = `${whiteRgb.r}, ${whiteRgb.g}, ${whiteRgb.b}`;
+        document.getElementById('ref-gray').innerText = `${grayRgb.r}, ${grayRgb.g}, ${grayRgb.b}`;
+        document.getElementById('ref-black').innerText = `${blackRgb.r}, ${blackRgb.g}, ${blackRgb.b}`;
+      } else {
+        state.samTarget = targetRgb;
+        state.samPatches = { white: whiteRgb, gray: grayRgb, black: blackRgb };
+
+        document.getElementById('sam-target').innerText = `${targetRgb.r}, ${targetRgb.g}, ${targetRgb.b}`;
+        document.getElementById('sam-white').innerText = `${whiteRgb.r}, ${whiteRgb.g}, ${whiteRgb.b}`;
+        document.getElementById('sam-gray').innerText = `${grayRgb.r}, ${grayRgb.g}, ${grayRgb.b}`;
+        document.getElementById('sam-black').innerText = `${blackRgb.r}, ${blackRgb.g}, ${blackRgb.b}`;
+      }
+
+      // Если сняты оба кадра — запрашиваем вердикт у Vercel
+      if (state.refTarget && state.samTarget) {
+        sendToVercelAPI();
+      }
+    };
+    img.src = URL.createObjectURL(file);
+  }
+
+  function getPixelRgb(x, y) {
+    const pixel = ctx.getImageData(x, y, 1, 1).data;
+    return { r: pixel[0], g: pixel[1], b: pixel[2] };
+  }
+
+  async function sendToVercelAPI() {
+    document.getElementById('corr-status-badge').innerText = "РАСЧЕТ НА СЕРВЕРЕ...";
+    document.getElementById('corr-status-badge').className = "status-badge badge-wait";
+
     try {
       const response = await fetch('https://colormatchpro-two.vercel.app/api/calibrate', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(frameData)
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(state)
       });
 
       const result = await response.json();
 
       if (result.success) {
-        // 1. Отображаем Сырые данные от сервера
-        document.getElementById('raw-match-val').innerText = `${result.raw.matchPercent}% MATCH`;
-        document.getElementById('raw-status-badge').innerText = `Δ = ${result.raw.delta}`;
-        document.getElementById('raw-status-badge').className = "status-badge badge-green";
-        document.getElementById('raw-ref-swatch').style.backgroundColor = `rgb(${frameData.refTarget.r}, ${frameData.refTarget.g}, ${frameData.refTarget.b})`;
-        document.getElementById('raw-sam-swatch').style.backgroundColor = `rgb(${frameData.samTarget.r}, ${frameData.samTarget.g}, ${frameData.samTarget.b})`;
-
-        // 2. Отображаем Скорректированные данные от сервера
         const corr = result.corrected;
         const corrValElem = document.getElementById('corr-match-val');
         const corrBadgeElem = document.getElementById('corr-status-badge');
@@ -272,14 +338,11 @@
         document.getElementById('corr-sam-rgb').innerText = `${corr.samRgb.r}, ${corr.samRgb.g}, ${corr.samRgb.b}`;
       }
     } catch (err) {
-      console.error("Ошибка при связи с сервером Vercel:", err);
-      document.getElementById('corr-status-badge').innerText = "ОШИБКА СЕРВЕРА";
+      console.error("Ошибка API Vercel:", err);
+      document.getElementById('corr-status-badge').innerText = "ОШИБКА API";
       document.getElementById('corr-status-badge').className = "status-badge badge-red";
     }
   }
-
-  // Запускаем расчет при загрузке страницы
-  runCalibrationOnServer();
 </script>
 
 </body>
