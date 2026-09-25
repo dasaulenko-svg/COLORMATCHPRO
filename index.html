@@ -1,1783 +1,286 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ColorMatch Pro</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    
-    <style>
-        :root {
-            --bg-color: #0B0E14;
-            --card-bg: rgba(22, 28, 45, 0.75);
-            --card-border: rgba(255, 255, 255, 0.08);
-            --accent-cyan: #00E5FF;
-            --accent-purple: #8B5CF6;
-            --accent-purple-glow: rgba(139, 92, 246, 0.35);
-            --accent-green: #00E676;
-            --accent-warning: #FFB300;
-            --accent-red: #FF5252;
-            --text-main: #F3F4F6;
-            --text-muted: #9CA3AF;
-        }
-
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        
-        body { 
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; 
-            background: var(--bg-color); 
-            background-image: radial-gradient(circle at 50% 0%, #1A2035 0%, #0B0E14 80%);
-            color: var(--text-main); 
-            margin: 0; 
-            padding: 16px 12px; 
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-
-        .container { width: 100%; max-width: 480px; }
-
-        .header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 16px;
-            padding: 4px 0;
-        }
-
-        .brand { display: flex; align-items: center; gap: 10px; }
-
-        .logo-badge {
-            width: 36px;
-            height: 36px;
-            background: linear-gradient(135deg, var(--accent-purple), var(--accent-cyan));
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 0 16px var(--accent-purple-glow);
-        }
-
-        .logo-badge svg { width: 20px; height: 20px; fill: #fff; }
-
-        h1 { 
-            margin: 0; 
-            font-size: 18px; 
-            font-weight: 800; 
-            letter-spacing: -0.5px;
-            background: linear-gradient(135deg, #FFF 60%, var(--accent-cyan));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-
-        .menu-container { position: relative; }
-
-        .menu-btn {
-            background: var(--card-bg);
-            border: 1px solid var(--card-border);
-            color: var(--text-main);
-            padding: 8px 12px;
-            border-radius: 12px;
-            font-size: 13px;
-            font-weight: 600;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            backdrop-filter: blur(10px);
-        }
-
-        .menu-dropdown {
-            position: absolute;
-            right: 0;
-            top: 46px;
-            background: rgba(18, 24, 38, 0.95);
-            border: 1px solid var(--card-border);
-            border-radius: 14px;
-            padding: 6px;
-            width: 220px;
-            box-shadow: 0 12px 32px rgba(0,0,0,0.5);
-            backdrop-filter: blur(16px);
-            display: none;
-            z-index: 100;
-        }
-
-        .menu-dropdown.active { display: block; }
-
-        .menu-item {
-            padding: 10px 12px;
-            font-size: 12px;
-            font-weight: 600;
-            color: var(--text-muted);
-            border-radius: 8px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .menu-item:hover, .menu-item.active {
-            background: rgba(255, 255, 255, 0.08);
-            color: #fff;
-        }
-
-        .status-pill { 
-            font-size: 11px; 
-            font-weight: 600;
-            padding: 4px 10px;
-            border-radius: 20px;
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid var(--card-border);
-            color: var(--accent-cyan);
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            margin-bottom: 14px;
-        }
-
-        .status-dot {
-            width: 6px;
-            height: 6px;
-            border-radius: 50%;
-            background-color: var(--accent-cyan);
-            box-shadow: 0 0 8px var(--accent-cyan);
-        }
-
-        .status-dot.loading {
-            background-color: var(--accent-warning);
-            box-shadow: 0 0 8px var(--accent-warning);
-            animation: pulse 1.2s infinite alternate;
-        }
-
-        @keyframes pulse { 0% { opacity: 0.3; } 100% { opacity: 1; } }
-
-        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-
-        .col { 
-            background: var(--card-bg); 
-            backdrop-filter: blur(12px);
-            border: 1px solid var(--card-border);
-            padding: 12px; 
-            border-radius: 16px; 
-            display: flex; 
-            flex-direction: column; 
-            justify-content: flex-start;
-            box-shadow: 0 8px 24px rgba(0,0,0,0.3);
-        }
-
-        .col-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 8px;
-        }
-
-        h3 { 
-            font-size: 12px; 
-            margin: 0; 
-            font-weight: 700; 
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            color: var(--text-muted);
-        }
-
-        .step-tag {
-            font-size: 10px;
-            font-weight: 700;
-            padding: 2px 6px;
-            border-radius: 4px;
-            background: rgba(255,255,255,0.1);
-            color: #fff;
-        }
-
-        .preview-box { 
-            width: 100%; 
-            height: 140px; 
-            border: 1px dashed rgba(255, 255, 255, 0.15); 
-            border-radius: 12px; 
-            margin-bottom: 10px; 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
-            overflow: hidden; 
-            background: #07090E; 
-            cursor: pointer;
-            position: relative;
-        }
-
-        .preview-box::after {
-            content: '🔍';
-            position: absolute;
-            bottom: 6px;
-            right: 6px;
-            font-size: 11px;
-            background: rgba(0, 0, 0, 0.6);
-            backdrop-filter: blur(4px);
-            padding: 2px 6px;
-            border-radius: 6px;
-            pointer-events: none;
-            opacity: 0.8;
-            border: 1px solid var(--card-border);
-        }
-
-        canvas { max-width: 100%; max-height: 100%; object-fit: contain; }
-
-        .btn-action { 
-            background: linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%); 
-            color: white; 
-            padding: 10px 6px; 
-            font-size: 12px; 
-            font-weight: 700; 
-            border-radius: 10px; 
-            border: none;
-            cursor: pointer; 
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 4px;
-            width: 100%; 
-            box-shadow: 0 4px 14px var(--accent-purple-glow);
-        }
-
-        .btn-action.secondary { 
-            background: linear-gradient(135deg, #00C6FF 0%, #0072FF 100%); 
-            box-shadow: 0 4px 14px rgba(0, 198, 255, 0.25);
-        }
-
-        .btn-action:disabled { opacity: 0.3; pointer-events: none; filter: grayscale(1); }
-
-        .patches-list {
-            display: flex;
-            flex-direction: column;
-            gap: 5px;
-            margin-top: 10px;
-            width: 100%;
-            background: rgba(0, 0, 0, 0.35);
-            padding: 8px;
-            border-radius: 10px;
-            border: 1px solid var(--card-border);
-        }
-
-        .patch-row {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            font-size: 10px;
-            color: var(--text-muted);
-        }
-
-        .patch-row.main-patch {
-            padding-bottom: 2px;
-            color: var(--text-main);
-        }
-
-        .swatch-dot {
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-            border: 1px solid rgba(255,255,255,0.3);
-            flex-shrink: 0;
-        }
-
-        .patch-text {
-            font-weight: 600;
-            white-space: nowrap;
-        }
-
-        .card { 
-            background: var(--card-bg); 
-            backdrop-filter: blur(16px);
-            border: 1px solid var(--card-border);
-            padding: 16px; 
-            border-radius: 18px; 
-            margin-top: 14px; 
-            box-shadow: 0 12px 32px rgba(0,0,0,0.4);
-        }
-
-        .comparison-block {
-            padding: 12px;
-            border-radius: 14px;
-            background: rgba(0, 0, 0, 0.3);
-            border: 1px solid var(--card-border);
-            margin-bottom: 12px;
-        }
-
-        .comparison-title {
-            font-size: 11px;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-bottom: 10px;
-            color: var(--text-muted);
-            text-align: center;
-        }
-
-        .comparison-title.raw { color: var(--accent-warning); }
-        .comparison-title.corrected { color: var(--accent-cyan); }
-        .comparison-title.corrected-3d { color: var(--accent-purple); }
-        .comparison-title.final { color: var(--accent-green); }
-
-        .methods-list {
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-        }
-
-        .method-row {
-            background: rgba(255, 255, 255, 0.03);
-            border: 1px solid rgba(255, 255, 255, 0.06);
-            border-radius: 8px;
-            padding: 6px 10px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-
-        .method-info {
-            display: flex;
-            flex-direction: column;
-            gap: 2px;
-        }
-
-        .method-name {
-            font-size: 11px;
-            font-weight: 600;
-            color: #fff;
-        }
-
-        .method-subtext {
-            font-size: 9px;
-            color: var(--text-muted);
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        .method-score {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .score-val {
-            font-size: 15px;
-            font-weight: 800;
-        }
-
-        .match-success { color: var(--accent-green); }
-        .match-warning { color: var(--accent-warning); }
-        .match-error { color: var(--accent-red); }
-
-        .swatches-pair {
-            display: flex;
-            align-items: center;
-            gap: 4px;
-        }
-
-        .swatch-mini {
-            width: 14px;
-            height: 14px;
-            border-radius: 50%;
-            border: 1px solid rgba(255,255,255,0.25);
-        }
-
-        .final-summary {
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-            margin-top: 4px;
-            padding: 10px;
-            background: rgba(0, 230, 118, 0.05);
-            border-radius: 10px;
-            border: 1px solid rgba(0, 230, 118, 0.2);
-        }
-
-        .summary-line {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-size: 11px;
-            color: var(--text-muted);
-        }
-
-        .summary-line b {
-            color: #fff;
-        }
-
-        .summary-badge {
-            font-size: 10px;
-            font-weight: 700;
-            padding: 2px 6px;
-            border-radius: 4px;
-            background: rgba(255, 255, 255, 0.08);
-        }
-
-        .summary-badge.active {
-            background: rgba(0, 230, 118, 0.2);
-            color: var(--accent-green);
-        }
-
-        .final-total-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-top: 6px;
-            padding-top: 8px;
-            border-top: 1px dashed rgba(255, 255, 255, 0.15);
-        }
-
-        .final-total-label {
-            font-size: 13px;
-            font-weight: 800;
-            color: #fff;
-        }
-
-        .final-total-value {
-            font-size: 22px;
-            font-weight: 900;
-            color: var(--accent-green);
-            text-shadow: 0 0 12px rgba(0, 230, 118, 0.4);
-        }
-
-        .reset-btn { 
-            background: rgba(255, 82, 82, 0.12); 
-            color: var(--accent-red); 
-            border: 1px solid rgba(255, 82, 82, 0.3); 
-            padding: 10px 20px; 
-            border-radius: 10px; 
-            margin-top: 4px; 
-            cursor: pointer; 
-            font-size: 12px; 
-            font-weight: 700;
-            width: 100%;
-        }
-
-        .camera-modal {
-            display: none;
-            position: fixed;
-            inset: 0;
-            background: rgba(0, 0, 0, 0.9);
-            z-index: 1000;
-            align-items: center;
-            justify-content: center;
-            padding: 16px;
-            backdrop-filter: blur(8px);
-        }
-
-        .camera-modal.active { display: flex; }
-
-        .camera-card {
-            background: #121824;
-            border: 1px solid var(--card-border);
-            border-radius: 20px;
-            width: 100%;
-            max-width: 420px;
-            padding: 16px;
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            box-shadow: 0 20px 50px rgba(0,0,0,0.8);
-        }
-
-        .camera-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-size: 14px;
-            font-weight: 700;
-        }
-
-        .close-btn {
-            background: rgba(255,255,255,0.1);
-            border: none;
-            color: #fff;
-            width: 28px;
-            height: 28px;
-            border-radius: 50%;
-            cursor: pointer;
-            font-size: 14px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .camera-viewport {
-            position: relative;
-            width: 100%;
-            height: 320px;
-            background: #000;
-            border-radius: 14px;
-            overflow: hidden;
-        }
-
-        .camera-viewport video { width: 100%; height: 100%; object-fit: cover; }
-
-        .camera-overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-        }
-
-        /* ZOOM MODAL STYLES */
-        .zoom-modal {
-            display: none;
-            position: fixed;
-            inset: 0;
-            background: rgba(5, 7, 12, 0.96);
-            z-index: 2000;
-            flex-direction: column;
-            backdrop-filter: blur(12px);
-        }
-
-        .zoom-modal.active { display: flex; }
-
-        .zoom-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 14px 16px;
-            background: rgba(18, 24, 38, 0.8);
-            border-bottom: 1px solid var(--card-border);
-            font-size: 14px;
-            font-weight: 700;
-        }
-
-        .zoom-viewport {
-            flex: 1;
-            overflow: hidden;
-            position: relative;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            touch-action: none;
-            user-select: none;
-        }
-
-        #zoomCanvas {
-            max-width: 90%;
-            max-height: 80%;
-            object-fit: contain;
-            transform-origin: center center;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.8);
-            border-radius: 8px;
-        }
-
-        .zoom-hint {
-            text-align: center;
-            padding: 10px;
-            font-size: 11px;
-            color: var(--text-muted);
-            background: rgba(0, 0, 0, 0.4);
-            border-top: 1px solid var(--card-border);
-        }
-
-        .view-pane { display: none; }
-        .view-pane.active { display: block; }
-        
-        .stub-box {
-            background: var(--card-bg);
-            border: 1px solid var(--card-border);
-            padding: 30px 16px;
-            border-radius: 16px;
-            text-align: center;
-            color: var(--text-muted);
-            font-size: 13px;
-        }
-    </style>
-    <script async src="https://docs.opencv.org/4.5.5/opencv.js" onload="onOpenCvReady()"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ColorBank / ColorMatchPro</title>
+  <style>
+    :root {
+      --bg-color: #0b1320;
+      --card-bg: #131c2e;
+      --text-main: #ffffff;
+      --text-muted: #94a3b8;
+      --accent-purple: #6366f1;
+      --accent-cyan: #06b6d4;
+      --accent-green: #10b981;
+      --accent-red: #ef4444;
+      --border-color: #1e293b;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      padding: 16px;
+      display: flex;
+      justify-content: center;
+    }
+
+    .app-container {
+      width: 100%;
+      max-width: 480px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .cards-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .card {
+      background: var(--card-bg);
+      border-radius: 16px;
+      padding: 12px;
+      border: 1px solid var(--border-color);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .btn {
+      width: 100%;
+      padding: 10px 14px;
+      border-radius: 12px;
+      border: none;
+      color: #fff;
+      font-weight: 600;
+      font-size: 14px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+    .btn-purple { background: linear-gradient(135deg, #6366f1, #8b5cf6); }
+    .btn-cyan { background: linear-gradient(135deg, #06b6d4, #3b82f6); }
+
+    .section-title {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      margin-top: 4px;
+    }
+
+    .info-list {
+      font-size: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      color: var(--text-muted);
+    }
+    .info-list span { color: var(--text-main); font-weight: 600; }
+
+    .result-block {
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      text-align: center;
+    }
+
+    .match-val {
+      font-size: 32px;
+      font-weight: 900;
+      letter-spacing: -0.5px;
+    }
+    .match-green { color: var(--accent-green); }
+    .match-red { color: var(--accent-red); }
+
+    .status-badge {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 4px 12px;
+      border-radius: 20px;
+      text-transform: uppercase;
+    }
+    .badge-red { background: rgba(239, 68, 68, 0.2); color: #fca5a5; }
+    .badge-green { background: rgba(16, 185, 129, 0.2); color: #6ee7b7; }
+    .badge-wait { background: rgba(99, 102, 241, 0.2); color: #a5b4fc; }
+
+    .swatch-compare {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 24px;
+      margin-top: 8px;
+      width: 100%;
+    }
+    .swatch-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+    .swatch-circle {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      border: 2px solid rgba(255,255,255,0.1);
+      background-color: #000;
+    }
+  </style>
 </head>
 <body>
 
-    <div class="container">
-        <div class="header">
-            <div class="brand">
-                <div class="logo-badge">
-                    <svg viewBox="0 0 24 24">
-                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z"/>
-                    </svg>
-                </div>
-                <h1>COLORMATCH</h1>
-            </div>
-
-            <div class="menu-container">
-                <button class="menu-btn" onclick="toggleMenu()">
-                    <span id="activeMenuLabel">🎯 Сравнение</span> ▾
-                </button>
-                <div class="menu-dropdown" id="menuDropdown">
-                    <div class="menu-item active" onclick="switchMode('compare', '🎯 Сравнение')">
-                        🎯 Сравнение цвета
-                    </div>
-                    <div class="menu-item" onclick="switchMode('calibrate', '🖥️ Калибровка')">
-                        🖥️ Калибровка экрана
-                    </div>
-                    <div class="menu-item" onclick="switchMode('correct', '🎨 Цветокоррекция')">
-                        🎨 Цветокоррекция снимка
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="status-pill" id="cvStatus">
-            <span class="status-dot loading"></span> Загрузка ядра OpenCV...
-        </div>
-
-        <div class="view-pane active" id="paneCompare">
-            <div class="grid">
-                <div class="col">
-                    <div class="col-header">
-                        <h3>1. Эталон</h3>
-                        <span class="step-tag">01</span>
-                    </div>
-                    <div class="preview-box" onclick="openZoomModal('canvasStandard')">
-                        <canvas id="canvasStandard"></canvas>
-                    </div>
-                    <button class="btn-action" id="btnStandard" onclick="openCamera('standard')" disabled>
-                        📷 Снять Эталон
-                    </button>
-                    <div id="infoStandard"></div>
-                </div>
-
-                <div class="col">
-                    <div class="col-header">
-                        <h3>2. Образец</h3>
-                        <span class="step-tag">02</span>
-                    </div>
-                    <div class="preview-box" onclick="openZoomModal('canvasSample')">
-                        <canvas id="canvasSample"></canvas>
-                    </div>
-                    <button class="btn-action secondary" id="btnSample" onclick="openCamera('sample')" disabled>
-                        📸 Снять Образец
-                    </button>
-                    <div id="infoSample"></div>
-                </div>
-            </div>
-
-            <div class="card" id="infoCard" style="display:none;">
-                <div id="result"></div>
-                <button class="reset-btn" id="resetBtn">🔄 Начать новый тест</button>
-            </div>
-        </div>
-
-        <div class="view-pane" id="paneCalibrate">
-            <div class="stub-box">
-                🖥️ <b>Калибровка экрана</b><br><br>
-                Режим настройки яркости и цветового профиля дисплея.
-            </div>
-        </div>
-
-        <div class="view-pane" id="paneCorrect">
-            <div class="stub-box">
-                🎨 <b>Цветокоррекция снимка</b><br><br>
-                Выравнивание баланса белого и экспозиции.
-            </div>
-        </div>
+<div class="app-container">
+  
+  <div class="cards-grid">
+    <!-- Эталон -->
+    <div class="card">
+      <button class="btn btn-purple">📷 Эталон</button>
+      <div class="info-list">
+        <div>⚪ <b>Цель:</b> <span id="ref-target-text">RGB 168, 162, 163</span></div>
+        <div>⚪ Белый: <span>226, 217, 223</span></div>
+        <div>⚪ Серый: <span>181, 172, 177</span></div>
+        <div>⚪ Чёрный: <span>125, 110, 111</span></div>
+      </div>
     </div>
 
-    <div class="camera-modal" id="cameraModal">
-        <div class="camera-card">
-            <div class="camera-header">
-                <span id="cameraTitle">Сканирование карточки</span>
-                <button class="close-btn" onclick="closeCamera()">✕</button>
-            </div>
-            
-            <div class="camera-viewport">
-                <video id="webcam" autoplay playsinline></video>
-                <svg class="camera-overlay" viewBox="0 0 400 320">
-                    <defs>
-                        <mask id="card-mask">
-                            <rect width="100%" height="100%" fill="white"/>
-                            <rect x="50" y="55" width="300" height="190" rx="12" fill="black"/>
-                        </mask>
-                    </defs>
-
-                    <rect width="100%" height="100%" fill="rgba(0,0,0,0.55)" mask="url(#card-mask)"/>
-                    <rect x="50" y="55" width="300" height="190" rx="12" fill="none" stroke="#00E5FF" stroke-width="2" stroke-dasharray="6 4"/>
-                    <circle cx="200" cy="150" r="26" fill="none" stroke="#00E676" stroke-width="2"/>
-                    <line x1="200" y1="115" x2="200" y2="185" stroke="#00E676" stroke-width="1.5"/>
-                    <line x1="165" y1="150" x2="235" y2="150" stroke="#00E676" stroke-width="1.5"/>
-
-                    <text x="200" y="32" fill="#FFFFFF" font-size="12" font-weight="600" text-anchor="middle">
-                        Совместите карту с рамкой
-                    </text>
-                </svg>
-            </div>
-
-            <button class="btn-action" onclick="takeSnapshot()">
-                📸 Сделать снимок
-            </button>
-        </div>
+    <!-- Образец -->
+    <div class="card">
+      <button class="btn btn-cyan">📷 Образец</button>
+      <div class="info-list">
+        <div>⚪ <b>Цель:</b> <span id="sam-target-text">RGB 159, 156, 156</span></div>
+        <div>⚪ Белый: <span>210, 203, 210</span></div>
+        <div>⚪ Серый: <span>188, 183, 188</span></div>
+        <div>⚪ Чёрный: <span>84, 73, 73</span></div>
+      </div>
     </div>
+  </div>
 
-    <!-- МОДАЛЬНОЕ ОКНО ZOOM ПРОСМОТРА -->
-    <div class="zoom-modal" id="zoomModal">
-        <div class="zoom-header">
-            <span id="zoomTitle">Просмотр снимка</span>
-            <button class="close-btn" onclick="closeZoomModal()">✕</button>
-        </div>
-        <div class="zoom-viewport" id="zoomViewport">
-            <canvas id="zoomCanvas"></canvas>
-        </div>
-        <div class="zoom-hint">🤏 Используйте Pinch-to-zoom для детального просмотра</div>
+  <!-- Блок Скорректированного совпадения (от сервера) -->
+  <div class="result-block">
+    <div class="section-title">✨ СКОРРЕКТИРОВАННОЕ СОВПАДЕНИЕ (VERCEL API)</div>
+    <div id="corr-match-val" class="match-val match-green">--% MATCH</div>
+    <div id="corr-status-badge" class="status-badge badge-wait">ОЖИДАНИЕ СЕРВЕРА</div>
+    
+    <div class="swatch-compare">
+      <div class="swatch-item">
+        <div id="corr-ref-swatch" class="swatch-circle"></div>
+        <span>Эталон</span>
+        <b id="corr-ref-rgb">0, 0, 0</b>
+      </div>
+      <span style="font-weight:700; color:var(--text-muted)">VS</span>
+      <div class="swatch-item">
+        <div id="corr-sam-swatch" class="swatch-circle"></div>
+        <span>Образец</span>
+        <b id="corr-sam-rgb">0, 0, 0</b>
+      </div>
     </div>
+  </div>
 
-    <script>
-        let isOpenCvReady = false;
-        let standardColorData = null;
-        let sampleColorData = null;
-        let activeMode = 'standard';
-        let mediaStream = null;
+  <!-- Блок Сырого совпадения (от сервера) -->
+  <div class="result-block">
+    <div class="section-title">📷 СЫРОЕ СОВПАДЕНИЕ (БЕЗ КОРРЕКЦИИ)</div>
+    <div id="raw-match-val" class="match-val match-green">--% MATCH</div>
+    <div id="raw-status-badge" class="status-badge badge-wait">ОЖИДАНИЕ СЕРВЕРА</div>
 
-        const cvStatus = document.getElementById('cvStatus');
-        const btnStandard = document.getElementById('btnStandard');
-        const btnSample = document.getElementById('btnSample');
+    <div class="swatch-compare">
+      <div class="swatch-item">
+        <div id="raw-ref-swatch" class="swatch-circle"></div>
+        <span>Эталон (168, 162, 163)</span>
+      </div>
+      <span style="font-weight:700; color:var(--text-muted)">VS</span>
+      <div class="swatch-item">
+        <div id="raw-sam-swatch" class="swatch-circle"></div>
+        <span>Образец (159, 156, 156)</span>
+      </div>
+    </div>
+  </div>
 
-        const infoStandard = document.getElementById('infoStandard');
-        const infoSample = document.getElementById('infoSample');
-        const infoCard = document.getElementById('infoCard');
-        const resultDiv = document.getElementById('result');
-        const resetBtn = document.getElementById('resetBtn');
+</div>
 
-        const cameraModal = document.getElementById('cameraModal');
-        const video = document.getElementById('webcam');
+<script>
+  // Входные данные кадров
+  const frameData = {
+    refTarget: { r: 168, g: 162, b: 163 },
+    refPatches: {
+      white: { r: 226, g: 217, b: 223 },
+      gray:  { r: 181, g: 172, b: 177 },
+      black: { r: 125, g: 110, b: 111 }
+    },
+    samTarget: { r: 159, g: 156, b: 156 },
+    samPatches: {
+      white: { r: 210, g: 203, b: 210 },
+      gray:  { r: 188, g: 183, b: 188 },
+      black: { r: 84,  g: 73,  b: 73  }
+    }
+  };
 
-        function labToRgb(l, a, b) {
-            let labMat = cv.matFromArray(1, 1, cv.CV_8UC3, [l, a, b]);
-            let rgbMat = new cv.Mat();
-            cv.cvtColor(labMat, rgbMat, cv.COLOR_Lab2RGB);
-            let r = rgbMat.data[0], g = rgbMat.data[1], b_val = rgbMat.data[2];
-            labMat.delete(); rgbMat.delete();
-            return { r, g, b: b_val };
+  // Функция отправки данных на Vercel API
+  async function runCalibrationOnServer() {
+    try {
+      const response = await fetch('https://colormatchpro-two.vercel.app/api/calibrate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(frameData)
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        // 1. Отображаем Сырые данные от сервера
+        document.getElementById('raw-match-val').innerText = `${result.raw.matchPercent}% MATCH`;
+        document.getElementById('raw-status-badge').innerText = `Δ = ${result.raw.delta}`;
+        document.getElementById('raw-status-badge').className = "status-badge badge-green";
+        document.getElementById('raw-ref-swatch').style.backgroundColor = `rgb(${frameData.refTarget.r}, ${frameData.refTarget.g}, ${frameData.refTarget.b})`;
+        document.getElementById('raw-sam-swatch').style.backgroundColor = `rgb(${frameData.samTarget.r}, ${frameData.samTarget.g}, ${frameData.samTarget.b})`;
+
+        // 2. Отображаем Скорректированные данные от сервера
+        const corr = result.corrected;
+        const corrValElem = document.getElementById('corr-match-val');
+        const corrBadgeElem = document.getElementById('corr-status-badge');
+
+        corrValElem.innerText = `${corr.matchPercent}% MATCH`;
+        corrBadgeElem.innerText = corr.statusText;
+
+        if (corr.isMatch) {
+          corrValElem.className = "match-val match-green";
+          corrBadgeElem.className = "status-badge badge-green";
+        } else {
+          corrValElem.className = "match-val match-red";
+          corrBadgeElem.className = "status-badge badge-red";
         }
 
-        function toggleMenu() {
-            document.getElementById('menuDropdown').classList.toggle('active');
-        }
+        document.getElementById('corr-ref-swatch').style.backgroundColor = `rgb(${corr.refRgb.r}, ${corr.refRgb.g}, ${corr.refRgb.b})`;
+        document.getElementById('corr-sam-swatch').style.backgroundColor = `rgb(${corr.samRgb.r}, ${corr.samRgb.g}, ${corr.samRgb.b})`;
+        document.getElementById('corr-ref-rgb').innerText = `${corr.refRgb.r}, ${corr.refRgb.g}, ${corr.refRgb.b}`;
+        document.getElementById('corr-sam-rgb').innerText = `${corr.samRgb.r}, ${corr.samRgb.g}, ${corr.samRgb.b}`;
+      }
+    } catch (err) {
+      console.error("Ошибка при связи с сервером Vercel:", err);
+      document.getElementById('corr-status-badge').innerText = "ОШИБКА СЕРВЕРА";
+      document.getElementById('corr-status-badge').className = "status-badge badge-red";
+    }
+  }
+
+  // Запускаем расчет при загрузке страницы
+  runCalibrationOnServer();
+</script>
 
-        function switchMode(modeKey, labelText) {
-            document.getElementById('activeMenuLabel').innerText = labelText;
-            document.getElementById('menuDropdown').classList.remove('active');
-
-            document.querySelectorAll('.menu-item').forEach(el => el.classList.remove('active'));
-            event.target.classList.add('active');
-
-            document.querySelectorAll('.view-pane').forEach(el => el.classList.remove('active'));
-            if (modeKey === 'compare') document.getElementById('paneCompare').classList.add('active');
-            if (modeKey === 'calibrate') document.getElementById('paneCalibrate').classList.add('active');
-            if (modeKey === 'correct') document.getElementById('paneCorrect').classList.add('active');
-        }
-
-        window.addEventListener('click', (e) => {
-            if (!e.target.closest('.menu-container')) {
-                document.getElementById('menuDropdown').classList.remove('active');
-            }
-        });
-
-        function onOpenCvReady() {
-            isOpenCvReady = true;
-            cvStatus.innerHTML = '<span class="status-dot"></span> Готов к работе';
-            btnStandard.disabled = false;
-            restoreState();
-        }
-
-        async function openCamera(mode) {
-            activeMode = mode;
-            document.getElementById('cameraTitle').innerText = mode === 'standard' ? 'Съемка Эталона' : 'Съемка Образца';
-            cameraModal.classList.add('active');
-
-            try {
-                mediaStream = await navigator.mediaDevices.getUserMedia({
-                    video: { 
-                        facingMode: { exact: "environment" },
-                        width: { ideal: 3840 },
-                        height: { ideal: 2160 }
-                    }
-                });
-            } catch (err) {
-                try {
-                    mediaStream = await navigator.mediaDevices.getUserMedia({ 
-                        video: { 
-                            width: { ideal: 3840 },
-                            height: { ideal: 2160 }
-                        } 
-                    });
-                } catch (fallbackErr) {
-                    alert('Ошибка доступа к камере: ' + fallbackErr.message);
-                    closeCamera();
-                    return;
-                }
-            }
-
-            video.srcObject = mediaStream;
-        }
-
-        function closeCamera() {
-            if (mediaStream) {
-                mediaStream.getTracks().forEach(track => track.stop());
-                mediaStream = null;
-            }
-            video.srcObject = null;
-            cameraModal.classList.remove('active');
-        }
-
-        async function takeSnapshot() {
-            if (!video.videoWidth || !video.videoHeight) return;
-
-            const viewportRect = video.getBoundingClientRect();
-            if (!viewportRect.width || !viewportRect.height) return;
-
-            let sourceElement = video;
-            let imgW = video.videoWidth;
-            let imgH = video.videoHeight;
-
-            const track = mediaStream ? mediaStream.getVideoTracks()[0] : null;
-
-            if ('ImageCapture' in window && track) {
-                try {
-                    const imageCapture = new ImageCapture(track);
-                    const blob = await imageCapture.takePhoto();
-                    const bitmap = await createImageBitmap(blob);
-                    sourceElement = bitmap;
-                    imgW = bitmap.width;
-                    imgH = bitmap.height;
-                } catch (err) {
-                    console.warn('ImageCapture не сработал, фоллбэк на кадр из видео:', err);
-                }
-            }
-
-            const strokeOffset = 2;
-            const overlayFrame = {
-                x: 50 + strokeOffset,
-                y: 55 + strokeOffset,
-                w: 300 - strokeOffset * 2,
-                h: 190 - strokeOffset * 2
-            };
-            const overlayW = 400;
-            const overlayH = 320;
-
-            const imgRatio = imgW / imgH;
-            const containerRatio = viewportRect.width / viewportRect.height;
-
-            let renderW, renderH, offsetX, offsetY;
-
-            if (containerRatio > imgRatio) {
-                renderW = viewportRect.width;
-                renderH = viewportRect.width / imgRatio;
-                offsetX = 0;
-                offsetY = (renderH - viewportRect.height) / 2;
-            } else {
-                renderH = viewportRect.height;
-                renderW = viewportRect.height * imgRatio;
-                offsetX = (renderW - viewportRect.width) / 2;
-                offsetY = 0;
-            }
-
-            const scaleX = imgW / renderW;
-            const scaleY = imgH / renderH;
-
-            const rectViewportX = (overlayFrame.x / overlayW) * viewportRect.width;
-            const rectViewportY = (overlayFrame.y / overlayH) * viewportRect.height;
-            const rectViewportW = (overlayFrame.w / overlayW) * viewportRect.width;
-            const rectViewportH = (overlayFrame.h / overlayH) * viewportRect.height;
-
-            const cropX = Math.max(0, Math.round((rectViewportX + offsetX) * scaleX));
-            const cropY = Math.max(0, Math.round((rectViewportY + offsetY) * scaleY));
-            const cropW = Math.min(imgW - cropX, Math.round(rectViewportW * scaleX));
-            const cropH = Math.min(imgH - cropY, Math.round(rectViewportH * scaleY));
-
-            const croppedCanvas = document.createElement('canvas');
-            croppedCanvas.width = cropW;
-            croppedCanvas.height = cropH;
-
-            const ctx = croppedCanvas.getContext('2d');
-            ctx.drawImage(sourceElement, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
-
-            closeCamera();
-            handleImageSource(croppedCanvas, activeMode);
-        }
-
-        function handleImageSource(canvasSource, mode) {
-            const canvasTargetId = mode === 'standard' ? 'canvasStandard' : 'canvasSample';
-            const colorData = processImageWithCard(canvasSource, canvasTargetId);
-
-            if (mode === 'standard') {
-                standardColorData = colorData;
-                renderPatchesList('infoStandard', standardColorData);
-                localStorage.setItem('cm_card_standard_data', JSON.stringify(standardColorData));
-
-                btnSample.disabled = false;
-                if (sampleColorData) compareColors();
-            } else {
-                sampleColorData = colorData;
-                renderPatchesList('infoSample', sampleColorData);
-                compareColors();
-            }
-        }
-
-        function drawTargetCrosshair(mat, cx, cy, colorScalar, radius = 27) {
-            let pCenter = new cv.Point(cx, cy);
-            cv.circle(mat, pCenter, radius, colorScalar, 3, cv.LINE_AA);
-            cv.circle(mat, pCenter, 3, colorScalar, -1, cv.LINE_AA);
-            
-            cv.line(mat, new cv.Point(cx - radius - 6, cy), new cv.Point(cx + radius + 6, cy), colorScalar, 2, cv.LINE_AA);
-            cv.line(mat, new cv.Point(cx, cy - radius - 6), new cv.Point(cx, cy + radius + 6), colorScalar, 2, cv.LINE_AA);
-        }
-
-        function getRegionColorLAB(labMat, cx, cy, radius = 18, useMedian = false) {
-            let lVals = [], aVals = [], bVals = [];
-            for (let y = cy - radius; y <= cy + radius; y++) {
-                for (let x = cx - radius; x <= cx + radius; x++) {
-                    let dist = Math.sqrt(Math.pow(x - cx, 2) + Math.pow(y - cy, 2));
-                    if (dist <= radius && x >= 0 && x < labMat.cols && y >= 0 && y < labMat.rows) {
-                        let pixel = labMat.ucharPtr(y, x);
-                        lVals.push(pixel[0]);
-                        aVals.push(pixel[1]);
-                        bVals.push(pixel[2]);
-                    }
-                }
-            }
-            if (lVals.length === 0) return { l: 0, a: 128, b: 128 };
-
-            if (useMedian) {
-                const getTrimmedMedian = (arr) => {
-                    arr.sort((a, b) => a - b);
-                    const trim = Math.floor(arr.length * 0.15);
-                    const sliced = arr.slice(trim, arr.length - trim);
-                    const mid = Math.floor(sliced.length / 2);
-                    return sliced.length % 2 !== 0 
-                        ? sliced[mid] 
-                        : Math.round((sliced[mid - 1] + sliced[mid]) / 2);
-                };
-                return {
-                    l: getTrimmedMedian(lVals),
-                    a: getTrimmedMedian(aVals),
-                    b: getTrimmedMedian(bVals)
-                };
-            } else {
-                const sum = arr => arr.reduce((val, b) => val + b, 0);
-                return {
-                    l: Math.round(sum(lVals) / lVals.length),
-                    a: Math.round(sum(aVals) / aVals.length),
-                    b: Math.round(sum(bVals) / bVals.length)
-                };
-            }
-        }
-
-        function processImageWithCard(canvasSource, canvasTargetId) {
-            let src = null, gray = null, blurred = null, thresh = null;
-            let contours = null, hierarchy = null;
-            let warped = null, warpedLab = null, srcMat = null, dstMat = null, M = null;
-
-            let extractedData = {
-                mainMean: { l: 0, a: 128, b: 128 },
-                mainMedian: { l: 0, a: 128, b: 128 },
-                patchesMean: { 
-                    white: {l:0,a:128,b:128}, 
-                    gray: {l:0,a:128,b:128}, 
-                    black: {l:0,a:128,b:128},
-                    right1: {l:0,a:128,b:128},
-                    right2: {l:0,a:128,b:128},
-                    right3: {l:0,a:128,b:128}
-                },
-                patchesMedian: { 
-                    white: {l:0,a:128,b:128}, 
-                    gray: {l:0,a:128,b:128}, 
-                    black: {l:0,a:128,b:128},
-                    right1: {l:0,a:128,b:128},
-                    right2: {l:0,a:128,b:128},
-                    right3: {l:0,a:128,b:128}
-                },
-                main: { l: 0, a: 128, b: 128 },
-                patches: { 
-                    white: {l:0,a:128,b:128}, 
-                    gray: {l:0,a:128,b:128}, 
-                    black: {l:0,a:128,b:128},
-                    right1: {l:0,a:128,b:128},
-                    right2: {l:0,a:128,b:128},
-                    right3: {l:0,a:128,b:128}
-                }
-            };
-
-            try {
-                src = cv.imread(canvasSource);
-                gray = new cv.Mat();
-                blurred = new cv.Mat();
-                thresh = new cv.Mat();
-                contours = new cv.MatVector();
-                hierarchy = new cv.Mat();
-
-                const imgWidth = src.cols;
-                const imgHeight = src.rows;
-                const totalArea = imgWidth * imgHeight;
-
-                cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
-                cv.GaussianBlur(gray, blurred, new cv.Size(7, 7), 0);
-                cv.adaptiveThreshold(blurred, thresh, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY_INV, 15, 3);
-                cv.findContours(thresh, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
-
-                let bestQuad = null;
-                let maxArea = 0;
-
-                for (let i = 0; i < contours.size(); ++i) {
-                    let cnt = contours.get(i);
-                    let area = cv.contourArea(cnt);
-
-                    if (area > totalArea * 0.20) {
-                        let peri = cv.arcLength(cnt, true);
-                        let approx = new cv.Mat();
-                        cv.approxPolyDP(cnt, approx, 0.03 * peri, true);
-
-                        if (approx.rows === 4 && cv.isContourConvex(approx)) {
-                            if (area > maxArea) {
-                                maxArea = area;
-                                bestQuad = [];
-                                for (let j = 0; j < 4; j++) {
-                                    bestQuad.push({
-                                        x: approx.data32S[j * 2],
-                                        y: approx.data32S[j * 2 + 1]
-                                    });
-                                }
-                            }
-                        }
-                        approx.delete();
-                    }
-                    cnt.delete();
-                }
-
-                warped = new cv.Mat();
-                // Повышенное разрешение трансформированной карточки (1.5x)
-                const scaleFactor = 1.5;
-                const CARD_W = Math.round(856 * scaleFactor);
-                const CARD_H = Math.round(540 * scaleFactor);
-
-                if (bestQuad) {
-                    let add = bestQuad.map(p => p.x + p.y);
-                    let diff = bestQuad.map(p => p.y - p.x);
-
-                    let tl = bestQuad[add.indexOf(Math.min(...add))];
-                    let br = bestQuad[add.indexOf(Math.max(...add))];
-                    let tr = bestQuad[diff.indexOf(Math.min(...diff))];
-                    let bl = bestQuad[diff.indexOf(Math.max(...diff))];
-
-                    srcMat = cv.matFromArray(4, 1, cv.CV_32FC2, [tl.x, tl.y, tr.x, tr.y, br.x, br.y, bl.x, bl.y]);
-                    dstMat = cv.matFromArray(4, 1, cv.CV_32FC2, [0, 0, CARD_W, 0, CARD_W, CARD_H, 0, CARD_H]);
-
-                    M = cv.getPerspectiveTransform(srcMat, dstMat);
-                    cv.warpPerspective(src, warped, M, new cv.Size(CARD_W, CARD_H));
-                } else {
-                    cv.resize(src, warped, new cv.Size(CARD_W, CARD_H));
-                }
-
-                warpedLab = new cv.Mat();
-                cv.cvtColor(warped, warpedLab, cv.COLOR_BGR2Lab);
-
-                const holeCenterX = Math.round(CARD_W * 0.508); 
-                const holeCenterY = Math.round(CARD_H * 0.468);
-                const holeRadius = Math.round(35 * scaleFactor);
-
-                const colorPatches = [
-                    { key: 'white',  x: Math.round(CARD_W * 0.155), y: Math.round(CARD_H * 0.310) - Math.round(20 * scaleFactor) },
-                    { key: 'gray',   x: Math.round(CARD_W * 0.155), y: Math.round(CARD_H * 0.525) - Math.round(5 * scaleFactor) },
-                    { key: 'black',  x: Math.round(CARD_W * 0.155), y: Math.round(CARD_H * 0.740) },
-                    { key: 'right1', x: Math.round(CARD_W * 0.845), y: Math.round(CARD_H * 0.310) - Math.round(20 * scaleFactor) },
-                    { key: 'right2', x: Math.round(CARD_W * 0.845), y: Math.round(CARD_H * 0.525) - Math.round(5 * scaleFactor) },
-                    { key: 'right3', x: Math.round(CARD_W * 0.845), y: Math.round(CARD_H * 0.740) }
-                ];
-
-                extractedData.mainMean = getRegionColorLAB(warpedLab, holeCenterX, holeCenterY, Math.round(holeRadius * 0.6), false);
-                extractedData.mainMedian = getRegionColorLAB(warpedLab, holeCenterX, holeCenterY, Math.round(holeRadius * 0.6), true);
-
-                colorPatches.forEach(p => {
-                    extractedData.patchesMean[p.key] = getRegionColorLAB(warpedLab, p.x, p.y, Math.round(6 * scaleFactor), false);
-                    extractedData.patchesMedian[p.key] = getRegionColorLAB(warpedLab, p.x, p.y, Math.round(6 * scaleFactor), true);
-                });
-
-                extractedData.main = extractedData.mainMean;
-                extractedData.patches = extractedData.patchesMean;
-
-                const greenColor = new cv.Scalar(0, 230, 118, 255);
-                drawTargetCrosshair(warped, holeCenterX, holeCenterY, greenColor, holeRadius);
-                colorPatches.forEach(p => {
-                    drawTargetCrosshair(warped, p.x, p.y, greenColor, Math.round(12 * scaleFactor));
-                });
-
-                cv.imshow(canvasTargetId, warped);
-
-            } finally {
-                if (src) src.delete();
-                if (gray) gray.delete();
-                if (blurred) blurred.delete();
-                if (thresh) thresh.delete();
-                if (contours) contours.delete();
-                if (hierarchy) hierarchy.delete();
-                if (warped) warped.delete();
-                if (warpedLab) warpedLab.delete();
-                if (srcMat) srcMat.delete();
-                if (dstMat) dstMat.delete();
-                if (M) M.delete();
-            }
-
-            return extractedData;
-        }
-
-        function restoreState() {
-            const savedData = localStorage.getItem('cm_card_standard_data');
-            if (savedData) {
-                standardColorData = JSON.parse(savedData);
-                renderPatchesList('infoStandard', standardColorData);
-                btnSample.disabled = false;
-            }
-        }
-
-        function renderPatchesList(elementId, dataObj) {
-            const container = document.getElementById(elementId);
-            if (!dataObj || !dataObj.main) {
-                container.innerHTML = '';
-                return;
-            }
-
-            const patchNames = {
-                white: 'Белый',
-                gray: 'Серый',
-                black: 'Чёрный',
-                right1: 'Cyan',
-                right2: 'Magenta',
-                right3: 'Yellow'
-            };
-
-            const m = dataObj.main;
-            const p = dataObj.patches;
-            
-            const rgbMain = labToRgb(m.l, m.a, m.b);
-
-            let html = `<div class="patches-list">
-                <div class="patch-row main-patch">
-                    <span class="swatch-dot" style="background: rgb(${rgbMain.r},${rgbMain.g},${rgbMain.b});"></span>
-                    <span class="patch-text"><b>Цель (LAB):</b> ${m.l}, ${m.a}, ${m.b}</span>
-                </div>`;
-
-            for (const key of ['white', 'gray', 'black', 'right1', 'right2', 'right3']) {
-                if (p && p[key]) {
-                    const c = p[key];
-                    const rgbP = labToRgb(c.l, c.a, c.b);
-                    html += `
-                        <div class="patch-row">
-                            <span class="swatch-dot" style="background: rgb(${rgbP.r},${rgbP.g},${rgbP.b});"></span>
-                            <span class="patch-text">${patchNames[key]}: ${c.l}, ${c.a}, ${c.b}</span>
-                        </div>
-                    `;
-                }
-            }
-
-            html += `</div>`;
-            container.innerHTML = html;
-        }
-
-        // ================= МЕТОДЫ 1D КОРРЕКЦИИ В LAB (5 АЛГОРИТМОВ) =================
-        
-        function applyGainOffsetCorrection(rawTarget, patches) {
-            const IDEAL = {
-                white: { l: 255, a: 128, b: 128 },
-                black: { l: 20,  a: 128, b: 128 }
-            };
-
-            function corrChannel(val, ch) {
-                let wIn = patches.white[ch], bIn = patches.black[ch];
-                let wOut = IDEAL.white[ch], bOut = IDEAL.black[ch];
-                let denom = (wIn - bIn) || 1;
-                let res = bOut + (val - bIn) * (wOut - bOut) / denom;
-                return Math.max(0, Math.min(255, Math.round(res)));
-            }
-
-            return {
-                l: corrChannel(rawTarget.l, 'l'),
-                a: corrChannel(rawTarget.a, 'a'),
-                b: corrChannel(rawTarget.b, 'b')
-            };
-        }
-
-        function applyLinearCorrection(rawTarget, patches) {
-            const IDEAL = {
-                white: { l: 255, a: 128, b: 128 },
-                gray:  { l: 128, a: 128, b: 128 },
-                black: { l: 20,  a: 128, b: 128 }
-            };
-
-            function interpolateChannel(val, ch) {
-                let pts = [
-                    { x: 0, y: 0 },
-                    { x: patches.black[ch], y: IDEAL.black[ch] },
-                    { x: patches.gray[ch],  y: IDEAL.gray[ch] },
-                    { x: patches.white[ch], y: IDEAL.white[ch] },
-                    { x: 255, y: 255 }
-                ];
-
-                pts.sort((a, b) => a.x - b.x);
-
-                let clean = [pts[0]];
-                for (let i = 1; i < pts.length; i++) {
-                    if (pts[i].x > clean[clean.length - 1].x) {
-                        clean.push(pts[i]);
-                    }
-                }
-
-                if (val < clean[0].x) {
-                    if (clean[0].x === 0) return 0;
-                    let slope = clean[0].y / clean[0].x;
-                    return Math.max(0, Math.min(255, Math.round(val * slope)));
-                }
-
-                let last = clean[clean.length - 1];
-                if (val > last.x) {
-                    if (last.x === 255) return 255;
-                    let slope = (255 - last.y) / (255 - last.x);
-                    return Math.max(0, Math.min(255, Math.round(last.y + (val - last.x) * slope)));
-                }
-
-                for (let i = 0; i < clean.length - 1; i++) {
-                    let p1 = clean[i], p2 = clean[i + 1];
-                    if (val >= p1.x && val <= p2.x) {
-                        let ratio = (val - p1.x) / (p2.x - p1.x);
-                        let interpolated = p1.y + ratio * (p2.y - p1.y);
-                        return Math.max(0, Math.min(255, Math.round(interpolated)));
-                    }
-                }
-
-                return Math.max(0, Math.min(255, Math.round(val)));
-            }
-
-            return {
-                l: interpolateChannel(rawTarget.l, 'l'),
-                a: interpolateChannel(rawTarget.a, 'a'),
-                b: interpolateChannel(rawTarget.b, 'b')
-            };
-        }
-
-        function applySplineCorrection(rawTarget, patches) {
-            const IDEAL = {
-                white: { l: 255, a: 128, b: 128 },
-                gray:  { l: 128, a: 128, b: 128 },
-                black: { l: 20,  a: 128, b: 128 }
-            };
-
-            function monotonicSpline(val, ch) {
-                let pts = [
-                    { x: 0, y: 0 },
-                    { x: patches.black[ch], y: IDEAL.black[ch] },
-                    { x: patches.gray[ch],  y: IDEAL.gray[ch] },
-                    { x: patches.white[ch], y: IDEAL.white[ch] },
-                    { x: 255, y: 255 }
-                ];
-
-                pts.sort((a, b) => a.x - b.x);
-
-                let clean = [pts[0]];
-                for (let i = 1; i < pts.length; i++) {
-                    if (pts[i].x > clean[clean.length - 1].x) {
-                        clean.push(pts[i]);
-                    }
-                }
-
-                if (clean.length < 2) return val;
-
-                if (val <= clean[0].x) return Math.max(0, Math.min(255, Math.round(clean[0].y * (val / Math.max(1, clean[0].x)))));
-                let last = clean[clean.length - 1];
-                if (val >= last.x) return Math.max(0, Math.min(255, Math.round(last.y + (255 - last.y) * ((val - last.x) / Math.max(1, 255 - last.x)))));
-
-                for (let i = 0; i < clean.length - 1; i++) {
-                    let p1 = clean[i], p2 = clean[i + 1];
-                    if (val >= p1.x && val <= p2.x) {
-                        let t = (val - p1.x) / (p2.x - p1.x);
-                        let smoothT = t * t * (3 - 2 * t);
-                        let interpolated = p1.y + smoothT * (p2.y - p1.y);
-                        return Math.max(0, Math.min(255, Math.round(interpolated)));
-                    }
-                }
-
-                return val;
-            }
-
-            return {
-                l: monotonicSpline(rawTarget.l, 'l'),
-                a: monotonicSpline(rawTarget.a, 'a'),
-                b: monotonicSpline(rawTarget.b, 'b')
-            };
-        }
-
-        // ================= МЕТОДЫ 3D КОРРЕКЦИИ В LAB (5 АЛГОРИТМОВ) =================
-
-        function apply3DIDWCorrection(rawTarget, patches) {
-            const IDEAL = {
-                white:  { l: 255, a: 128, b: 128 },
-                gray:   { l: 128, a: 128, b: 128 },
-                black:  { l: 20,  a: 128, b: 128 },
-                right1: { l: 232, a: 74,  b: 104 },
-                right2: { l: 123, a: 216, b: 102 },
-                right3: { l: 247, a: 110, b: 226 }
-            };
-
-            const keys = ['white', 'gray', 'black', 'right1', 'right2', 'right3'];
-            let sumW = 0, sumDL = 0, sumDA = 0, sumDB = 0;
-
-            for (let k of keys) {
-                let p = patches[k];
-                let target = IDEAL[k];
-                let dist = Math.sqrt((rawTarget.l - p.l)**2 + (rawTarget.a - p.a)**2 + (rawTarget.b - p.b)**2);
-                let w = 1.0 / (Math.pow(dist, 2) + 1e-4);
-                
-                sumW += w;
-                sumDL += w * (target.l - p.l);
-                sumDA += w * (target.a - p.a);
-                sumDB += w * (target.b - p.b);
-            }
-
-            let resL = rawTarget.l + sumDL / sumW;
-            let resA = rawTarget.a + sumDA / sumW;
-            let resB = rawTarget.b + sumDB / sumW;
-
-            return {
-                l: Math.max(0, Math.min(255, Math.round(resL))),
-                a: Math.max(0, Math.min(255, Math.round(resA))),
-                b: Math.max(0, Math.min(255, Math.round(resB)))
-            };
-        }
-
-        function apply3DAffineCorrection(rawTarget, patches) {
-            const IDEAL = {
-                white:  { l: 255, a: 128, b: 128 },
-                gray:   { l: 128, a: 128, b: 128 },
-                black:  { l: 20,  a: 128, b: 128 },
-                right1: { l: 232, a: 74,  b: 104 },
-                right2: { l: 123, a: 216, b: 102 },
-                right3: { l: 247, a: 110, b: 226 }
-            };
-
-            const keys = ['white', 'gray', 'black', 'right1', 'right2', 'right3'];
-            let srcMat = new cv.Mat(keys.length, 4, cv.CV_64F);
-            let dstMat = new cv.Mat(keys.length, 3, cv.CV_64F);
-
-            for (let i = 0; i < keys.length; i++) {
-                let k = keys[i];
-                srcMat.doublePtr(i, 0)[0] = patches[k].l;
-                srcMat.doublePtr(i, 1)[0] = patches[k].a;
-                srcMat.doublePtr(i, 2)[0] = patches[k].b;
-                srcMat.doublePtr(i, 3)[0] = 1.0;
-
-                dstMat.doublePtr(i, 0)[0] = IDEAL[k].l;
-                dstMat.doublePtr(i, 1)[0] = IDEAL[k].a;
-                dstMat.doublePtr(i, 2)[0] = IDEAL[k].b;
-            }
-
-            let M = new cv.Mat();
-            cv.solve(srcMat, dstMat, M, cv.DECOMP_SVD);
-
-            let resL = rawTarget.l * M.doublePtr(0, 0)[0] + rawTarget.a * M.doublePtr(1, 0)[0] + rawTarget.b * M.doublePtr(2, 0)[0] + M.doublePtr(3, 0)[0];
-            let resA = rawTarget.l * M.doublePtr(0, 1)[0] + rawTarget.a * M.doublePtr(1, 1)[0] + rawTarget.b * M.doublePtr(2, 1)[0] + M.doublePtr(3, 1)[0];
-            let resB = rawTarget.l * M.doublePtr(0, 2)[0] + rawTarget.a * M.doublePtr(1, 2)[0] + rawTarget.b * M.doublePtr(2, 2)[0] + M.doublePtr(3, 2)[0];
-
-            srcMat.delete(); dstMat.delete(); M.delete();
-
-            return {
-                l: Math.max(0, Math.min(255, Math.round(resL))),
-                a: Math.max(0, Math.min(255, Math.round(resA))),
-                b: Math.max(0, Math.min(255, Math.round(resB)))
-            };
-        }
-
-        function apply3DTPSCorrection(rawTarget, patches) {
-            const IDEAL = {
-                white:  { l: 255, a: 128, b: 128 },
-                gray:   { l: 128, a: 128, b: 128 },
-                black:  { l: 20,  a: 128, b: 128 },
-                right1: { l: 232, a: 74,  b: 104 },
-                right2: { l: 123, a: 216, b: 102 },
-                right3: { l: 247, a: 110, b: 226 }
-            };
-
-            const keys = ['white', 'gray', 'black', 'right1', 'right2', 'right3'];
-            const N = keys.length;
-
-            const U = (dist) => (dist === 0 ? 0 : dist * dist * Math.log(dist));
-
-            let K = new cv.Mat(N, N, cv.CV_64F);
-            let P = new cv.Mat(N, 4, cv.CV_64F);
-
-            for (let i = 0; i < N; i++) {
-                let pi = patches[keys[i]];
-                P.doublePtr(i, 0)[0] = 1.0;
-                P.doublePtr(i, 1)[0] = pi.l;
-                P.doublePtr(i, 2)[0] = pi.a;
-                P.doublePtr(i, 3)[0] = pi.b;
-
-                for (let j = 0; j < N; j++) {
-                    let pj = patches[keys[j]];
-                    let dist = Math.sqrt((pi.l - pj.l)**2 + (pi.a - pj.a)**2 + (pi.b - pj.b)**2);
-                    K.doublePtr(i, j)[0] = U(dist);
-                }
-            }
-
-            let L = new cv.Mat(N + 4, N + 4, cv.CV_64F);
-            L.setTo(new cv.Scalar(0));
-
-            for (let i = 0; i < N; i++) {
-                for (let j = 0; j < N; j++) {
-                    L.doublePtr(i, j)[0] = K.doublePtr(i, j)[0];
-                }
-                for (let j = 0; j < 4; j++) {
-                    L.doublePtr(i, N + j)[0] = P.doublePtr(i, j)[0];
-                    L.doublePtr(N + j, i)[0] = P.doublePtr(i, j)[0];
-                }
-            }
-
-            let Y = new cv.Mat(N + 4, 3, cv.CV_64F);
-            Y.setTo(new cv.Scalar(0));
-            for (let i = 0; i < N; i++) {
-                let target = IDEAL[keys[i]];
-                Y.doublePtr(i, 0)[0] = target.l;
-                Y.doublePtr(i, 1)[0] = target.a;
-                Y.doublePtr(i, 2)[0] = target.b;
-            }
-
-            let W = new cv.Mat();
-            cv.solve(L, Y, W, cv.DECOMP_SVD);
-
-            let resL = W.doublePtr(N, 0)[0] + W.doublePtr(N+1, 0)[0]*rawTarget.l + W.doublePtr(N+2, 0)[0]*rawTarget.a + W.doublePtr(N+3, 0)[0]*rawTarget.b;
-            let resA = W.doublePtr(N, 1)[0] + W.doublePtr(N+1, 1)[0]*rawTarget.l + W.doublePtr(N+2, 1)[0]*rawTarget.a + W.doublePtr(N+3, 1)[0]*rawTarget.b;
-            let resB = W.doublePtr(N, 2)[0] + W.doublePtr(N+1, 2)[0]*rawTarget.l + W.doublePtr(N+2, 2)[0]*rawTarget.a + W.doublePtr(N+3, 2)[0]*rawTarget.b;
-
-            for (let i = 0; i < N; i++) {
-                let pi = patches[keys[i]];
-                let dist = Math.sqrt((rawTarget.l - pi.l)**2 + (rawTarget.a - pi.a)**2 + (rawTarget.b - pi.b)**2);
-                let uVal = U(dist);
-                resL += W.doublePtr(i, 0)[0] * uVal;
-                resA += W.doublePtr(i, 1)[0] * uVal;
-                resB += W.doublePtr(i, 2)[0] * uVal;
-            }
-
-            K.delete(); P.delete(); L.delete(); Y.delete(); W.delete();
-
-            return {
-                l: Math.max(0, Math.min(255, Math.round(resL))),
-                a: Math.max(0, Math.min(255, Math.round(resA))),
-                b: Math.max(0, Math.min(255, Math.round(resB)))
-            };
-        }
-
-        function getStatusBadge(diff) {
-            if (diff >= 35) return { class: 'match-error', text: 'СОВСЕМ НЕ ТОТ' };
-            if (diff >= 15) return { class: 'match-warning', text: 'ПОЧТИ ТОТ' };
-            return { class: 'match-success', text: 'ТОТ САМЫЙ ЦВЕТ' };
-        }
-
-        function computeRawScore(stdRaw, smpRaw, statType) {
-            const stdColor = statType === 'mean' ? stdRaw.mainMean : (stdRaw.mainMedian || stdRaw.mainMean);
-            const smpColor = statType === 'mean' ? smpRaw.mainMean : (smpRaw.mainMedian || smpRaw.mainMean);
-
-            const diff = Math.round(Math.sqrt(
-                Math.pow(stdColor.l - smpColor.l, 2) + 
-                Math.pow(stdColor.a - smpColor.a, 2) + 
-                Math.pow(stdColor.b - smpColor.b, 2)
-            ));
-            
-            const percent = Math.max(0, Math.min(100, Math.round(100 - (diff / 255) * 100 * 2.5)));
-            const status = getStatusBadge(diff);
-
-            return { stdColor, smpColor, diff, percent, status };
-        }
-
-        function computeMethodScore(stdRaw, smpRaw, mathMethod, statType) {
-            const rawTargetStd = statType === 'mean' ? stdRaw.mainMean : (stdRaw.mainMedian || stdRaw.mainMean);
-            const rawTargetSmp = statType === 'mean' ? smpRaw.mainMean : (smpRaw.mainMedian || smpRaw.mainMean);
-            
-            const patchesDataStd = statType === 'mean' ? stdRaw.patchesMean : (stdRaw.patchesMedian || stdRaw.patchesMean);
-            const patchesDataSmp = statType === 'mean' ? smpRaw.patchesMean : (smpRaw.patchesMedian || smpRaw.patchesMean);
-
-            let corrector;
-            if (mathMethod === 'gain_offset') corrector = applyGainOffsetCorrection;
-            else if (mathMethod === 'linear') corrector = applyLinearCorrection;
-            else if (mathMethod === 'spline') corrector = applySplineCorrection;
-            else if (mathMethod === '3d_idw') corrector = apply3DIDWCorrection;
-            else if (mathMethod === '3d_affine') corrector = apply3DAffineCorrection;
-            else if (mathMethod === '3d_tps') corrector = apply3DTPSCorrection;
-
-            const stdCorr = corrector(rawTargetStd, patchesDataStd);
-            const smpCorr = corrector(rawTargetSmp, patchesDataSmp);
-
-            const diff = Math.round(Math.sqrt(
-                Math.pow(stdCorr.l - smpCorr.l, 2) + 
-                Math.pow(stdCorr.a - smpCorr.a, 2) + 
-                Math.pow(stdCorr.b - smpCorr.b, 2)
-            ));
-
-            const percent = Math.max(0, Math.min(100, Math.round(100 - (diff / 255) * 100 * 2.5)));
-            const status = getStatusBadge(diff);
-
-            return { stdCorr, smpCorr, diff, percent, status };
-        }
-
-        function processBlockEnsemble(scoresList) {
-            const sorted = [...scoresList].sort((a, b) => b - a);
-            let valid = sorted;
-            let hasOutliers = false;
-
-            if (sorted[0] - sorted[sorted.length - 1] > 10) {
-                valid = sorted.filter(v => (sorted[0] - v) <= 10);
-                if (valid.length < 2) valid = sorted.slice(0, 2);
-                hasOutliers = true;
-            }
-
-            const avg = valid.reduce((sum, val) => sum + val, 0) / valid.length;
-            
-            const isConsensus = !hasOutliers && valid.every(v => v > 85);
-            const bonus = isConsensus ? 1.0 : 0.0;
-
-            return {
-                avg: Math.round(avg * 10) / 10,
-                bonus,
-                total: Math.round((avg + bonus) * 10) / 10,
-                hasOutliers,
-                isConsensus
-            };
-        }
-
-        function compareColors() {
-            if (!standardColorData || !sampleColorData) return;
-
-            // Сырое сравнение
-            const rawMean = computeRawScore(standardColorData, sampleColorData, 'mean');
-            const rawMedian = computeRawScore(standardColorData, sampleColorData, 'median');
-
-            // 5 методов для 1D коррекции
-            const m1D_1 = computeMethodScore(standardColorData, sampleColorData, 'gain_offset', 'mean');
-            const m1D_2 = computeMethodScore(standardColorData, sampleColorData, 'linear', 'mean');
-            const m1D_3 = computeMethodScore(standardColorData, sampleColorData, 'linear', 'median');
-            const m1D_4 = computeMethodScore(standardColorData, sampleColorData, 'spline', 'mean');
-            const m1D_5 = computeMethodScore(standardColorData, sampleColorData, 'spline', 'median');
-
-            // 5 методов для 3D коррекции
-            const m3D_1 = computeMethodScore(standardColorData, sampleColorData, '3d_idw', 'mean');
-            const m3D_2 = computeMethodScore(standardColorData, sampleColorData, '3d_affine', 'mean');
-            const m3D_3 = computeMethodScore(standardColorData, sampleColorData, '3d_affine', 'median');
-            const m3D_4 = computeMethodScore(standardColorData, sampleColorData, '3d_tps', 'mean');
-            const m3D_5 = computeMethodScore(standardColorData, sampleColorData, '3d_tps', 'median');
-
-            // Ансамблирование
-            const rawAvg = (rawMean.percent + rawMedian.percent) / 2;
-            const cameraBonus = rawAvg >= 90 ? 2.0 : 0.0;
-
-            const res1D = processBlockEnsemble([m1D_1.percent, m1D_2.percent, m1D_3.percent, m1D_4.percent, m1D_5.percent]);
-            const res3D = processBlockEnsemble([m3D_1.percent, m3D_2.percent, m3D_3.percent, m3D_4.percent, m3D_5.percent]);
-
-            const ensembleAverage = (res1D.total + res3D.total) / 2;
-            const finalScore = Math.min(99, Math.round((ensembleAverage + cameraBonus) * 10) / 10);
-
-            infoCard.style.display = 'block';
-
-            const renderMethodRow = (title, res, isRaw = false) => {
-                const stdLab = isRaw ? res.stdColor : res.stdCorr;
-                const smpLab = isRaw ? res.smpColor : res.smpCorr;
-                const stdRgb = labToRgb(stdLab.l, stdLab.a, stdLab.b);
-                const smpRgb = labToRgb(smpLab.l, smpLab.a, smpLab.b);
-
-                return `
-                <div class="method-row">
-                    <div class="method-info">
-                        <span class="method-name">${title}</span>
-                        <span class="method-subtext">
-                            <span class="${res.status.class}">${res.status.text}</span> • ΔE = ${res.diff}
-                        </span>
-                    </div>
-                    <div class="method-score">
-                        <div class="swatches-pair">
-                            <div class="swatch-mini" style="background: rgb(${stdRgb.r},${stdRgb.g},${stdRgb.b})" title="Эталон"></div>
-                            <div class="swatch-mini" style="background: rgb(${smpRgb.r},${smpRgb.g},${smpRgb.b})" title="Образец"></div>
-                        </div>
-                        <span class="score-val ${res.status.class}">${res.percent}%</span>
-                    </div>
-                </div>
-                `;
-            };
-
-            resultDiv.innerHTML = `
-                <!-- БЛОК 0: СЫРОЕ СРАВНЕНИЕ (БЕЗ КОРРЕКЦИИ) -->
-                <div class="comparison-block" style="border: 1px solid rgba(255, 179, 0, 0.4);">
-                    <div class="comparison-title raw">📷 Прямое сравнение в LAB (без коррекции)</div>
-                    
-                    <div class="methods-list">
-                        ${renderMethodRow('Сырые данные (Среднее)', rawMean, true)}
-                        ${renderMethodRow('Сырые данные (Медиана)', rawMedian, true)}
-                    </div>
-                </div>
-
-                <!-- БЛОК 1: 1D КОРРЕКЦИЯ (5 АЛГОРИТМОВ) -->
-                <div class="comparison-block" style="border: 1px solid rgba(0, 229, 255, 0.35);">
-                    <div class="comparison-title corrected">✨ Сравнение методов 1D коррекции</div>
-                    
-                    <div class="methods-list">
-                        ${renderMethodRow('1D Gain + Offset (Черный/Белый)', m1D_1)}
-                        ${renderMethodRow('1D Линейное + Среднее', m1D_2)}
-                        ${renderMethodRow('1D Линейное + Медианное', m1D_3)}
-                        ${renderMethodRow('1D Сплайновое + Среднее', m1D_4)}
-                        ${renderMethodRow('1D Сплайновое + Медианное', m1D_5)}
-                    </div>
-                </div>
-
-                <!-- БЛОК 2: 3D КОРРЕКЦИЯ (5 АЛГОРИТМОВ) -->
-                <div class="comparison-block" style="border: 1px solid rgba(139, 92, 246, 0.35);">
-                    <div class="comparison-title corrected-3d">🔮 Сравнение методов 3D коррекции</div>
-                    
-                    <div class="methods-list">
-                        ${renderMethodRow('3D IDW (Инверсно-взвешенное)', m3D_1)}
-                        ${renderMethodRow('3D Аффинное + Среднее', m3D_2)}
-                        ${renderMethodRow('3D Аффинное + Медианное', m3D_3)}
-                        ${renderMethodRow('3D TPS Сплайн + Среднее', m3D_4)}
-                        ${renderMethodRow('3D TPS Сплайн + Медианное', m3D_5)}
-                    </div>
-                </div>
-
-                <!-- БЛОК 3: ИТОГОВЫЙ ВЕРДИКТ -->
-                <div class="comparison-block" style="border: 1px solid rgba(0, 230, 118, 0.4); background: rgba(0, 230, 118, 0.03);">
-                    <div class="comparison-title final">🏆 Итоговый ансамблевый вердикт</div>
-                    
-                    <div class="final-summary">
-                        <div class="summary-line">
-                            <span>📷 Бонус света камеры (Сырое > 90%):</span>
-                            <span class="summary-badge ${cameraBonus > 0 ? 'active' : ''}">+${cameraBonus}%</span>
-                        </div>
-
-                        <div class="summary-line">
-                            <span>✨ 1D Коррекция (${res1D.hasOutliers ? 'без выбросов' : 'полный ансамбль'}):</span>
-                            <span><b>${res1D.avg}%</b> <span class="summary-badge ${res1D.bonus > 0 ? 'active' : ''}">+${res1D.bonus}% консенсус</span></span>
-                        </div>
-
-                        <div class="summary-line">
-                            <span>🔮 3D Коррекция (${res3D.hasOutliers ? 'без выбросов' : 'полный ансамбль'}):</span>
-                            <span><b>${res3D.avg}%</b> <span class="summary-badge ${res3D.bonus > 0 ? 'active' : ''}">+${res3D.bonus}% консенсус</span></span>
-                        </div>
-
-                        <div class="final-total-row">
-                            <span class="final-total-label">Окончательный результат:</span>
-                            <span class="final-total-value">${finalScore}%</span>
-                        </div>
-                    </div>
-                </div>
-            `;
-        }
-
-        // ================= ЛОГИКА PINCH TO ZOOM ПРОСМОТРА =================
-        let zoomScale = 1;
-        let zoomPosX = 0;
-        let zoomPosY = 0;
-        let initialDist = 0;
-        let initialScale = 1;
-        let isDragging = false;
-        let startX = 0, startY = 0;
-
-        function openZoomModal(canvasId) {
-            const sourceCanvas = document.getElementById(canvasId);
-            if (!sourceCanvas || sourceCanvas.width === 0) return;
-
-            const zoomCanvas = document.getElementById('zoomCanvas');
-            zoomCanvas.width = sourceCanvas.width;
-            zoomCanvas.height = sourceCanvas.height;
-            const ctx = zoomCanvas.getContext('2d');
-            ctx.drawImage(sourceCanvas, 0, 0);
-
-            document.getElementById('zoomTitle').innerText = canvasId === 'canvasStandard' ? 'Превью: Эталон' : 'Превью: Образец';
-
-            zoomScale = 1;
-            zoomPosX = 0;
-            zoomPosY = 0;
-            updateZoomTransform();
-
-            document.getElementById('zoomModal').classList.add('active');
-        }
-
-        function closeZoomModal() {
-            document.getElementById('zoomModal').classList.remove('active');
-        }
-
-        function updateZoomTransform() {
-            const zoomCanvas = document.getElementById('zoomCanvas');
-            zoomCanvas.style.transform = `translate(${zoomPosX}px, ${zoomPosY}px) scale(${zoomScale})`;
-        }
-
-        const zoomViewport = document.getElementById('zoomViewport');
-
-        zoomViewport.addEventListener('touchstart', (e) => {
-            if (e.touches.length === 2) {
-                isDragging = false;
-                initialDist = Math.hypot(
-                    e.touches[0].clientX - e.touches[1].clientX,
-                    e.touches[0].clientY - e.touches[1].clientY
-                );
-                initialScale = zoomScale;
-            } else if (e.touches.length === 1) {
-                isDragging = true;
-                startX = e.touches[0].clientX - zoomPosX;
-                startY = e.touches[0].clientY - zoomPosY;
-            }
-        });
-
-        zoomViewport.addEventListener('touchmove', (e) => {
-            if (e.touches.length === 2) {
-                e.preventDefault();
-                const currentDist = Math.hypot(
-                    e.touches[0].clientX - e.touches[1].clientX,
-                    e.touches[0].clientY - e.touches[1].clientY
-                );
-                if (initialDist > 0) {
-                    zoomScale = Math.min(Math.max(1, initialScale * (currentDist / initialDist)), 5);
-                    updateZoomTransform();
-                }
-            } else if (e.touches.length === 1 && isDragging) {
-                e.preventDefault();
-                if (zoomScale > 1) {
-                    zoomPosX = e.touches[0].clientX - startX;
-                    zoomPosY = e.touches[0].clientY - startY;
-                    updateZoomTransform();
-                }
-            }
-        }, { passive: false });
-
-        zoomViewport.addEventListener('touchend', (e) => {
-            if (e.touches.length < 2) initialDist = 0;
-            if (e.touches.length === 0) isDragging = false;
-        });
-
-        zoomViewport.addEventListener('wheel', (e) => {
-            e.preventDefault();
-            const delta = e.deltaY < 0 ? 0.2 : -0.2;
-            zoomScale = Math.min(Math.max(1, zoomScale + delta), 5);
-            if (zoomScale === 1) {
-                zoomPosX = 0;
-                zoomPosY = 0;
-            }
-            updateZoomTransform();
-        }, { passive: false });
-
-        resetBtn.addEventListener('click', () => {
-            localStorage.removeItem('cm_card_standard_data');
-            standardColorData = null;
-            sampleColorData = null;
-
-            infoStandard.innerHTML = '';
-            infoSample.innerHTML = '';
-            infoCard.style.display = 'none';
-            resultDiv.innerText = '';
-
-            btnSample.disabled = true;
-
-            const canvasStd = document.getElementById('canvasStandard');
-            const canvasSmp = document.getElementById('canvasSample');
-            canvasStd.getContext('2d').clearRect(0, 0, canvasStd.width, canvasStd.height);
-            canvasSmp.getContext('2d').clearRect(0, 0, canvasSmp.width, canvasSmp.height);
-        });
-    </script>
 </body>
 </html>
