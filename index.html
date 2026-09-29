@@ -941,7 +941,7 @@
         }
 
         // =========================================================================
-        // МОДУЛЬ АВТО-ЭКСПОЗИЦИИ (P-РЕГУЛЯТОР) ДЛЯ АВТОМАШИННОЙ ПОДСТРОЙКИ КАДРА
+        // МОДУЛЬ АВТО-ЭКСПОЗИЦИИ (P-РЕГУЛЯТОР С ОБРЕЗКОЙ ТОП 3% и BOTTOM 3%)
         // =========================================================================
 
         function startAutoExposureControl(videoElement, stream) {
@@ -965,16 +965,27 @@
                 
                 // Зона анализа белой плашки (левый верхний фрагмент карты в рамке)
                 const imgData = ctx.getImageData(30, 40, 20, 20).data;
-                let totalLuma = 0;
-                let count = 0;
+                let lumaValues = [];
 
                 for (let i = 0; i < imgData.length; i += 4) {
                     const luma = 0.299 * imgData[i] + 0.587 * imgData[i+1] + 0.114 * imgData[i+2];
-                    totalLuma += luma;
-                    count++;
+                    lumaValues.push(luma);
                 }
 
-                const avgLuma = count > 0 ? totalLuma / count : 128;
+                if (lumaValues.length === 0) return;
+
+                // Сортировка пикселей для обрезки выбросов (Top 3% / Bottom 3%)
+                lumaValues.sort((a, b) => a - b);
+                
+                const trimCount = Math.floor(lumaValues.length * 0.03);
+                const trimmedLuma = lumaValues.slice(trimCount, lumaValues.length - trimCount);
+
+                let totalLuma = 0;
+                for (let i = 0; i < trimmedLuma.length; i++) {
+                    totalLuma += trimmedLuma[i];
+                }
+
+                const avgLuma = trimmedLuma.length > 0 ? totalLuma / trimmedLuma.length : 128;
                 const targetLuma = 225; // Целевая яркость белой плашки без пересвета
 
                 const lumaError = targetLuma - avgLuma;
