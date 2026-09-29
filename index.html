@@ -941,7 +941,7 @@
         }
 
         // =========================================================================
-        // МОДУЛЬ АВТО-ЭКСПОЗИЦИИ (P-РЕГУЛЯТОР С ОБРЕЗКОЙ TOP 20% и BOTTOM 20%)
+        // МОДУЛЬ АВТО-ЭКСПОЗИЦИИ (P-РЕГУЛЯТОР: АНАЛИЗ ВИДОИСКАТЕЛЯ ДО НАЖАТИЯ КНОПКИ)
         // =========================================================================
 
         function startAutoExposureControl(videoElement, stream) {
@@ -961,10 +961,11 @@
             autoEvInterval = setInterval(async () => {
                 if (!videoElement || videoElement.paused || videoElement.ended || !videoElement.videoWidth) return;
 
+                // Захватываем текущий кадр из видеопотока видоискателя
                 ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
                 
-                // Зона анализа белой плашки (левый верхний фрагмент карты в рамке)
-                const imgData = ctx.getImageData(30, 40, 20, 20).data;
+                // Анализируем центральный прямоугольник 80x60 в центре кадра
+                const imgData = ctx.getImageData(40, 30, 80, 60).data;
                 let lumaValues = [];
 
                 for (let i = 0; i < imgData.length; i += 4) {
@@ -974,9 +975,10 @@
 
                 if (lumaValues.length === 0) return;
 
-                // Сортировка пикселей для обрезки выбросов (Top 20% / Bottom 20%)
+                // 1. Сортируем массив яркостей по возрастанию
                 lumaValues.sort((a, b) => a - b);
                 
+                // 2. Отбрасываем верхние 20% (выбросы белого/блики) и нижние 20% (выбросы чёрного/тени)
                 const trimCount = Math.floor(lumaValues.length * 0.20);
                 const trimmedLuma = lumaValues.slice(trimCount, lumaValues.length - trimCount);
 
@@ -985,11 +987,16 @@
                     totalLuma += trimmedLuma[i];
                 }
 
+                // 3. Вычисляем очищенную среднюю яркость кадра
                 const avgLuma = trimmedLuma.length > 0 ? totalLuma / trimmedLuma.length : 128;
-                const targetLuma = 225; // Целевая яркость белой плашки без пересвета
+                
+                // Целевой коридор нормальной экспозиции
+                const targetLuma = 128; // Нейтральная целевая яркость кадра
+                const maxWhiteThreshold = 245; // Порог пересвета (белый <= 245)
+                const minBlackThreshold = 10;  // Порог недосвета (чёрный >= 10)
 
                 const lumaError = targetLuma - avgLuma;
-                const Kp = 0.02; // Коэффициент пропорционального регулятора
+                const Kp = 0.02; // Коэффициент P-регулятора
 
                 if (supportsEV) {
                     const minEV = capabilities.exposureCompensation.min || -2.0;
@@ -1014,7 +1021,7 @@
                     }
                 }
 
-                updateCameraStatusUI(avgLuma, supportsEV, currentEv, capabilities.exposureCompensation?.min);
+                updateCameraStatusUI(avgLuma, maxWhiteThreshold, minBlackThreshold, supportsEV, currentEv, capabilities.exposureCompensation?.min);
             }, 150);
         }
 
@@ -1025,19 +1032,19 @@
             }
         }
 
-        function updateCameraStatusUI(luma, supportsEV, evValue, minEV) {
+        function updateCameraStatusUI(luma, maxWhite, minBlack, supportsEV, evValue, minEV) {
             const badge = document.getElementById('cameraStatusBadge');
             if (!badge) return;
 
-            if (luma >= 250) {
+            if (luma >= maxWhite) {
                 if (supportsEV && minEV !== undefined && evValue <= minEV) {
                     badge.className = 'camera-status-badge warning';
                     badge.innerText = '🟡 Слишком яркий свет. Сделайте тень рукой';
                 } else {
                     badge.className = 'camera-status-badge';
-                    badge.innerText = '⚙️ Подстройка яркости...';
+                    badge.innerText = '⚙️ Подстройка экспозиции...';
                 }
-            } else if (luma < 140) {
+            } else if (luma <= minBlack) {
                 badge.className = 'camera-status-badge warning';
                 badge.innerText = '🟡 Мало света. Добавьте освещения';
             } else {
@@ -1091,6 +1098,9 @@
 
         async function takeSnapshot() {
             if (!video.videoWidth || !video.videoHeight) return;
+
+            // При нажатии кнопки замораживаем регулятор экспозиции
+            stopAutoExposureControl();
 
             const viewportRect = video.getBoundingClientRect();
             if (!viewportRect.width || !viewportRect.height) return;
