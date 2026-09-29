@@ -941,7 +941,7 @@
         }
 
         // =========================================================================
-        // МОДУЛЬ АВТО-ЭКСПОЗИЦИИ (P-РЕГУЛЯТОР С ОБРЕЗКОЙ ТОП 3% и BOTTOM 3%)
+        // МОДУЛЬ АВТО-ЭКСПОЗИЦИИ (P-РЕГУЛЯТОР С ОБРЕЗКОЙ TOP 20% и BOTTOM 20%)
         // =========================================================================
 
         function startAutoExposureControl(videoElement, stream) {
@@ -974,10 +974,10 @@
 
                 if (lumaValues.length === 0) return;
 
-                // Сортировка пикселей для обрезки выбросов (Top 3% / Bottom 3%)
+                // Сортировка пикселей для обрезки выбросов (Top 20% / Bottom 20%)
                 lumaValues.sort((a, b) => a - b);
                 
-                const trimCount = Math.floor(lumaValues.length * 0.03);
+                const trimCount = Math.floor(lumaValues.length * 0.20);
                 const trimmedLuma = lumaValues.slice(trimCount, lumaValues.length - trimCount);
 
                 let totalLuma = 0;
