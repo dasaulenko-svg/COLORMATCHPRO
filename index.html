@@ -964,7 +964,7 @@
                 // Захватываем текущий кадр из видеопотока видоискателя
                 ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
                 
-                // Анализируем центральный прямоугольник 80x60 в центре кадра
+                // Анализируем центральный прямоугольник в зоне карты
                 const imgData = ctx.getImageData(40, 30, 80, 60).data;
                 let lumaValues = [];
 
@@ -975,11 +975,9 @@
 
                 if (lumaValues.length === 0) return;
 
-                // 1. Сортируем массив яркостей по возрастанию
+                // 1. Мягкое отсечение 5% экстремумов (только явный шум по краям)
                 lumaValues.sort((a, b) => a - b);
-                
-                // 2. Отбрасываем верхние 20% (выбросы белого/блики) и нижние 20% (выбросы чёрного/тени)
-                const trimCount = Math.floor(lumaValues.length * 0.20);
+                const trimCount = Math.floor(lumaValues.length * 0.05);
                 const trimmedLuma = lumaValues.slice(trimCount, lumaValues.length - trimCount);
 
                 let totalLuma = 0;
@@ -987,16 +985,16 @@
                     totalLuma += trimmedLuma[i];
                 }
 
-                // 3. Вычисляем очищенную среднюю яркость кадра
+                // 2. Средняя реальная яркость кадра
                 const avgLuma = trimmedLuma.length > 0 ? totalLuma / trimmedLuma.length : 128;
                 
-                // Целевой коридор нормальной экспозиции
-                const targetLuma = 128; // Нейтральная целевая яркость кадра
-                const maxWhiteThreshold = 245; // Порог пересвета (белый <= 245)
-                const minBlackThreshold = 10;  // Порог недосвета (чёрный >= 10)
+                // Рабочие пороги освещенности
+                const targetLuma = 128;
+                const minAcceptableLuma = 75;  // Если меньше 75 — фиксируем недосвет
+                const maxAcceptableLuma = 200; // Если больше 200 — фиксируем пересвет
 
                 const lumaError = targetLuma - avgLuma;
-                const Kp = 0.02; // Коэффициент P-регулятора
+                const Kp = 0.015;
 
                 if (supportsEV) {
                     const minEV = capabilities.exposureCompensation.min || -2.0;
@@ -1021,7 +1019,7 @@
                     }
                 }
 
-                updateCameraStatusUI(avgLuma, maxWhiteThreshold, minBlackThreshold, supportsEV, currentEv, capabilities.exposureCompensation?.min);
+                updateCameraStatusUI(avgLuma, minAcceptableLuma, maxAcceptableLuma);
             }, 150);
         }
 
@@ -1032,21 +1030,16 @@
             }
         }
 
-        function updateCameraStatusUI(luma, maxWhite, minBlack, supportsEV, evValue, minEV) {
+        function updateCameraStatusUI(luma, minLuma, maxLuma) {
             const badge = document.getElementById('cameraStatusBadge');
             if (!badge) return;
 
-            if (luma >= maxWhite) {
-                if (supportsEV && minEV !== undefined && evValue <= minEV) {
-                    badge.className = 'camera-status-badge warning';
-                    badge.innerText = '🟡 Слишком яркий свет. Сделайте тень рукой';
-                } else {
-                    badge.className = 'camera-status-badge';
-                    badge.innerText = '⚙️ Подстройка экспозиции...';
-                }
-            } else if (luma <= minBlack) {
+            if (luma < minLuma) {
                 badge.className = 'camera-status-badge warning';
                 badge.innerText = '🟡 Мало света. Добавьте освещения';
+            } else if (luma > maxLuma) {
+                badge.className = 'camera-status-badge warning';
+                badge.innerText = '🟡 Слишком ярко. Избегайте прямых бликов';
             } else {
                 badge.className = 'camera-status-badge success';
                 badge.innerText = '🟢 Свет идеальный (Готово)';
@@ -1099,7 +1092,7 @@
         async function takeSnapshot() {
             if (!video.videoWidth || !video.videoHeight) return;
 
-            // При нажатии кнопки замораживаем регулятор экспозиции
+            // Замораживаем регулятор экспозиции перед съёмкой
             stopAutoExposureControl();
 
             const viewportRect = video.getBoundingClientRect();
