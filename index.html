@@ -586,6 +586,37 @@
             pointer-events: none;
         }
 
+        /* Индикатор экспозиции видоискателя */
+        .camera-status-badge {
+            position: absolute;
+            bottom: 12px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(11, 14, 20, 0.85);
+            border: 1px solid var(--card-border);
+            backdrop-filter: blur(8px);
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--accent-cyan);
+            pointer-events: none;
+            z-index: 10;
+            white-space: nowrap;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+            transition: all 0.2s ease;
+        }
+
+        .camera-status-badge.warning {
+            color: var(--accent-warning);
+            border-color: rgba(255, 179, 0, 0.4);
+        }
+
+        .camera-status-badge.success {
+            color: var(--accent-green);
+            border-color: rgba(0, 230, 118, 0.4);
+        }
+
         /* ZOOM MODAL STYLES */
         .zoom-modal {
             display: none;
@@ -806,6 +837,7 @@
                         Совместите карту с рамкой
                     </text>
                 </svg>
+                <div id="cameraStatusBadge" class="camera-status-badge">⚙️ Инициализация камеры...</div>
             </div>
 
             <button class="btn-action" onclick="takeSnapshot()">
@@ -832,6 +864,10 @@
         let sampleColorData = null;
         let activeMode = 'standard';
         let mediaStream = null;
+
+        // Переменные цикла авто-экспозиции (P-регулятор)
+        let autoEvInterval = null;
+        let currentEv = 0;
 
         const cvStatus = document.getElementById('cvStatus');
         const btnStandard = document.getElementById('btnStandard');
@@ -904,6 +940,101 @@
             restoreState();
         }
 
+        // =========================================================================
+        // МОДУЛЬ АВТО-ЭКСПОЗИЦИИ (P-РЕГУЛЯТОР) ДЛЯ АВТОМАШИННОЙ ПОДСТРОЙКИ КАДРА
+        // =========================================================================
+
+        function startAutoExposureControl(videoElement, stream) {
+            const track = stream ? stream.getVideoTracks()[0] : null;
+            if (!track) return;
+
+            const capabilities = track.getCapabilities ? track.getCapabilities() : {};
+            const supportsEV = 'exposureCompensation' in capabilities;
+
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d', { willReadFrequently: true });
+            canvas.width = 160;
+            canvas.height = 120;
+
+            if (autoEvInterval) clearInterval(autoEvInterval);
+
+            autoEvInterval = setInterval(async () => {
+                if (!videoElement || videoElement.paused || videoElement.ended || !videoElement.videoWidth) return;
+
+                ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
+                
+                // Зона анализа белой плашки (левый верхний фрагмент карты в рамке)
+                const imgData = ctx.getImageData(30, 40, 20, 20).data;
+                let totalLuma = 0;
+                let count = 0;
+
+                for (let i = 0; i < imgData.length; i += 4) {
+                    const luma = 0.299 * imgData[i] + 0.587 * imgData[i+1] + 0.114 * imgData[i+2];
+                    totalLuma += luma;
+                    count++;
+                }
+
+                const avgLuma = count > 0 ? totalLuma / count : 128;
+                const targetLuma = 225; // Целевая яркость белой плашки без пересвета
+
+                const lumaError = targetLuma - avgLuma;
+                const Kp = 0.02; // Коэффициент пропорционального регулятора
+
+                if (supportsEV) {
+                    const minEV = capabilities.exposureCompensation.min || -2.0;
+                    const maxEV = capabilities.exposureCompensation.max || 2.0;
+                    const step = capabilities.exposureCompensation.step || 0.1;
+
+                    let deltaEV = lumaError * Kp;
+                    let targetEV = currentEv + deltaEV;
+
+                    targetEV = Math.max(minEV, Math.min(maxEV, targetEV));
+                    targetEV = Math.round(targetEV / step) * step;
+
+                    if (Math.abs(targetEV - currentEv) >= step) {
+                        currentEv = targetEV;
+                        try {
+                            await track.applyConstraints({
+                                advanced: [{ exposureCompensation: currentEv }]
+                            });
+                        } catch (e) {
+                            console.warn("Ошибка установки EV:", e);
+                        }
+                    }
+                }
+
+                updateCameraStatusUI(avgLuma, supportsEV, currentEv, capabilities.exposureCompensation?.min);
+            }, 150);
+        }
+
+        function stopAutoExposureControl() {
+            if (autoEvInterval) {
+                clearInterval(autoEvInterval);
+                autoEvInterval = null;
+            }
+        }
+
+        function updateCameraStatusUI(luma, supportsEV, evValue, minEV) {
+            const badge = document.getElementById('cameraStatusBadge');
+            if (!badge) return;
+
+            if (luma >= 250) {
+                if (supportsEV && minEV !== undefined && evValue <= minEV) {
+                    badge.className = 'camera-status-badge warning';
+                    badge.innerText = '🟡 Слишком яркий свет. Сделайте тень рукой';
+                } else {
+                    badge.className = 'camera-status-badge';
+                    badge.innerText = '⚙️ Подстройка яркости...';
+                }
+            } else if (luma < 140) {
+                badge.className = 'camera-status-badge warning';
+                badge.innerText = '🟡 Мало света. Добавьте освещения';
+            } else {
+                badge.className = 'camera-status-badge success';
+                badge.innerText = '🟢 Свет идеальный (Готово)';
+            }
+        }
+
         async function openCamera(mode) {
             activeMode = mode;
             document.getElementById('cameraTitle').innerText = mode === 'standard' ? 'Съемка Эталона' : 'Съемка Образца';
@@ -933,9 +1064,12 @@
             }
 
             video.srcObject = mediaStream;
+            currentEv = 0;
+            startAutoExposureControl(video, mediaStream);
         }
 
         function closeCamera() {
+            stopAutoExposureControl();
             if (mediaStream) {
                 mediaStream.getTracks().forEach(track => track.stop());
                 mediaStream = null;
