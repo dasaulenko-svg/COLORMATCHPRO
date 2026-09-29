@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ColorMatch Pro</title>
+    <title>SPECTRIX</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -602,7 +602,7 @@
                         <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z"/>
                     </svg>
                 </div>
-                <h1>COLORMATCH</h1>
+                <h1>SPECTRIX</h1>
             </div>
 
             <div class="menu-container">
@@ -618,6 +618,9 @@
                     </div>
                     <div class="menu-item" onclick="switchMode('correct', '🎨 Цветокоррекция')">
                         🎨 Цветокоррекция снимка
+                    </div>
+                    <div class="menu-item" onclick="switchMode('catalog', '🎨 Цвет из каталога')">
+                        🎨 Цвет из каталога
                     </div>
                 </div>
             </div>
@@ -675,6 +678,13 @@
             <div class="stub-box">
                 🎨 <b>Цветокоррекция снимка</b><br><br>
                 Выравнивание баланса белого и экспозиции.
+            </div>
+        </div>
+
+        <div class="view-pane" id="paneCatalog">
+            <div class="stub-box">
+                🎨 <b>Цвет из каталога</b><br><br>
+                Подбор артикула и кода цвета по палитрам (NCS, RAL, Caparol, Pantone).
             </div>
         </div>
     </div>
@@ -770,6 +780,7 @@
             if (modeKey === 'compare') document.getElementById('paneCompare').classList.add('active');
             if (modeKey === 'calibrate') document.getElementById('paneCalibrate').classList.add('active');
             if (modeKey === 'correct') document.getElementById('paneCorrect').classList.add('active');
+            if (modeKey === 'catalog') document.getElementById('paneCatalog').classList.add('active');
         }
 
         window.addEventListener('click', (e) => {
