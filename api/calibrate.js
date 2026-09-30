@@ -188,6 +188,121 @@ function apply3DIDWCorrection(rawTarget, patches) {
     };
 }
 
+function solve4x4(A, B) {
+    let M = A.map((row, i) => [...row, B[i]]);
+    for (let i = 0; i < 4; i++) {
+        let maxRow = i;
+        for (let k = i + 1; k < 4; k++) {
+            if (Math.abs(M[k][i]) > Math.abs(M[maxRow][i])) maxRow = k;
+        }
+        [M[i], M[maxRow]] = [M[maxRow], M[i]];
+        if (Math.abs(M[i][i]) < 1e-8) return null;
+        for (let k = i + 1; k < 4; k++) {
+            let c = -M[k][i] / M[i][i];
+            for (let j = i; j <= 4; j++) {
+                if (i === j) M[k][j] = 0;
+                else M[k][j] += c * M[i][j];
+            }
+        }
+    }
+    let x = [0, 0, 0, 0];
+    for (let i = 3; i >= 0; i--) {
+        x[i] = M[i][4] / M[i][i];
+        for (let k = i - 1; k >= 0; k--) {
+            M[k][4] -= M[k][i] * x[i];
+        }
+    }
+    return x;
+}
+
+function apply3DAffineCorrection(rawTarget, patches) {
+    const IDEAL = {
+        white:  { l: 255, a: 128, b: 128 },
+        gray:   { l: 128, a: 128, b: 128 },
+        black:  { l: 20,  a: 128, b: 128 },
+        right1: { l: 232, a: 74,  b: 104 },
+        right2: { l: 123, a: 216, b: 102 },
+        right3: { l: 247, a: 110, b: 226 }
+    };
+    const keys = ['white', 'gray', 'black', 'right1', 'right2', 'right3'];
+    
+    let X = keys.map(k => [1, patches[k].l, patches[k].a, patches[k].b]);
+    
+    let XtX = Array(4).fill(0).map(() => Array(4).fill(0));
+    for (let r = 0; r < 4; r++) {
+        for (let c = 0; c < 4; c++) {
+            let sum = 0;
+            for (let i = 0; i < 6; i++) sum += X[i][r] * X[i][c];
+            XtX[r][c] = sum;
+        }
+    }
+
+    function fitChannel(chKey) {
+        let Y = keys.map(k => IDEAL[k][chKey]);
+        let XtY = [0, 0, 0, 0];
+        for (let r = 0; r < 4; r++) {
+            for (let i = 0; i < 6; i++) XtY[r] += X[i][r] * Y[i];
+        }
+        return solve4x4(XtX, XtY);
+    }
+
+    let cL = fitChannel('l');
+    let cA = fitChannel('a');
+    let cB = fitChannel('b');
+
+    if (!cL || !cA || !cB) return apply3DIDWCorrection(rawTarget, patches);
+
+    let resL = cL[0] + cL[1] * rawTarget.l + cL[2] * rawTarget.a + cL[3] * rawTarget.b;
+    let resA = cA[0] + cA[1] * rawTarget.l + cA[2] * rawTarget.a + cA[3] * rawTarget.b;
+    let resB = cB[0] + cB[1] * rawTarget.l + cB[2] * rawTarget.a + cB[3] * rawTarget.b;
+
+    return {
+        l: Math.max(0, Math.min(255, Math.round(resL))),
+        a: Math.max(0, Math.min(255, Math.round(resA))),
+        b: Math.max(0, Math.min(255, Math.round(resB)))
+    };
+}
+
+function apply3DTPSCorrection(rawTarget, patches) {
+    const IDEAL = {
+        white:  { l: 255, a: 128, b: 128 },
+        gray:   { l: 128, a: 128, b: 128 },
+        black:  { l: 20,  a: 128, b: 128 },
+        right1: { l: 232, a: 74,  b: 104 },
+        right2: { l: 123, a: 216, b: 102 },
+        right3: { l: 247, a: 110, b: 226 }
+    };
+    const keys = ['white', 'gray', 'black', 'right1', 'right2', 'right3'];
+
+    function phi(r) {
+        if (r < 1e-6) return 0;
+        return r * r * Math.log(r);
+    }
+
+    let sumW = 0, sumDL = 0, sumDA = 0, sumDB = 0;
+    for (let k of keys) {
+        let p = patches[k];
+        let target = IDEAL[k];
+        let dist = Math.sqrt((rawTarget.l - p.l)**2 + (rawTarget.a - p.a)**2 + (rawTarget.b - p.b)**2);
+        let w = 1.0 / (phi(dist) + 1.0);
+        
+        sumW += w;
+        sumDL += w * (target.l - p.l);
+        sumDA += w * (target.a - p.a);
+        sumDB += w * (target.b - p.b);
+    }
+
+    let resL = rawTarget.l + sumDL / sumW;
+    let resA = rawTarget.a + sumDA / sumW;
+    let resB = rawTarget.b + sumDB / sumW;
+
+    return {
+        l: Math.max(0, Math.min(255, Math.round(resL))),
+        a: Math.max(0, Math.min(255, Math.round(resA))),
+        b: Math.max(0, Math.min(255, Math.round(resB)))
+    };
+}
+
 function getStatusBadge(diff) {
     if (diff >= 35) return { class: 'match-error', text: 'СОВСЕМ НЕ ТОТ' };
     if (diff >= 15) return { class: 'match-warning', text: 'ПОЧТИ ТОТ' };
@@ -215,13 +330,15 @@ function computeMethodScore(stdRaw, smpRaw, mathMethod, statType) {
     const rawTargetSmp = statType === 'mean' ? smpRaw.mainMean : (smpRaw.mainMedian || smpRaw.mainMean);
     
     const patchesDataStd = statType === 'mean' ? stdRaw.patchesMean : (stdRaw.patchesMedian || stdRaw.patchesMean);
-    const patchesDataSmp = statType === 'mean' ? smpRaw.patchesMean : (smpRaw.patchesMedian || smpRaw.patchesMean);
+    const patchesDataSmp = statType === 'mean' ? smpRaw.patchesMedian : (smpRaw.patchesMedian || smpRaw.patchesMean);
 
     let corrector;
     if (mathMethod === 'gain_offset') corrector = applyGainOffsetCorrection;
     else if (mathMethod === 'linear') corrector = applyLinearCorrection;
     else if (mathMethod === 'spline') corrector = applySplineCorrection;
     else if (mathMethod === '3d_idw') corrector = apply3DIDWCorrection;
+    else if (mathMethod === '3d_affine') corrector = apply3DAffineCorrection;
+    else if (mathMethod === '3d_tps') corrector = apply3DTPSCorrection;
     else corrector = applyLinearCorrection;
 
     const stdCorr = corrector(rawTargetStd, patchesDataStd);
@@ -266,11 +383,11 @@ function processBlockEnsemble(scoresList) {
 export default function handler(req, res) {
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
 
     if (req.method === 'OPTIONS') return res.status(200).end();
 
-    const { standard, sample } = req.body;
+    const { standard, sample } = req.body || {};
 
     if (!standard || !sample) {
         return res.status(400).json({ error: 'Missing standard or sample data' });
@@ -286,10 +403,10 @@ export default function handler(req, res) {
     const m1D_5 = computeMethodScore(standard, sample, 'spline', 'median');
 
     const m3D_1 = computeMethodScore(standard, sample, '3d_idw', 'mean');
-    const m3D_2 = computeMethodScore(standard, sample, 'gain_offset', 'median');
-    const m3D_3 = computeMethodScore(standard, sample, 'linear', 'mean');
-    const m3D_4 = computeMethodScore(standard, sample, 'spline', 'mean');
-    const m3D_5 = computeMethodScore(standard, sample, 'spline', 'median');
+    const m3D_2 = computeMethodScore(standard, sample, '3d_affine', 'mean');
+    const m3D_3 = computeMethodScore(standard, sample, '3d_affine', 'median');
+    const m3D_4 = computeMethodScore(standard, sample, '3d_tps', 'mean');
+    const m3D_5 = computeMethodScore(standard, sample, '3d_tps', 'median');
 
     const rawAvg = (rawMean.percent + rawMedian.percent) / 2;
     const cameraBonus = rawAvg >= 90 ? 2.0 : 0.0;
@@ -379,5 +496,5 @@ export default function handler(req, res) {
         </div>
     `;
 
-    return res.status(200).json({ html });
+    return res.status(200).json({ html, finalScore });
 }
