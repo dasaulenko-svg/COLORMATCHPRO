@@ -436,7 +436,7 @@
             pointer-events: none;
         }
 
-        .camera-status-badge {
+        .camera-ev-control {
             position: absolute;
             bottom: 12px;
             left: 50%;
@@ -444,26 +444,43 @@
             background: rgba(11, 14, 20, 0.85);
             border: 1px solid var(--card-border);
             backdrop-filter: blur(8px);
-            padding: 6px 12px;
+            padding: 4px 8px;
             border-radius: 20px;
-            font-size: 11px;
-            font-weight: 600;
-            color: var(--accent-cyan);
-            pointer-events: none;
+            display: flex;
+            align-items: center;
+            gap: 12px;
             z-index: 10;
-            white-space: nowrap;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
-            transition: all 0.2s ease;
+            user-select: none;
         }
 
-        .camera-status-badge.warning {
-            color: var(--accent-warning);
-            border-color: rgba(255, 179, 0, 0.4);
+        .ev-btn {
+            background: rgba(255, 255, 255, 0.12);
+            border: 1px solid var(--card-border);
+            color: #fff;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            font-size: 18px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: background 0.15s ease;
         }
 
-        .camera-status-badge.success {
-            color: var(--accent-green);
-            border-color: rgba(0, 230, 118, 0.4);
+        .ev-btn:active {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .ev-display {
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--accent-cyan);
+            min-width: 65px;
+            text-align: center;
+            font-family: monospace;
         }
 
         .zoom-modal {
@@ -680,7 +697,12 @@
                         Совместите карту с рамкой
                     </text>
                 </svg>
-                <div id="cameraStatusBadge" class="camera-status-badge">⚙️ Инициализация камеры...</div>
+
+                <div class="camera-ev-control">
+                    <button class="ev-btn" onclick="adjustExposure(-1)">−</button>
+                    <span id="evValueDisplay" class="ev-display">EV: 0.0</span>
+                    <button class="ev-btn" onclick="adjustExposure(1)">+</button>
+                </div>
             </div>
 
             <button class="btn-action" onclick="takeSnapshot()">
@@ -707,8 +729,7 @@
         let activeMode = 'standard';
         let mediaStream = null;
 
-        let autoEvInterval = null;
-        let isApplyingEV = false;
+        let currentEV = 0;
 
         const cvStatus = document.getElementById('cvStatus');
         const btnStandard = document.getElementById('btnStandard');
@@ -781,114 +802,52 @@
             restoreState();
         }
 
-        // =========================================================================
-        // МОДУЛЬ АВТО-ЭКСПОЗИЦИИ (P-РЕГУЛЯТОР С ОБРАТНОЙ СВЯЗЬЮ И ДЕДБЕНДОМ)
-        // =========================================================================
-
-        function startAutoExposureControl(videoElement, stream) {
+        function initManualExposure(stream) {
             const track = stream ? stream.getVideoTracks()[0] : null;
             if (!track) return;
 
             const capabilities = track.getCapabilities ? track.getCapabilities() : {};
-            const supportsEV = 'exposureCompensation' in capabilities;
+            const settings = track.getSettings ? track.getSettings() : {};
 
-            const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d', { willReadFrequently: true });
-            canvas.width = 160;
-            canvas.height = 120;
-
-            if (autoEvInterval) clearInterval(autoEvInterval);
-            isApplyingEV = false;
-
-            autoEvInterval = setInterval(async () => {
-                if (!videoElement || videoElement.paused || videoElement.ended || !videoElement.videoWidth) return;
-
-                ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
-                
-                const imgData = ctx.getImageData(40, 30, 80, 60).data;
-                let lumaValues = [];
-
-                for (let i = 0; i < imgData.length; i += 4) {
-                    const luma = 0.299 * imgData[i] + 0.587 * imgData[i+1] + 0.114 * imgData[i+2];
-                    lumaValues.push(luma);
-                }
-
-                if (lumaValues.length === 0) return;
-
-                lumaValues.sort((a, b) => a - b);
-                const trimCount = Math.floor(lumaValues.length * 0.05);
-                const trimmedLuma = lumaValues.slice(trimCount, lumaValues.length - trimCount);
-
-                let totalLuma = 0;
-                for (let i = 0; i < trimmedLuma.length; i++) {
-                    totalLuma += trimmedLuma[i];
-                }
-
-                const avgLuma = trimmedLuma.length > 0 ? totalLuma / trimmedLuma.length : 128;
-                
-                const targetLuma = 128;
-                const minAcceptableLuma = 75;
-                const maxAcceptableLuma = 200;
-
-                const lumaError = targetLuma - avgLuma;
-
-                // Избегаем одновременных вызовов applyConstraints
-                if (supportsEV && !isApplyingEV) {
-                    // Мертвая зона: не корректируем, если погрешность незначительна
-                    if (Math.abs(lumaError) > 10) {
-                        const settings = track.getSettings ? track.getSettings() : {};
-                        const currentEvReal = settings.exposureCompensation || 0;
-
-                        const minEV = capabilities.exposureCompensation.min || -2.0;
-                        const maxEV = capabilities.exposureCompensation.max || 2.0;
-                        const step = capabilities.exposureCompensation.step || 0.1;
-
-                        const Kp = 0.005; // Мягкий коэффициент шаг коррекции
-                        let deltaEV = lumaError * Kp;
-                        let targetEV = currentEvReal + deltaEV;
-
-                        targetEV = Math.max(minEV, Math.min(maxEV, targetEV));
-                        targetEV = Math.round(targetEV / step) * step;
-
-                        if (Math.abs(targetEV - currentEvReal) >= step) {
-                            isApplyingEV = true;
-                            try {
-                                await track.applyConstraints({
-                                    advanced: [{ exposureCompensation: targetEV }]
-                                });
-                            } catch (e) {
-                                console.warn("Ошибка установки EV:", e);
-                            } finally {
-                                isApplyingEV = false;
-                            }
-                        }
-                    }
-                }
-
-                updateCameraStatusUI(avgLuma, minAcceptableLuma, maxAcceptableLuma);
-            }, 250);
+            if ('exposureCompensation' in capabilities) {
+                currentEV = settings.exposureCompensation || 0;
+            } else {
+                currentEV = 0;
+            }
+            updateEvDisplay();
         }
 
-        function stopAutoExposureControl() {
-            if (autoEvInterval) {
-                clearInterval(autoEvInterval);
-                autoEvInterval = null;
+        async function adjustExposure(direction) {
+            if (!mediaStream) return;
+            const track = mediaStream.getVideoTracks()[0];
+            if (!track) return;
+
+            const capabilities = track.getCapabilities ? track.getCapabilities() : {};
+            if (!('exposureCompensation' in capabilities)) return;
+
+            const minEV = capabilities.exposureCompensation.min || -2.0;
+            const maxEV = capabilities.exposureCompensation.max || 2.0;
+            const step = capabilities.exposureCompensation.step || 0.1;
+
+            let targetEV = currentEV + direction * step;
+            targetEV = Math.max(minEV, Math.min(maxEV, targetEV));
+            targetEV = Math.round(targetEV / step) * step;
+
+            try {
+                await track.applyConstraints({
+                    advanced: [{ exposureCompensation: targetEV }]
+                });
+                currentEV = targetEV;
+                updateEvDisplay();
+            } catch (e) {
+                console.warn("Ошибка изменения EV:", e);
             }
         }
 
-        function updateCameraStatusUI(luma, minLuma, maxLuma) {
-            const badge = document.getElementById('cameraStatusBadge');
-            if (!badge) return;
-
-            if (luma < minLuma) {
-                badge.className = 'camera-status-badge warning';
-                badge.innerText = '🟡 Мало света. Добавьте освещения';
-            } else if (luma > maxLuma) {
-                badge.className = 'camera-status-badge warning';
-                badge.innerText = '🟡 Слишком ярко. Избегайте прямых бликов';
-            } else {
-                badge.className = 'camera-status-badge success';
-                badge.innerText = '🟢 Свет идеальный (Готово)';
+        function updateEvDisplay() {
+            const display = document.getElementById('evValueDisplay');
+            if (display) {
+                display.innerText = `EV: ${currentEV > 0 ? '+' : ''}${currentEV.toFixed(1)}`;
             }
         }
 
@@ -921,11 +880,10 @@
             }
 
             video.srcObject = mediaStream;
-            startAutoExposureControl(video, mediaStream);
+            initManualExposure(mediaStream);
         }
 
         function closeCamera() {
-            stopAutoExposureControl();
             if (mediaStream) {
                 mediaStream.getTracks().forEach(track => track.stop());
                 mediaStream = null;
@@ -936,8 +894,6 @@
 
         async function takeSnapshot() {
             if (!video.videoWidth || !video.videoHeight) return;
-
-            stopAutoExposureControl();
 
             const viewportRect = video.getBoundingClientRect();
             if (!viewportRect.width || !viewportRect.height) return;
