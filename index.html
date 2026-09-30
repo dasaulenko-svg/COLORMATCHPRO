@@ -91,7 +91,6 @@
             -webkit-text-fill-color: transparent;
         }
 
-        /* Золотой бейдж PRO */
         .pro-badge {
             display: none;
             background: rgba(255, 215, 0, 0.15);
@@ -282,10 +281,7 @@
 
         .btn-action:disabled { opacity: 0.3; pointer-events: none; filter: grayscale(1); }
 
-        /* СКРЫВАЕМЫЕ ЭЛЕМЕНТЫ ЛАЙТ РЕЖИМА */
-        .info-container {
-            display: none;
-        }
+        .info-container { display: none; }
 
         .patches-list {
             display: flex;
@@ -335,7 +331,6 @@
             box-shadow: 0 12px 32px rgba(0,0,0,0.4);
         }
 
-        /* ЛАЙТ ВЕРДИКТ */
         .lite-verdict-box {
             display: flex;
             align-items: center;
@@ -354,151 +349,6 @@
 
         .lite-verdict-value {
             font-size: 26px;
-            font-weight: 900;
-            color: var(--accent-green);
-            text-shadow: 0 0 12px rgba(0, 230, 118, 0.4);
-        }
-
-        .comparison-block {
-            padding: 12px;
-            border-radius: 14px;
-            background: rgba(0, 0, 0, 0.3);
-            border: 1px solid var(--card-border);
-            margin-bottom: 12px;
-        }
-
-        .comparison-title {
-            font-size: 11px;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-bottom: 10px;
-            color: var(--text-muted);
-            text-align: center;
-        }
-
-        .comparison-title.raw { color: var(--accent-warning); }
-        .comparison-title.corrected { color: var(--accent-cyan); }
-        .comparison-title.corrected-3d { color: var(--accent-purple); }
-        .comparison-title.final { color: var(--accent-green); }
-
-        .methods-list {
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-        }
-
-        .method-row {
-            background: rgba(255, 255, 255, 0.03);
-            border: 1px solid rgba(255, 255, 255, 0.06);
-            border-radius: 8px;
-            padding: 6px 10px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-
-        .method-info {
-            display: flex;
-            flex-direction: column;
-            gap: 2px;
-        }
-
-        .method-name {
-            font-size: 11px;
-            font-weight: 600;
-            color: #fff;
-        }
-
-        .method-subtext {
-            font-size: 9px;
-            color: var(--text-muted);
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        .method-score {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .score-val {
-            font-size: 15px;
-            font-weight: 800;
-        }
-
-        .match-success { color: var(--accent-green); }
-        .match-warning { color: var(--accent-warning); }
-        .match-error { color: var(--accent-red); }
-
-        .swatches-pair {
-            display: flex;
-            align-items: center;
-            gap: 4px;
-        }
-
-        .swatch-mini {
-            width: 14px;
-            height: 14px;
-            border-radius: 50%;
-            border: 1px solid rgba(255,255,255,0.25);
-        }
-
-        .final-summary {
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-            margin-top: 4px;
-            padding: 10px;
-            background: rgba(0, 230, 118, 0.05);
-            border-radius: 10px;
-            border: 1px solid rgba(0, 230, 118, 0.2);
-        }
-
-        .summary-line {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-size: 11px;
-            color: var(--text-muted);
-        }
-
-        .summary-line b {
-            color: #fff;
-        }
-
-        .summary-badge {
-            font-size: 10px;
-            font-weight: 700;
-            padding: 2px 6px;
-            border-radius: 4px;
-            background: rgba(255, 255, 255, 0.08);
-        }
-
-        .summary-badge.active {
-            background: rgba(0, 230, 118, 0.2);
-            color: var(--accent-green);
-        }
-
-        .final-total-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-top: 6px;
-            padding-top: 8px;
-            border-top: 1px dashed rgba(255, 255, 255, 0.15);
-        }
-
-        .final-total-label {
-            font-size: 13px;
-            font-weight: 800;
-            color: #fff;
-        }
-
-        .final-total-value {
-            font-size: 22px;
             font-weight: 900;
             color: var(--accent-green);
             text-shadow: 0 0 12px rgba(0, 230, 118, 0.4);
@@ -586,7 +436,6 @@
             pointer-events: none;
         }
 
-        /* Индикатор экспозиции видоискателя */
         .camera-status-badge {
             position: absolute;
             bottom: 12px;
@@ -617,7 +466,6 @@
             border-color: rgba(0, 230, 118, 0.4);
         }
 
-        /* ZOOM MODAL STYLES */
         .zoom-modal {
             display: none;
             position: fixed;
@@ -683,22 +531,10 @@
             font-size: 13px;
         }
 
-        /* ПРАВИЛА АКТИВАЦИИ РЕЖИМА PRO */
-        body.pro-mode-active .pro-badge {
-            display: inline-block;
-        }
-
-        body.pro-mode-active .info-container {
-            display: block;
-        }
-
-        body.pro-mode-active .lite-verdict-box {
-            display: none;
-        }
-
-        body.pro-mode-active .pro-details {
-            display: block !important;
-        }
+        body.pro-mode-active .pro-badge { display: inline-block; }
+        body.pro-mode-active .info-container { display: block; }
+        body.pro-mode-active .lite-verdict-box { display: none; }
+        body.pro-mode-active .pro-details { display: block !important; }
 
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(-4px); }
@@ -710,7 +546,6 @@
 <body>
 
     <div class="container">
-        <!-- ТРОЙНОЙ ТАП ПО ШАПКЕ АКТИВИРУЕТ PRO -->
         <div class="header">
             <div class="brand" id="brandTrigger">
                 <div class="logo-badge">
@@ -732,8 +567,11 @@
                     <div class="menu-item active" onclick="switchMode('compare', '🎯 Сравнение')">
                         🎯 Сравнение цвета
                     </div>
-                    <div class="menu-item" onclick="switchMode('calibrate', '🖥️ Калибровка')">
+                    <div class="menu-item" onclick="switchMode('calibrate', '🖥️ Калибровка экрана')">
                         🖥️ Калибровка экрана
+                    </div>
+                    <div class="menu-item" onclick="switchMode('camcalibrate', '📷 Калибровка камеры')">
+                        📷 Калибровка камеры
                     </div>
                     <div class="menu-item" onclick="switchMode('correct', '🎨 Цветокоррекция')">
                         🎨 Цветокоррекция снимка
@@ -762,7 +600,6 @@
                     <button class="btn-action" id="btnStandard" onclick="openCamera('standard')" disabled>
                         📷 Снять Эталон
                     </button>
-                    <!-- В PRO выводит LAB/RGB, в Light скрыто -->
                     <div class="info-container" id="infoStandard"></div>
                 </div>
 
@@ -777,7 +614,6 @@
                     <button class="btn-action secondary" id="btnSample" onclick="openCamera('sample')" disabled>
                         📸 Снять Образец
                     </button>
-                    <!-- В PRO выводит LAB/RGB, в Light скрыто -->
                     <div class="info-container" id="infoSample"></div>
                 </div>
             </div>
@@ -792,6 +628,13 @@
             <div class="stub-box">
                 🖥️ <b>Калибровка экрана</b><br><br>
                 Режим настройки яркости и цветового профиля дисплея.
+            </div>
+        </div>
+
+        <div class="view-pane" id="paneCamCalibrate">
+            <div class="stub-box">
+                📷 <b>Калибровка камеры</b><br><br>
+                Создание калибровочного профиля камеры под текущие условия освещения.
             </div>
         </div>
 
@@ -846,7 +689,6 @@
         </div>
     </div>
 
-    <!-- МОДАЛЬНОЕ ОКНО ZOOM ПРОСМОТРА -->
     <div class="zoom-modal" id="zoomModal">
         <div class="zoom-header">
             <span id="zoomTitle">Просмотр снимка</span>
@@ -865,9 +707,8 @@
         let activeMode = 'standard';
         let mediaStream = null;
 
-        // Переменные цикла авто-экспозиции (P-регулятор)
         let autoEvInterval = null;
-        let currentEv = 0;
+        let isApplyingEV = false;
 
         const cvStatus = document.getElementById('cvStatus');
         const btnStandard = document.getElementById('btnStandard');
@@ -882,7 +723,6 @@
         const cameraModal = document.getElementById('cameraModal');
         const video = document.getElementById('webcam');
 
-        // Тройной тап по логотипу SPECTRIX
         let brandTapCount = 0;
         let brandTapTimer = null;
         const brandTrigger = document.getElementById('brandTrigger');
@@ -923,6 +763,7 @@
             document.querySelectorAll('.view-pane').forEach(el => el.classList.remove('active'));
             if (modeKey === 'compare') document.getElementById('paneCompare').classList.add('active');
             if (modeKey === 'calibrate') document.getElementById('paneCalibrate').classList.add('active');
+            if (modeKey === 'camcalibrate') document.getElementById('paneCamCalibrate').classList.add('active');
             if (modeKey === 'correct') document.getElementById('paneCorrect').classList.add('active');
             if (modeKey === 'catalog') document.getElementById('paneCatalog').classList.add('active');
         }
@@ -941,7 +782,7 @@
         }
 
         // =========================================================================
-        // МОДУЛЬ АВТО-ЭКСПОЗИЦИИ (P-РЕГУЛЯТОР: АНАЛИЗ ВИДОИСКАТЕЛЯ ДО НАЖАТИЯ КНОПКИ)
+        // МОДУЛЬ АВТО-ЭКСПОЗИЦИИ (P-РЕГУЛЯТОР С ОБРАТНОЙ СВЯЗЬЮ И ДЕДБЕНДОМ)
         // =========================================================================
 
         function startAutoExposureControl(videoElement, stream) {
@@ -957,14 +798,13 @@
             canvas.height = 120;
 
             if (autoEvInterval) clearInterval(autoEvInterval);
+            isApplyingEV = false;
 
             autoEvInterval = setInterval(async () => {
                 if (!videoElement || videoElement.paused || videoElement.ended || !videoElement.videoWidth) return;
 
-                // Захватываем текущий кадр из видеопотока видоискателя
                 ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
                 
-                // Анализируем центральный прямоугольник в зоне карты
                 const imgData = ctx.getImageData(40, 30, 80, 60).data;
                 let lumaValues = [];
 
@@ -975,7 +815,6 @@
 
                 if (lumaValues.length === 0) return;
 
-                // 1. Мягкое отсечение 5% экстремумов (только явный шум по краям)
                 lumaValues.sort((a, b) => a - b);
                 const trimCount = Math.floor(lumaValues.length * 0.05);
                 const trimmedLuma = lumaValues.slice(trimCount, lumaValues.length - trimCount);
@@ -985,42 +824,49 @@
                     totalLuma += trimmedLuma[i];
                 }
 
-                // 2. Средняя реальная яркость кадра
                 const avgLuma = trimmedLuma.length > 0 ? totalLuma / trimmedLuma.length : 128;
                 
-                // Рабочие пороги освещенности
                 const targetLuma = 128;
-                const minAcceptableLuma = 75;  // Если меньше 75 — фиксируем недосвет
-                const maxAcceptableLuma = 200; // Если больше 200 — фиксируем пересвет
+                const minAcceptableLuma = 75;
+                const maxAcceptableLuma = 200;
 
                 const lumaError = targetLuma - avgLuma;
-                const Kp = 0.015;
 
-                if (supportsEV) {
-                    const minEV = capabilities.exposureCompensation.min || -2.0;
-                    const maxEV = capabilities.exposureCompensation.max || 2.0;
-                    const step = capabilities.exposureCompensation.step || 0.1;
+                // Избегаем одновременных вызовов applyConstraints
+                if (supportsEV && !isApplyingEV) {
+                    // Мертвая зона: не корректируем, если погрешность незначительна
+                    if (Math.abs(lumaError) > 10) {
+                        const settings = track.getSettings ? track.getSettings() : {};
+                        const currentEvReal = settings.exposureCompensation || 0;
 
-                    let deltaEV = lumaError * Kp;
-                    let targetEV = currentEv + deltaEV;
+                        const minEV = capabilities.exposureCompensation.min || -2.0;
+                        const maxEV = capabilities.exposureCompensation.max || 2.0;
+                        const step = capabilities.exposureCompensation.step || 0.1;
 
-                    targetEV = Math.max(minEV, Math.min(maxEV, targetEV));
-                    targetEV = Math.round(targetEV / step) * step;
+                        const Kp = 0.005; // Мягкий коэффициент шаг коррекции
+                        let deltaEV = lumaError * Kp;
+                        let targetEV = currentEvReal + deltaEV;
 
-                    if (Math.abs(targetEV - currentEv) >= step) {
-                        currentEv = targetEV;
-                        try {
-                            await track.applyConstraints({
-                                advanced: [{ exposureCompensation: currentEv }]
-                            });
-                        } catch (e) {
-                            console.warn("Ошибка установки EV:", e);
+                        targetEV = Math.max(minEV, Math.min(maxEV, targetEV));
+                        targetEV = Math.round(targetEV / step) * step;
+
+                        if (Math.abs(targetEV - currentEvReal) >= step) {
+                            isApplyingEV = true;
+                            try {
+                                await track.applyConstraints({
+                                    advanced: [{ exposureCompensation: targetEV }]
+                                });
+                            } catch (e) {
+                                console.warn("Ошибка установки EV:", e);
+                            } finally {
+                                isApplyingEV = false;
+                            }
                         }
                     }
                 }
 
                 updateCameraStatusUI(avgLuma, minAcceptableLuma, maxAcceptableLuma);
-            }, 150);
+            }, 250);
         }
 
         function stopAutoExposureControl() {
@@ -1075,7 +921,6 @@
             }
 
             video.srcObject = mediaStream;
-            currentEv = 0;
             startAutoExposureControl(video, mediaStream);
         }
 
@@ -1092,7 +937,6 @@
         async function takeSnapshot() {
             if (!video.videoWidth || !video.videoHeight) return;
 
-            // Замораживаем регулятор экспозиции перед съёмкой
             stopAutoExposureControl();
 
             const viewportRect = video.getBoundingClientRect();
@@ -1444,8 +1288,6 @@
             container.innerHTML = html;
         }
 
-        // ================= ВЫЗОВ СЕРВЕРНОЙ МАТЕМАТИКИ =================
-
         async function compareColors() {
             if (!standardColorData || !sampleColorData) return;
 
@@ -1469,19 +1311,14 @@
                 if (!response.ok) throw new Error('Ошибка ответа сервера');
 
                 const data = await response.json();
-                
-                // Извлекаем итоговый процент из полученного HTML
                 const matchPercent = extractPercent(data.html) || '100%';
 
-                // Обертка: в Light показан только чистый блок, в Pro — вся серверная аналитика
                 resultDiv.innerHTML = `
-                    <!-- Light UI Verdict -->
                     <div class="lite-verdict-box">
                         <span class="lite-verdict-title">Совпадение цвета</span>
                         <span class="lite-verdict-value">${matchPercent}</span>
                     </div>
 
-                    <!-- Pro UI Verdict (подробные матрицы и дельты) -->
                     <div class="pro-details" style="display:none;">
                         ${data.html}
                     </div>
@@ -1504,7 +1341,6 @@
             return totalVal ? totalVal.innerText.trim() : null;
         }
 
-        // ================= ЛОГИКА PINCH TO ZOOM ПРОСМОТРА =================
         let zoomScale = 1;
         let zoomPosX = 0;
         let zoomPosY = 0;
