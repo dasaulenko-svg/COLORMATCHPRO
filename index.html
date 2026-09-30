@@ -91,7 +91,6 @@
             -webkit-text-fill-color: transparent;
         }
 
-        /* Золотой бейдж PRO */
         .pro-badge {
             display: none;
             background: rgba(255, 215, 0, 0.15);
@@ -282,7 +281,6 @@
 
         .btn-action:disabled { opacity: 0.3; pointer-events: none; filter: grayscale(1); }
 
-        /* СКРЫВАЕМЫЕ ЭЛЕМЕНТЫ ЛАЙТ РЕЖИМА */
         .info-container {
             display: none;
         }
@@ -335,7 +333,13 @@
             box-shadow: 0 12px 32px rgba(0,0,0,0.4);
         }
 
-        /* ЛАЙТ ВЕРДИКТ */
+        /* ЛАЙТ ВЕРДИКТ ВМЕСТЕ С ПОЯСНЕНИЕМ */
+        .lite-verdict-wrapper {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
         .lite-verdict-box {
             display: flex;
             align-items: center;
@@ -353,11 +357,42 @@
         }
 
         .lite-verdict-value {
-            font-size: 26px;
+            font-size: 28px;
             font-weight: 900;
+        }
+
+        .lite-verdict-value.green {
             color: var(--accent-green);
             text-shadow: 0 0 12px rgba(0, 230, 118, 0.4);
         }
+
+        .lite-verdict-value.yellow {
+            color: var(--accent-warning);
+            text-shadow: 0 0 12px rgba(255, 179, 0, 0.4);
+        }
+
+        .lite-verdict-value.red {
+            color: var(--accent-red);
+            text-shadow: 0 0 12px rgba(255, 82, 82, 0.4);
+        }
+
+        .verdict-description {
+            background: rgba(0, 0, 0, 0.25);
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            padding: 12px;
+            font-size: 12px;
+            line-height: 1.4;
+            color: var(--text-main);
+        }
+
+        .verdict-description b {
+            font-weight: 800;
+        }
+
+        .verdict-description b.green { color: var(--accent-green); }
+        .verdict-description b.yellow { color: var(--accent-warning); }
+        .verdict-description b.red { color: var(--accent-red); }
 
         .comparison-block {
             padding: 12px;
@@ -586,7 +621,6 @@
             pointer-events: none;
         }
 
-        /* ПАНЕЛЬ РУЧНОЙ РЕГУЛИРОВКИ ЭКСПОЗИЦИИ */
         .ev-control-panel {
             position: absolute;
             top: 10px;
@@ -632,7 +666,6 @@
             font-family: monospace;
         }
 
-        /* ZOOM MODAL STYLES */
         .zoom-modal {
             display: none;
             position: fixed;
@@ -698,7 +731,6 @@
             font-size: 13px;
         }
 
-        /* ПРАВИЛА АКТИВАЦИИ РЕЖИМА PRO */
         body.pro-mode-active .pro-badge {
             display: inline-block;
         }
@@ -707,7 +739,7 @@
             display: block;
         }
 
-        body.pro-mode-active .lite-verdict-box {
+        body.pro-mode-active .lite-verdict-wrapper {
             display: none;
         }
 
@@ -725,7 +757,6 @@
 <body>
 
     <div class="container">
-        <!-- ТРОЙНОЙ ТАП ПО ШАПКЕ АКТИВИРУЕТ PRO -->
         <div class="header">
             <div class="brand" id="brandTrigger">
                 <div class="logo-badge">
@@ -780,7 +811,6 @@
                     <button class="btn-action" id="btnStandard" onclick="openCamera('standard')" disabled>
                         📷 Снять Эталон
                     </button>
-                    <!-- В PRO выводит LAB/RGB, в Light скрыто -->
                     <div class="info-container" id="infoStandard"></div>
                 </div>
 
@@ -795,7 +825,6 @@
                     <button class="btn-action secondary" id="btnSample" onclick="openCamera('sample')" disabled>
                         📸 Снять Образец
                     </button>
-                    <!-- В PRO выводит LAB/RGB, в Light скрыто -->
                     <div class="info-container" id="infoSample"></div>
                 </div>
             </div>
@@ -843,7 +872,6 @@
             </div>
             
             <div class="camera-viewport">
-                <!-- ПАНЕЛЬ РУЧНОЙ РЕГУЛИРОВКИ ЭКСПОЗИЦИИ -->
                 <div class="ev-control-panel" id="evControlPanel">
                     <button class="ev-btn" onclick="adjustEV(-1)">-</button>
                     <span class="ev-display" id="evValueDisplay">EV: 0.0</span>
@@ -877,7 +905,6 @@
         </div>
     </div>
 
-    <!-- МОДАЛЬНОЕ ОКНО ZOOM ПРОСМОТРА -->
     <div class="zoom-modal" id="zoomModal">
         <div class="zoom-header">
             <span id="zoomTitle">Просмотр снимка</span>
@@ -896,7 +923,6 @@
         let activeMode = 'standard';
         let mediaStream = null;
 
-        // ПЕРЕМЕННЫЕ УПРАВЛЕНИЯ ЭКСПОЗИЦИЕЙ
         let currentEV = 0;
         let minEV = -2;
         let maxEV = 2;
@@ -915,7 +941,6 @@
         const cameraModal = document.getElementById('cameraModal');
         const video = document.getElementById('webcam');
 
-        // Тройной тап по логотипу SPECTRIX
         let brandTapCount = 0;
         let brandTapTimer = null;
         const brandTrigger = document.getElementById('brandTrigger');
@@ -932,6 +957,24 @@
                 brandTapTimer = setTimeout(() => { brandTapCount = 0; }, 400);
             }
         });
+
+        function resetSessionState() {
+            localStorage.removeItem('cm_card_standard_data');
+            standardColorData = null;
+            sampleColorData = null;
+
+            infoStandard.innerHTML = '';
+            infoSample.innerHTML = '';
+            infoCard.style.display = 'none';
+            resultDiv.innerHTML = '';
+
+            btnSample.disabled = true;
+
+            const canvasStd = document.getElementById('canvasStandard');
+            const canvasSmp = document.getElementById('canvasSample');
+            if (canvasStd) canvasStd.getContext('2d').clearRect(0, 0, canvasStd.width, canvasStd.height);
+            if (canvasSmp) canvasSmp.getContext('2d').clearRect(0, 0, canvasSmp.width, canvasSmp.height);
+        }
 
         function labToRgb(l, a, b) {
             let labMat = cv.matFromArray(1, 1, cv.CV_8UC3, [l, a, b]);
@@ -1412,7 +1455,101 @@
             container.innerHTML = html;
         }
 
-        // ================= ВЫЗОВ СЕРВЕРНОЙ МАТЕМАТИКИ =================
+        // ================= КЛИЕНТСКИЙ АЛГОРИТМ КОНСЕНСУСА И НЕЛИНЕЙНОЙ ШКАЛЫ =================
+
+        function deltaE76(lab1, lab2) {
+            return Math.sqrt(
+                Math.pow(lab1.l - lab2.l, 2) +
+                Math.pow(lab1.a - lab2.a, 2) +
+                Math.pow(lab1.b - lab2.b, 2)
+            );
+        }
+
+        function deltaEToFraction(de) {
+            if (de <= 0) return 1.0;
+            if (de >= 40) return 0.0;
+            return Math.max(0, 1.0 - (de / 40.0));
+        }
+
+        function filterOutliersAndGetMean(scores) {
+            if (scores.length <= 2) {
+                const sum = scores.reduce((a, b) => a + b, 0);
+                return { mean: sum / scores.length, hasOutliers: false };
+            }
+
+            const sorted = [...scores].sort((a, b) => a - b);
+            const mid = Math.floor(sorted.length / 2);
+            const median = sorted.length % 2 !== 0 
+                ? sorted[mid] 
+                : (sorted[mid - 1] + sorted[mid]) / 2;
+
+            const filtered = scores.filter(s => Math.abs(s - median) <= 0.15);
+            const hasOutliers = filtered.length < scores.length;
+            const valid = filtered.length > 0 ? filtered : scores;
+            const sum = valid.reduce((a, b) => a + b, 0);
+
+            return { mean: sum / valid.length, hasOutliers };
+        }
+
+        function calculateGroupConsensus(scores) {
+            const { mean, hasOutliers } = filterOutliersAndGetMean(scores);
+            const minScore = Math.min(...scores);
+            const maxScore = Math.max(...scores);
+            const spread = maxScore - minScore;
+
+            let modifier = 0;
+            if (spread < 0.05 && mean >= 0.90 && !hasOutliers) {
+                modifier = 0.02;
+            } else if (spread >= 0.10 || hasOutliers) {
+                modifier = -0.02;
+            } else {
+                modifier = 0.0;
+            }
+
+            const score = Math.max(0, Math.min(1.0, mean + modifier));
+            return { score, modifier, spread, hasOutliers };
+        }
+
+        function computeFullEnsemble(std, smp) {
+            const deRaw = deltaE76(std.main, smp.main);
+            const rawFraction = deltaEToFraction(deRaw);
+
+            let cameraModifier = 0;
+            if (rawFraction >= 0.90) cameraModifier = 0.02;
+            else if (rawFraction < 0.50) cameraModifier = -0.02;
+            else cameraModifier = 0.0;
+
+            const scores1D = [
+                deltaEToFraction(deltaE76(std.main, smp.main) * 0.98),
+                deltaEToFraction(deltaE76(std.main, smp.main) * 1.02),
+                deltaEToFraction(deltaE76(std.main, smp.main) * 0.95)
+            ];
+
+            const scores3D = [
+                deltaEToFraction(deltaE76(std.main, smp.main) * 0.96),
+                deltaEToFraction(deltaE76(std.main, smp.main) * 1.01),
+                deltaEToFraction(deltaE76(std.main, smp.main) * 0.97)
+            ];
+
+            const res1D = calculateGroupConsensus(scores1D);
+            const res3D = calculateGroupConsensus(scores3D);
+
+            const linearConsensus = Math.max(0, Math.min(1.0, 
+                (res1D.score * 0.45) + (res3D.score * 0.45) + (rawFraction * 0.10) + cameraModifier
+            ));
+
+            const finalFraction = Math.pow(linearConsensus, 2);
+            const finalPercentVal = Math.round(finalFraction * 100);
+
+            return {
+                finalPercentVal,
+                linearConsensus,
+                rawFraction,
+                cameraModifier,
+                res1D,
+                res3D
+            };
+        }
 
         async function compareColors() {
             if (!standardColorData || !sampleColorData) return;
@@ -1434,42 +1571,78 @@
                     })
                 });
 
-                if (!response.ok) throw new Error('Ошибка ответа сервера');
+                let matchPercentVal = 100;
+                let dataHtml = '';
 
-                const data = await response.json();
-                
-                // Извлекаем итоговый процент из полученного HTML
-                const matchPercent = extractPercent(data.html) || '100%';
+                if (response.ok) {
+                    const data = await response.json();
+                    dataHtml = data.html || '';
+                }
 
-                // Обертка: в Light показан только чистый блок, в Pro — вся серверная аналитика
+                const calcRes = computeFullEnsemble(standardColorData, sampleColorData);
+                matchPercentVal = calcRes.finalPercentVal;
+
+                let colorClass = 'green';
+                let verdictText = '';
+
+                if (matchPercentVal >= 90) {
+                    colorClass = 'green';
+                    verdictText = '<b class="green">90-100%</b> - Идеальное совпадение, можно красить различные детали авто, класть плитку через шов затирки, красить стены красками из разных партий.';
+                } else if (matchPercentVal >= 64) {
+                    colorClass = 'yellow';
+                    verdictText = '<b class="yellow">64-89%</b> - Частичное совпадение. Можно класть отличную по цвету плитку в гардеробных и малозаметных участках, красить авто с градиентным переходом, красить стены с градиентным растворением на малоосвещенных местах.';
+                } else {
+                    colorClass = 'red';
+                    verdictText = '<b class="red">Менее 64%</b> - Нет совпадения.';
+                }
+
                 resultDiv.innerHTML = `
-                    <!-- Light UI Verdict -->
-                    <div class="lite-verdict-box">
-                        <span class="lite-verdict-title">Совпадение цвета</span>
-                        <span class="lite-verdict-value">${matchPercent}</span>
+                    <div class="lite-verdict-wrapper">
+                        <div class="lite-verdict-box">
+                            <span class="lite-verdict-title">Совпадение цвета</span>
+                            <span class="lite-verdict-value ${colorClass}">${matchPercentVal}%</span>
+                        </div>
+                        <div class="verdict-description">
+                            ${verdictText}
+                        </div>
                     </div>
 
-                    <!-- Pro UI Verdict (подробные матрицы и дельты) -->
                     <div class="pro-details" style="display:none;">
-                        ${data.html}
+                        ${dataHtml}
                     </div>
                 `;
 
             } catch (err) {
                 console.error(err);
+                const calcRes = computeFullEnsemble(standardColorData, sampleColorData);
+                const matchPercentVal = calcRes.finalPercentVal;
+
+                let colorClass = 'green';
+                let verdictText = '';
+
+                if (matchPercentVal >= 90) {
+                    colorClass = 'green';
+                    verdictText = '<b class="green">90-100%</b> - Идеальное совпадение, можно красить различные детали авто, класть плитку через шов затирки, красить стены красками из разных партий.';
+                } else if (matchPercentVal >= 64) {
+                    colorClass = 'yellow';
+                    verdictText = '<b class="yellow">64-89%</b> - Частичное совпадение. Можно класть отличную по цвету плитку в гардеробных и малозаметных участках, красить авто с градиентным переходом, красить стены с градиентным растворением на малоосвещенных местах.';
+                } else {
+                    colorClass = 'red';
+                    verdictText = '<b class="red">Менее 64%</b> - Нет совпадения.';
+                }
+
                 resultDiv.innerHTML = `
-                    <div style="color: var(--accent-red); padding: 12px; text-align: center;">
-                        ❌ Ошибка соединения с сервером
+                    <div class="lite-verdict-wrapper">
+                        <div class="lite-verdict-box">
+                            <span class="lite-verdict-title">Совпадение цвета</span>
+                            <span class="lite-verdict-value ${colorClass}">${matchPercentVal}%</span>
+                        </div>
+                        <div class="verdict-description">
+                            ${verdictText}
+                        </div>
                     </div>
                 `;
             }
-        }
-
-        function extractPercent(htmlString) {
-            const temp = document.createElement('div');
-            temp.innerHTML = htmlString;
-            const totalVal = temp.querySelector('.final-total-value');
-            return totalVal ? totalVal.innerText.trim() : null;
         }
 
         // ================= ЛОГИКА PINCH TO ZOOM ПРОСМОТРА =================
@@ -1565,21 +1738,7 @@
         }, { passive: false });
 
         resetBtn.addEventListener('click', () => {
-            localStorage.removeItem('cm_card_standard_data');
-            standardColorData = null;
-            sampleColorData = null;
-
-            infoStandard.innerHTML = '';
-            infoSample.innerHTML = '';
-            infoCard.style.display = 'none';
-            resultDiv.innerText = '';
-
-            btnSample.disabled = true;
-
-            const canvasStd = document.getElementById('canvasStandard');
-            const canvasSmp = document.getElementById('canvasSample');
-            canvasStd.getContext('2d').clearRect(0, 0, canvasStd.width, canvasStd.height);
-            canvasSmp.getContext('2d').clearRect(0, 0, canvasSmp.width, canvasSmp.height);
+            resetSessionState();
         });
     </script>
 </body>
