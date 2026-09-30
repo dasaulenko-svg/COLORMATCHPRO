@@ -586,6 +586,52 @@
             pointer-events: none;
         }
 
+        /* ПАНЕЛЬ РУЧНОЙ РЕГУЛИРОВКИ ЭКСПОЗИЦИИ */
+        .ev-control-panel {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(11, 14, 20, 0.85);
+            border: 1px solid var(--card-border);
+            padding: 4px 10px;
+            border-radius: 12px;
+            backdrop-filter: blur(8px);
+        }
+
+        .ev-btn {
+            background: rgba(255, 255, 255, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #fff;
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            font-weight: 800;
+            font-size: 16px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            user-select: none;
+        }
+
+        .ev-btn:active {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .ev-display {
+            color: var(--accent-cyan);
+            font-weight: 700;
+            font-size: 13px;
+            min-width: 75px;
+            text-align: center;
+            font-family: monospace;
+        }
+
         /* ZOOM MODAL STYLES */
         .zoom-modal {
             display: none;
@@ -704,6 +750,9 @@
                     <div class="menu-item" onclick="switchMode('calibrate', '🖥️ Калибровка')">
                         🖥️ Калибровка экрана
                     </div>
+                    <div class="menu-item" onclick="switchMode('camCalibrate', '📷 Калибровка камеры')">
+                        📷 Калибровка камеры
+                    </div>
                     <div class="menu-item" onclick="switchMode('correct', '🎨 Цветокоррекция')">
                         🎨 Цветокоррекция снимка
                     </div>
@@ -764,6 +813,13 @@
             </div>
         </div>
 
+        <div class="view-pane" id="paneCamCalibrate">
+            <div class="stub-box">
+                📷 <b>Калибровка камеры</b><br><br>
+                Настройка профиля сенсора, экспозиции и баланса белого.
+            </div>
+        </div>
+
         <div class="view-pane" id="paneCorrect">
             <div class="stub-box">
                 🎨 <b>Цветокоррекция снимка</b><br><br>
@@ -787,6 +843,13 @@
             </div>
             
             <div class="camera-viewport">
+                <!-- ПАНЕЛЬ РУЧНОЙ РЕГУЛИРОВКИ ЭКСПОЗИЦИИ -->
+                <div class="ev-control-panel" id="evControlPanel">
+                    <button class="ev-btn" onclick="adjustEV(-1)">-</button>
+                    <span class="ev-display" id="evValueDisplay">EV: 0.0</span>
+                    <button class="ev-btn" onclick="adjustEV(1)">+</button>
+                </div>
+
                 <video id="webcam" autoplay playsinline></video>
                 <svg class="camera-overlay" viewBox="0 0 400 320">
                     <defs>
@@ -832,6 +895,12 @@
         let sampleColorData = null;
         let activeMode = 'standard';
         let mediaStream = null;
+
+        // ПЕРЕМЕННЫЕ УПРАВЛЕНИЯ ЭКСПОЗИЦИЕЙ
+        let currentEV = 0;
+        let minEV = -2;
+        let maxEV = 2;
+        let stepEV = 0.1;
 
         const cvStatus = document.getElementById('cvStatus');
         const btnStandard = document.getElementById('btnStandard');
@@ -887,6 +956,7 @@
             document.querySelectorAll('.view-pane').forEach(el => el.classList.remove('active'));
             if (modeKey === 'compare') document.getElementById('paneCompare').classList.add('active');
             if (modeKey === 'calibrate') document.getElementById('paneCalibrate').classList.add('active');
+            if (modeKey === 'camCalibrate') document.getElementById('paneCamCalibrate').classList.add('active');
             if (modeKey === 'correct') document.getElementById('paneCorrect').classList.add('active');
             if (modeKey === 'catalog') document.getElementById('paneCatalog').classList.add('active');
         }
@@ -933,6 +1003,52 @@
             }
 
             video.srcObject = mediaStream;
+            initExposureControl();
+        }
+
+        function initExposureControl() {
+            const track = mediaStream ? mediaStream.getVideoTracks()[0] : null;
+            if (!track) return;
+
+            const capabilities = track.getCapabilities ? track.getCapabilities() : {};
+            if ('exposureCompensation' in capabilities) {
+                minEV = capabilities.exposureCompensation.min || -2;
+                maxEV = capabilities.exposureCompensation.max || 2;
+                stepEV = capabilities.exposureCompensation.step || 0.1;
+
+                const settings = track.getSettings ? track.getSettings() : {};
+                currentEV = settings.exposureCompensation || 0;
+            } else {
+                currentEV = 0;
+            }
+            updateEVDisplay();
+        }
+
+        async function adjustEV(direction) {
+            const track = mediaStream ? mediaStream.getVideoTracks()[0] : null;
+            if (!track) return;
+
+            let targetEV = currentEV + (direction * stepEV);
+            targetEV = Math.max(minEV, Math.min(maxEV, targetEV));
+            targetEV = Math.round(targetEV / stepEV) * stepEV;
+
+            try {
+                await track.applyConstraints({
+                    advanced: [{ exposureCompensation: targetEV }]
+                });
+                currentEV = targetEV;
+                updateEVDisplay();
+            } catch (err) {
+                console.warn('Не удалось изменить экспозицию:', err);
+            }
+        }
+
+        function updateEVDisplay() {
+            const display = document.getElementById('evValueDisplay');
+            if (display) {
+                const sign = currentEV > 0 ? '+' : '';
+                display.innerText = `EV: ${sign}${currentEV.toFixed(1)}`;
+            }
         }
 
         function closeCamera() {
