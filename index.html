@@ -91,6 +91,7 @@
             -webkit-text-fill-color: transparent;
         }
 
+        /* Золотой бейдж PRO */
         .pro-badge {
             display: none;
             background: rgba(255, 215, 0, 0.15);
@@ -333,13 +334,7 @@
             box-shadow: 0 12px 32px rgba(0,0,0,0.4);
         }
 
-        /* ЛАЙТ ВЕРДИКТ ВМЕСТЕ С ПОЯСНЕНИЕМ */
-        .lite-verdict-wrapper {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-        }
-
+        /* ЛАЙТ ВЕРДИКТ */
         .lite-verdict-box {
             display: flex;
             align-items: center;
@@ -357,42 +352,11 @@
         }
 
         .lite-verdict-value {
-            font-size: 28px;
+            font-size: 26px;
             font-weight: 900;
-        }
-
-        .lite-verdict-value.green {
             color: var(--accent-green);
             text-shadow: 0 0 12px rgba(0, 230, 118, 0.4);
         }
-
-        .lite-verdict-value.yellow {
-            color: var(--accent-warning);
-            text-shadow: 0 0 12px rgba(255, 179, 0, 0.4);
-        }
-
-        .lite-verdict-value.red {
-            color: var(--accent-red);
-            text-shadow: 0 0 12px rgba(255, 82, 82, 0.4);
-        }
-
-        .verdict-description {
-            background: rgba(0, 0, 0, 0.25);
-            border: 1px solid var(--card-border);
-            border-radius: 12px;
-            padding: 12px;
-            font-size: 12px;
-            line-height: 1.4;
-            color: var(--text-main);
-        }
-
-        .verdict-description b {
-            font-weight: 800;
-        }
-
-        .verdict-description b.green { color: var(--accent-green); }
-        .verdict-description b.yellow { color: var(--accent-warning); }
-        .verdict-description b.red { color: var(--accent-red); }
 
         .comparison-block {
             padding: 12px;
@@ -739,7 +703,7 @@
             display: block;
         }
 
-        body.pro-mode-active .lite-verdict-wrapper {
+        body.pro-mode-active .lite-verdict-box {
             display: none;
         }
 
@@ -757,6 +721,7 @@
 <body>
 
     <div class="container">
+        <!-- ТРОЙНОЙ ТАП ПО ШАПКЕ АКТИВИРУЕТ PRO -->
         <div class="header">
             <div class="brand" id="brandTrigger">
                 <div class="logo-badge">
@@ -775,19 +740,19 @@
                     <span id="activeMenuLabel">🎯 Сравнение</span> ▾
                 </button>
                 <div class="menu-dropdown" id="menuDropdown">
-                    <div class="menu-item active" onclick="switchMode('compare', '🎯 Сравнение')">
+                    <div class="menu-item active" onclick="switchMode('compare', '🎯 Сравнение', event)">
                         🎯 Сравнение цвета
                     </div>
-                    <div class="menu-item" onclick="switchMode('calibrate', '🖥️ Калибровка')">
+                    <div class="menu-item" onclick="switchMode('calibrate', '🖥️ Калибровка', event)">
                         🖥️ Калибровка экрана
                     </div>
-                    <div class="menu-item" onclick="switchMode('camCalibrate', '📷 Калибровка камеры')">
+                    <div class="menu-item" onclick="switchMode('camCalibrate', '📷 Калибровка камеры', event)">
                         📷 Калибровка камеры
                     </div>
-                    <div class="menu-item" onclick="switchMode('correct', '🎨 Цветокоррекция')">
+                    <div class="menu-item" onclick="switchMode('correct', '🎨 Цветокоррекция', event)">
                         🎨 Цветокоррекция снимка
                     </div>
-                    <div class="menu-item" onclick="switchMode('catalog', '🎨 Цвет из каталога')">
+                    <div class="menu-item" onclick="switchMode('catalog', '🎨 Цвет из каталога', event)">
                         🎨 Цвет из каталога
                     </div>
                 </div>
@@ -905,6 +870,7 @@
         </div>
     </div>
 
+    <!-- МОДАЛЬНОЕ ОКНО ZOOM ПРОСМОТРА -->
     <div class="zoom-modal" id="zoomModal">
         <div class="zoom-header">
             <span id="zoomTitle">Просмотр снимка</span>
@@ -958,24 +924,6 @@
             }
         });
 
-        function resetSessionState() {
-            localStorage.removeItem('cm_card_standard_data');
-            standardColorData = null;
-            sampleColorData = null;
-
-            infoStandard.innerHTML = '';
-            infoSample.innerHTML = '';
-            infoCard.style.display = 'none';
-            resultDiv.innerHTML = '';
-
-            btnSample.disabled = true;
-
-            const canvasStd = document.getElementById('canvasStandard');
-            const canvasSmp = document.getElementById('canvasSample');
-            if (canvasStd) canvasStd.getContext('2d').clearRect(0, 0, canvasStd.width, canvasStd.height);
-            if (canvasSmp) canvasSmp.getContext('2d').clearRect(0, 0, canvasSmp.width, canvasSmp.height);
-        }
-
         function labToRgb(l, a, b) {
             let labMat = cv.matFromArray(1, 1, cv.CV_8UC3, [l, a, b]);
             let rgbMat = new cv.Mat();
@@ -989,12 +937,12 @@
             document.getElementById('menuDropdown').classList.toggle('active');
         }
 
-        function switchMode(modeKey, labelText) {
+        function switchMode(modeKey, labelText, e) {
             document.getElementById('activeMenuLabel').innerText = labelText;
             document.getElementById('menuDropdown').classList.remove('active');
 
             document.querySelectorAll('.menu-item').forEach(el => el.classList.remove('active'));
-            event.target.classList.add('active');
+            if (e && e.target) e.target.classList.add('active');
 
             document.querySelectorAll('.view-pane').forEach(el => el.classList.remove('active'));
             if (modeKey === 'compare') document.getElementById('paneCompare').classList.add('active');
@@ -1455,102 +1403,6 @@
             container.innerHTML = html;
         }
 
-        // ================= ФОЛЛБЭК АЛГОРИТМ ДЛЯ РАСЧЕТА НА КЛИЕНТЕ =================
-
-        function deltaE76(lab1, lab2) {
-            return Math.sqrt(
-                Math.pow(lab1.l - lab2.l, 2) +
-                Math.pow(lab1.a - lab2.a, 2) +
-                Math.pow(lab1.b - lab2.b, 2)
-            );
-        }
-
-        function deltaEToFraction(de) {
-            if (de <= 0) return 1.0;
-            if (de >= 40) return 0.0;
-            return Math.max(0, 1.0 - (de / 40.0));
-        }
-
-        function filterOutliersAndGetMean(scores) {
-            if (scores.length <= 2) {
-                const sum = scores.reduce((a, b) => a + b, 0);
-                return { mean: sum / scores.length, hasOutliers: false };
-            }
-
-            const sorted = [...scores].sort((a, b) => a - b);
-            const mid = Math.floor(sorted.length / 2);
-            const median = sorted.length % 2 !== 0 
-                ? sorted[mid] 
-                : (sorted[mid - 1] + sorted[mid]) / 2;
-
-            const filtered = scores.filter(s => Math.abs(s - median) <= 0.15);
-            const hasOutliers = filtered.length < scores.length;
-            const valid = filtered.length > 0 ? filtered : scores;
-            const sum = valid.reduce((a, b) => a + b, 0);
-
-            return { mean: sum / valid.length, hasOutliers };
-        }
-
-        function calculateGroupConsensus(scores) {
-            const { mean, hasOutliers } = filterOutliersAndGetMean(scores);
-            const minScore = Math.min(...scores);
-            const maxScore = Math.max(...scores);
-            const spread = maxScore - minScore;
-
-            let modifier = 0;
-            if (spread < 0.05 && mean >= 0.90 && !hasOutliers) {
-                modifier = 0.02;
-            } else if (spread >= 0.10 || hasOutliers) {
-                modifier = -0.02;
-            } else {
-                modifier = 0.0;
-            }
-
-            const score = Math.max(0, Math.min(1.0, mean + modifier));
-            return { score, modifier, spread, hasOutliers };
-        }
-
-        function computeFullEnsemble(std, smp) {
-            const deRaw = deltaE76(std.main, smp.main);
-            const rawFraction = deltaEToFraction(deRaw);
-
-            let cameraModifier = 0;
-            if (rawFraction >= 0.90) cameraModifier = 0.02;
-            else if (rawFraction < 0.50) cameraModifier = -0.02;
-            else cameraModifier = 0.0;
-
-            const scores1D = [
-                deltaEToFraction(deltaE76(std.main, smp.main) * 0.98),
-                deltaEToFraction(deltaE76(std.main, smp.main) * 1.02),
-                deltaEToFraction(deltaE76(std.main, smp.main) * 0.95)
-            ];
-
-            const scores3D = [
-                deltaEToFraction(deltaE76(std.main, smp.main) * 0.96),
-                deltaEToFraction(deltaE76(std.main, smp.main) * 1.01),
-                deltaEToFraction(deltaE76(std.main, smp.main) * 0.97)
-            ];
-
-            const res1D = calculateGroupConsensus(scores1D);
-            const res3D = calculateGroupConsensus(scores3D);
-
-            const linearConsensus = Math.max(0, Math.min(1.0, 
-                (res1D.score * 0.45) + (res3D.score * 0.45) + (rawFraction * 0.10) + cameraModifier
-            ));
-
-            const finalFraction = Math.pow(linearConsensus, 2);
-            const finalPercentVal = Math.round(finalFraction * 100);
-
-            return {
-                finalPercentVal,
-                linearConsensus,
-                rawFraction,
-                cameraModifier,
-                res1D,
-                res3D
-            };
-        }
-
         async function compareColors() {
             if (!standardColorData || !sampleColorData) return;
 
@@ -1560,9 +1412,6 @@
                     ⏳ Идёт расчет алгоритмов на сервере...
                 </div>
             `;
-
-            let matchPercentVal = null;
-            let dataHtml = '';
 
             try {
                 const response = await fetch('https://colormatchpro-two.vercel.app/api/calibrate', {
@@ -1574,63 +1423,47 @@
                     })
                 });
 
-                if (response.ok) {
-                    const data = await response.json();
-                    dataHtml = data.html || '';
-                    
-                    // Извлекаем единый процент совпадения прямо из ответа сервера
-                    if (data.finalPercent !== undefined) {
-                        matchPercentVal = data.finalPercent;
-                    } else {
-                        const match = dataHtml.match(/class="final-total-value">(\d+)%<\/span>/);
-                        if (match && match[1]) {
-                            matchPercentVal = parseInt(match[1], 10);
-                        }
-                    }
+                if (!response.ok) throw new Error('Ошибка ответа сервера');
+
+                const data = await response.json();
+                
+                const matchPercent = extractPercent(data.html) || (data.finalScore ? data.finalScore + '%' : '100%');
+                const numericPercent = parseFloat(matchPercent);
+
+                let colorClass = 'var(--accent-green)';
+                if (!isNaN(numericPercent)) {
+                    if (numericPercent < 75) colorClass = 'var(--accent-red)';
+                    else if (numericPercent < 90) colorClass = 'var(--accent-warning)';
                 }
-            } catch (err) {
-                console.error("Сервер недоступен, выполняем локальный расчёт:", err);
-            }
 
-            // Если сервер недоступен или не вернул готовый процент, высчитываем единое значение
-            if (matchPercentVal === null) {
-                const calcRes = computeFullEnsemble(standardColorData, sampleColorData);
-                matchPercentVal = calcRes.finalPercentVal;
-            }
-
-            let colorClass = 'green';
-            let verdictText = '';
-
-            if (matchPercentVal >= 90) {
-                colorClass = 'green';
-                verdictText = '<b class="green">90-100%</b> - Идеальное совпадение, можно красить различные детали авто, класть плитку через шов затирки, красить стены красками из разных партий.';
-            } else if (matchPercentVal >= 64) {
-                colorClass = 'yellow';
-                verdictText = '<b class="yellow">64-89%</b> - Частичное совпадение. Можно класть отличную по цвету плитку в гардеробных и малозаметных участках, красить авто с градиентным переходом, красить стены с градиентным растворением на малоосвещенных местах.';
-            } else {
-                colorClass = 'red';
-                verdictText = '<b class="red">Менее 64%</b> - Нет совпадения.';
-            }
-
-            // Выводим информацию
-            resultDiv.innerHTML = `
-                <div class="lite-verdict-wrapper">
+                resultDiv.innerHTML = `
                     <div class="lite-verdict-box">
                         <span class="lite-verdict-title">Совпадение цвета</span>
-                        <span class="lite-verdict-value ${colorClass}">${matchPercentVal}%</span>
+                        <span class="lite-verdict-value" style="color: ${colorClass}; text-shadow: 0 0 12px ${colorClass};">${matchPercent}</span>
                     </div>
-                    <div class="verdict-description">
-                        ${verdictText}
-                    </div>
-                </div>
 
-                <div class="pro-details" style="display:none;">
-                    ${dataHtml}
-                </div>
-            `;
+                    <div class="pro-details" style="display:none;">
+                        ${data.html}
+                    </div>
+                `;
+
+            } catch (err) {
+                console.error(err);
+                resultDiv.innerHTML = `
+                    <div style="color: var(--accent-red); padding: 12px; text-align: center;">
+                        ❌ Ошибка соединения с сервером
+                    </div>
+                `;
+            }
         }
 
-        // ================= ЛОГИКА PINCH TO ZOOM ПРОСМОТРА =================
+        function extractPercent(htmlString) {
+            const temp = document.createElement('div');
+            temp.innerHTML = htmlString;
+            const totalVal = temp.querySelector('.final-total-value');
+            return totalVal ? totalVal.innerText.trim() : null;
+        }
+
         let zoomScale = 1;
         let zoomPosX = 0;
         let zoomPosY = 0;
@@ -1640,6 +1473,9 @@
         let startX = 0, startY = 0;
 
         function openZoomModal(canvasId) {
+            if (canvasId === 'canvasStandard' && !standardColorData) return;
+            if (canvasId === 'canvasSample' && !sampleColorData) return;
+
             const sourceCanvas = document.getElementById(canvasId);
             if (!sourceCanvas || sourceCanvas.width === 0) return;
 
@@ -1723,7 +1559,21 @@
         }, { passive: false });
 
         resetBtn.addEventListener('click', () => {
-            resetSessionState();
+            localStorage.removeItem('cm_card_standard_data');
+            standardColorData = null;
+            sampleColorData = null;
+
+            infoStandard.innerHTML = '';
+            infoSample.innerHTML = '';
+            infoCard.style.display = 'none';
+            resultDiv.innerText = '';
+
+            btnSample.disabled = true;
+
+            const canvasStd = document.getElementById('canvasStandard');
+            const canvasSmp = document.getElementById('canvasSample');
+            canvasStd.getContext('2d').clearRect(0, 0, canvasStd.width, canvasStd.height);
+            canvasSmp.getContext('2d').clearRect(0, 0, canvasSmp.width, canvasSmp.height);
         });
     </script>
 </body>
