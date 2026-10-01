@@ -91,6 +91,7 @@
             -webkit-text-fill-color: transparent;
         }
 
+        /* Золотой бейдж PRO */
         .pro-badge {
             display: none;
             background: rgba(255, 215, 0, 0.15);
@@ -281,6 +282,7 @@
 
         .btn-action:disabled { opacity: 0.3; pointer-events: none; filter: grayscale(1); }
 
+        /* СКРЫВАЕМЫЕ ЭЛЕМЕНТЫ ЛАЙТ РЕЖИМА */
         .info-container {
             display: none;
         }
@@ -333,6 +335,7 @@
             box-shadow: 0 12px 32px rgba(0,0,0,0.4);
         }
 
+        /* ЛАЙТ ВЕРДИКТ */
         .lite-verdict-box {
             display: flex;
             align-items: center;
@@ -583,6 +586,7 @@
             pointer-events: none;
         }
 
+        /* ПАНЕЛЬ РУЧНОЙ РЕГУЛИРОВКИ ЭКСПОЗИЦИИ */
         .ev-control-panel {
             position: absolute;
             top: 10px;
@@ -628,6 +632,7 @@
             font-family: monospace;
         }
 
+        /* ZOOM MODAL STYLES */
         .zoom-modal {
             display: none;
             position: fixed;
@@ -693,6 +698,7 @@
             font-size: 13px;
         }
 
+        /* ПРАВИЛА АКТИВАЦИИ РЕЖИМА PRO */
         body.pro-mode-active .pro-badge {
             display: inline-block;
         }
@@ -719,6 +725,7 @@
 <body>
 
     <div class="container">
+        <!-- ТРОЙНОЙ ТАП ПО ШАПКЕ АКТИВИРУЕТ PRO -->
         <div class="header">
             <div class="brand" id="brandTrigger">
                 <div class="logo-badge">
@@ -773,6 +780,7 @@
                     <button class="btn-action" id="btnStandard" onclick="openCamera('standard')" disabled>
                         📷 Снять Эталон
                     </button>
+                    <!-- В PRO выводит LAB/RGB, в Light скрыто -->
                     <div class="info-container" id="infoStandard"></div>
                 </div>
 
@@ -787,6 +795,7 @@
                     <button class="btn-action secondary" id="btnSample" onclick="openCamera('sample')" disabled>
                         📸 Снять Образец
                     </button>
+                    <!-- В PRO выводит LAB/RGB, в Light скрыто -->
                     <div class="info-container" id="infoSample"></div>
                 </div>
             </div>
@@ -834,6 +843,7 @@
             </div>
             
             <div class="camera-viewport">
+                <!-- ПАНЕЛЬ РУЧНОЙ РЕГУЛИРОВКИ ЭКСПОЗИЦИИ -->
                 <div class="ev-control-panel" id="evControlPanel">
                     <button class="ev-btn" onclick="adjustEV(-1)">-</button>
                     <span class="ev-display" id="evValueDisplay">EV: 0.0</span>
@@ -867,6 +877,7 @@
         </div>
     </div>
 
+    <!-- МОДАЛЬНОЕ ОКНО ZOOM ПРОСМОТРА -->
     <div class="zoom-modal" id="zoomModal">
         <div class="zoom-header">
             <span id="zoomTitle">Просмотр снимка</span>
@@ -885,6 +896,7 @@
         let activeMode = 'standard';
         let mediaStream = null;
 
+        // ПЕРЕМЕННЫЕ УПРАВЛЕНИЯ ЭКСПОЗИЦИЕЙ
         let currentEV = 0;
         let minEV = -2;
         let maxEV = 2;
@@ -903,6 +915,7 @@
         const cameraModal = document.getElementById('cameraModal');
         const video = document.getElementById('webcam');
 
+        // Тройной тап по логотипу SPECTRIX
         let brandTapCount = 0;
         let brandTapTimer = null;
         const brandTrigger = document.getElementById('brandTrigger');
@@ -1399,6 +1412,8 @@
             container.innerHTML = html;
         }
 
+        // ================= ВЫЗОВ СЕРВЕРНОЙ МАТЕМАТИКИ =================
+
         async function compareColors() {
             if (!standardColorData || !sampleColorData) return;
 
@@ -1423,14 +1438,18 @@
 
                 const data = await response.json();
                 
+                // Извлекаем итоговый процент из полученного HTML
                 const matchPercent = extractPercent(data.html) || '100%';
 
+                // Обертка: в Light показан только чистый блок, в Pro — вся серверная аналитика
                 resultDiv.innerHTML = `
+                    <!-- Light UI Verdict -->
                     <div class="lite-verdict-box">
                         <span class="lite-verdict-title">Совпадение цвета</span>
                         <span class="lite-verdict-value">${matchPercent}</span>
                     </div>
 
+                    <!-- Pro UI Verdict (подробные матрицы и дельты) -->
                     <div class="pro-details" style="display:none;">
                         ${data.html}
                     </div>
@@ -1453,6 +1472,7 @@
             return totalVal ? totalVal.innerText.trim() : null;
         }
 
+        // ================= ЛОГИКА PINCH TO ZOOM ПРОСМОТРА =================
         let zoomScale = 1;
         let zoomPosX = 0;
         let zoomPosY = 0;
