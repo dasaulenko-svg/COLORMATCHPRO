@@ -359,6 +359,20 @@
             text-shadow: 0 0 12px rgba(0, 230, 118, 0.4);
         }
 
+        .lite-verdict-info {
+            margin-top: 10px;
+            padding: 12px;
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            font-size: 11px;
+            line-height: 1.5;
+            color: var(--text-muted);
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
         .comparison-block {
             padding: 12px;
             border-radius: 14px;
@@ -707,7 +721,8 @@
             display: block;
         }
 
-        body.pro-mode-active .lite-verdict-box {
+        body.pro-mode-active .lite-verdict-box,
+        body.pro-mode-active .lite-verdict-info {
             display: none;
         }
 
@@ -1448,6 +1463,11 @@
                         <span class="lite-verdict-title">Совпадение цвета</span>
                         <span class="lite-verdict-value">${matchPercent}</span>
                     </div>
+                    <div class="lite-verdict-info">
+                        <div><b class="match-success">90-100%</b> - Идеальное совпадение, можно красить различные детали авто, класть плитку через шов затирки, красить стены красками из разных партий.</div>
+                        <div><b class="match-warning">64-89%</b> - Частичное совпадение. Можно класть отличную по цвету плитку в гардеробных и малозаметных участках, красить авто с градиентным переходом, красить стены с градиентным растворением на малоосвещенных местах.</div>
+                        <div><b class="match-error">Менее 63%</b> - Нет совпадения.</div>
+                    </div>
 
                     <!-- Pro UI Verdict (подробные матрицы и дельты) -->
                     <div class="pro-details" style="display:none;">
@@ -1507,7 +1527,7 @@
 
         function updateZoomTransform() {
             const zoomCanvas = document.getElementById('zoomCanvas');
-            zoomCanvas.style.transform = `translate(${zoomPosX}px, ${zoomPosY}px) scale(${zoomScale})`;
+            zoomCanvas.style.transform = `translate(${zoomPosX}px) scale(${zoomScale})`;
         }
 
         const zoomViewport = document.getElementById('zoomViewport');
