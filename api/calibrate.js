@@ -1,11 +1,7 @@
 function labToRgb(l, a, b) {
-    let L = (l / 255) * 100;
-    let A = a - 128;
-    let B = b - 128;
-
-    let y = (L + 16) / 116;
-    let x = A / 500 + y;
-    let z = y - B / 200;
+    let y = (l + 16) / 116;
+    let x = a / 500 + y;
+    let z = y - b / 200;
 
     let x3 = Math.pow(x, 3), y3 = Math.pow(y, 3), z3 = Math.pow(z, 3);
     x = (x3 > 0.008856 ? x3 : (x - 16 / 116) / 7.787) * 0.95047;
