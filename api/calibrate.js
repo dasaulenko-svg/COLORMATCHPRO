@@ -204,7 +204,16 @@ function computeRawScore(stdRaw, smpRaw, statType) {
         Math.pow(stdColor.b - smpColor.b, 2)
     ));
     
-    const percent = Math.max(0, Math.min(100, Math.round(100 - (diff / 255) * 100 * 2.5)));
+    let basePercent = Math.round(100 - (diff / 255) * 100 * 2.5);
+
+    // Условие бонусов и штрафов по Delta E для сырых данных
+    if (diff < 5) {
+        basePercent += 2;
+    } else if (diff > 15) {
+        basePercent -= 2;
+    }
+
+    const percent = Math.max(0, Math.min(100, basePercent));
     const status = getStatusBadge(diff);
 
     return { stdColor, smpColor, diff, percent, status };
