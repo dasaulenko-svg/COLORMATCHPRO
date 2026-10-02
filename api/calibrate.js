@@ -196,6 +196,13 @@ function getStatusBadge(diff) {
     return { class: 'match-success', text: 'ТОТ САМЫЙ ЦВЕТ' };
 }
 
+// Перевод Delta E в процент совпадения на основе восприятия человеком
+function deltaEToPercent(diff) {
+    if (diff <= 0) return 100;
+    const score = 100 * Math.exp(-0.04 * diff);
+    return Math.max(0, Math.min(100, Math.round(score)));
+}
+
 function computeRawScore(stdRaw, smpRaw, statType) {
     const stdColor = statType === 'mean' ? stdRaw.mainMean : (stdRaw.mainMedian || stdRaw.mainMean);
     const smpColor = statType === 'mean' ? smpRaw.mainMean : (smpRaw.mainMedian || smpRaw.mainMean);
@@ -206,7 +213,8 @@ function computeRawScore(stdRaw, smpRaw, statType) {
         Math.pow(stdColor.b - smpColor.b, 2)
     ));
     
-    const percent = Math.max(0, Math.min(100, Math.round(100 - (diff / 255) * 100 * 2.5)));
+    // Применение новой нелинейной шкалы строго для сырых данных
+    const percent = deltaEToPercent(diff);
     const status = getStatusBadge(diff);
 
     return { stdColor, smpColor, diff, percent, status };
@@ -254,7 +262,7 @@ export default function handler(req, res) {
         return res.status(400).json({ error: 'Missing standard or sample data' });
     }
 
-    // 1. Сбор чистых результатов (без изменения алгоритмов калибровки)
+    // 1. Сбор чистых результатов
     const rawMean = computeRawScore(standard, sample, 'mean');
     const rawMedian = computeRawScore(standard, sample, 'median');
 
