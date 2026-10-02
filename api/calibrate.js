@@ -243,7 +243,8 @@ function computeMethodScore(stdRaw, smpRaw, mathMethod, statType) {
         Math.pow(stdCorr.b - smpCorr.b, 2)
     ));
 
-    const percent = Math.max(0, Math.min(100, Math.round(100 - (diff / 255) * 100 * 2.5)));
+    // Исправлено: замена старой RGB-формулы на перевод Delta E в проценты по шкале восприятия
+    const percent = deltaEToPercent(diff);
     const status = getStatusBadge(diff);
 
     return { stdCorr, smpCorr, diff, percent, status };
