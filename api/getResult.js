@@ -31,17 +31,43 @@ export function getResult(data) {
         m3D_1, m3D_2, m3D_3, m3D_4, m3D_5
     } = data;
 
-    // 1. Берем строго 10 результатов (5 из 1D и 5 из 3D)
+    // --- 1. Обработка сырых данных и подсчёт бонуса/штрафа ---
+    const rawE1 = Number(rawMean.diff);
+    const rawE2 = Number(rawMedian.diff);
+    const avgRawDeltaE = Math.round(((rawE1 + rawE2) / 2) * 100) / 100;
+
+    let rawModifier = 0;
+    let rawModifierText = '0%';
+    let rawStatusClass = 'neutral';
+
+    if (avgRawDeltaE < 4) {
+        rawModifier = 2;
+        rawModifierText = '+2% (Бонус)';
+        rawStatusClass = 'good';
+    } else if (avgRawDeltaE > 8) {
+        rawModifier = -2;
+        rawModifierText = '-2% (Штраф)';
+        rawStatusClass = 'bad';
+    } else {
+        rawModifier = 0;
+        rawModifierText = '0% (Без изменений)';
+        rawStatusClass = 'neutral';
+    }
+
+    // --- 2. Подсчёт базового среднего по 10 методам (5 из 1D и 5 из 3D) ---
     const scores = [
         m1D_1.percent, m1D_2.percent, m1D_3.percent, m1D_4.percent, m1D_5.percent,
         m3D_1.percent, m3D_2.percent, m3D_3.percent, m3D_4.percent, m3D_5.percent
     ];
 
-    // 2. Считаем чистое среднее арифметическое
     const sum = scores.reduce((acc, val) => acc + val, 0);
-    const finalScore = Math.round((sum / scores.length) * 10) / 10;
+    const baseScore = Math.round((sum / scores.length) * 10) / 10;
 
-    // 3. Генерация строки таблицы
+    // --- 3. Итоговый результат с учётом модификатора ---
+    const calculatedScore = baseScore + rawModifier;
+    const finalScore = Math.min(100, Math.max(0, Math.round(calculatedScore * 10) / 10));
+
+    // --- 4. Генерация строки таблицы ---
     const renderMethodRow = (title, resObj, isRaw = false) => {
         const stdLab = isRaw ? resObj.stdColor : resObj.stdCorr;
         const smpLab = isRaw ? resObj.smpColor : resObj.smpCorr;
@@ -67,7 +93,7 @@ export function getResult(data) {
         `;
     };
 
-    // 4. Формирование итогового HTML
+    // --- 5. Формирование итогового HTML ---
     const html = `
         <div class="comparison-block" style="border: 1px solid rgba(255, 179, 0, 0.4);">
             <div class="comparison-title raw">📷 Прямое сравнение в LAB (без коррекции)</div>
@@ -100,11 +126,19 @@ export function getResult(data) {
         </div>
 
         <div class="comparison-block" style="border: 1px solid rgba(0, 230, 118, 0.4); background: rgba(0, 230, 118, 0.03);">
-            <div class="comparison-title final">🏆 Итоговый вердикт (Чистая математика)</div>
+            <div class="comparison-title final">🏆 Итоговый вердикт с учётом консенсуса</div>
             <div class="final-summary">
                 <div class="final-total-row">
-                    <span class="final-total-label">Среднее арифметическое (10 методов 1D + 3D):</span>
-                    <span class="final-total-value">${finalScore}%</span>
+                    <span class="final-total-label">Среднее ΔE сырых данных:</span>
+                    <span class="final-total-value">${avgRawDeltaE} (Модификатор: ${rawModifierText})</span>
+                </div>
+                <div class="final-total-row">
+                    <span class="final-total-label">Базовое среднее (10 методов 1D + 3D):</span>
+                    <span class="final-total-value">${baseScore}%</span>
+                </div>
+                <div class="final-total-row" style="margin-top: 8px; font-weight: bold; border-top: 1px dashed rgba(255,255,255,0.2); padding-top: 8px;">
+                    <span class="final-total-label">Итоговый вердикт (Базовое + Модификатор сырых):</span>
+                    <span class="final-total-value" style="font-size: 1.2em;">${finalScore}%</span>
                 </div>
             </div>
         </div>
