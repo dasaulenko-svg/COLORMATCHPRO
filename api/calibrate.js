@@ -1,3 +1,5 @@
+import { getResult } from './getResult.js';
+
 function labToRgb(l, a, b) {
     let y = (l + 16) / 116;
     let x = a / 500 + y;
@@ -239,30 +241,6 @@ function computeMethodScore(stdRaw, smpRaw, mathMethod, statType) {
     return { stdCorr, smpCorr, diff, percent, status };
 }
 
-function processBlockEnsemble(scoresList) {
-    const sorted = [...scoresList].sort((a, b) => b - a);
-    let valid = sorted;
-    let hasOutliers = false;
-
-    if (sorted[0] - sorted[sorted.length - 1] > 10) {
-        valid = sorted.filter(v => (sorted[0] - v) <= 10);
-        if (valid.length < 2) valid = sorted.slice(0, 2);
-        hasOutliers = true;
-    }
-
-    const avg = valid.reduce((sum, val) => sum + val, 0) / valid.length;
-    const isConsensus = !hasOutliers && valid.every(v => v > 85);
-    const bonus = isConsensus ? 1.0 : 0.0;
-
-    return {
-        avg: Math.round(avg * 10) / 10,
-        bonus,
-        total: Math.round((avg + bonus) * 10) / 10,
-        hasOutliers,
-        isConsensus
-    };
-}
-
 export default function handler(req, res) {
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -276,6 +254,7 @@ export default function handler(req, res) {
         return res.status(400).json({ error: 'Missing standard or sample data' });
     }
 
+    // 1. Сбор чистых результатов (без изменения алгоритмов калибровки)
     const rawMean = computeRawScore(standard, sample, 'mean');
     const rawMedian = computeRawScore(standard, sample, 'median');
 
@@ -291,93 +270,12 @@ export default function handler(req, res) {
     const m3D_4 = computeMethodScore(standard, sample, 'spline', 'mean');
     const m3D_5 = computeMethodScore(standard, sample, 'spline', 'median');
 
-    const rawAvg = (rawMean.percent + rawMedian.percent) / 2;
-    const cameraBonus = rawAvg >= 90 ? 2.0 : 0.0;
+    // 2. Передача чистых данных в отдельный файл вердикта
+    const resultData = getResult({
+        rawMean, rawMedian,
+        m1D_1, m1D_2, m1D_3, m1D_4, m1D_5,
+        m3D_1, m3D_2, m3D_3, m3D_4, m3D_5
+    });
 
-    const res1D = processBlockEnsemble([m1D_1.percent, m1D_2.percent, m1D_3.percent, m1D_4.percent, m1D_5.percent]);
-    const res3D = processBlockEnsemble([m3D_1.percent, m3D_2.percent, m3D_3.percent, m3D_4.percent, m3D_5.percent]);
-
-    const ensembleAverage = (res1D.total + res3D.total) / 2;
-    const finalScore = Math.min(99, Math.round((ensembleAverage + cameraBonus) * 10) / 10);
-
-    const renderMethodRow = (title, resObj, isRaw = false) => {
-        const stdLab = isRaw ? resObj.stdColor : resObj.stdCorr;
-        const smpLab = isRaw ? resObj.smpColor : resObj.smpCorr;
-        const stdRgb = labToRgb(stdLab.l, stdLab.a, stdLab.b);
-        const smpRgb = labToRgb(smpLab.l, smpLab.a, smpLab.b);
-
-        return `
-        <div class="method-row">
-            <div class="method-info">
-                <span class="method-name">${title}</span>
-                <span class="method-subtext">
-                    <span class="${resObj.status.class}">${resObj.status.text}</span> • ΔE = ${resObj.diff}
-                </span>
-            </div>
-            <div class="method-score">
-                <div class="swatches-pair">
-                    <div class="swatch-mini" style="background: rgb(${stdRgb.r},${stdRgb.g},${stdRgb.b})" title="Эталон"></div>
-                    <div class="swatch-mini" style="background: rgb(${smpRgb.r},${smpRgb.g},${smpRgb.b})" title="Образец"></div>
-                </div>
-                <span class="score-val ${resObj.status.class}">${resObj.percent}%</span>
-            </div>
-        </div>
-        `;
-    };
-
-    const html = `
-        <div class="comparison-block" style="border: 1px solid rgba(255, 179, 0, 0.4);">
-            <div class="comparison-title raw">📷 Прямое сравнение в LAB (без коррекции)</div>
-            <div class="methods-list">
-                ${renderMethodRow('Сырые данные (Среднее)', rawMean, true)}
-                ${renderMethodRow('Сырые данные (Медиана)', rawMedian, true)}
-            </div>
-        </div>
-
-        <div class="comparison-block" style="border: 1px solid rgba(0, 229, 255, 0.35);">
-            <div class="comparison-title corrected">✨ Сравнение методов 1D коррекции</div>
-            <div class="methods-list">
-                ${renderMethodRow('1D Gain + Offset (Черный/Белый)', m1D_1)}
-                ${renderMethodRow('1D Линейное + Среднее', m1D_2)}
-                ${renderMethodRow('1D Линейное + Медианное', m1D_3)}
-                ${renderMethodRow('1D Сплайновое + Среднее', m1D_4)}
-                ${renderMethodRow('1D Сплайновое + Медианное', m1D_5)}
-            </div>
-        </div>
-
-        <div class="comparison-block" style="border: 1px solid rgba(139, 92, 246, 0.35);">
-            <div class="comparison-title corrected-3d">🔮 Сравнение методов 3D коррекции</div>
-            <div class="methods-list">
-                ${renderMethodRow('3D IDW (Инверсно-взвешенное)', m3D_1)}
-                ${renderMethodRow('3D Аффинное + Среднее', m3D_2)}
-                ${renderMethodRow('3D Аффинное + Медианное', m3D_3)}
-                ${renderMethodRow('3D TPS Сплайн + Среднее', m3D_4)}
-                ${renderMethodRow('3D TPS Сплайн + Медианное', m3D_5)}
-            </div>
-        </div>
-
-        <div class="comparison-block" style="border: 1px solid rgba(0, 230, 118, 0.4); background: rgba(0, 230, 118, 0.03);">
-            <div class="comparison-title final">🏆 Итоговый ансамблевый вердикт</div>
-            <div class="final-summary">
-                <div class="summary-line">
-                    <span>📷 Бонус света камеры (Сырое > 90%):</span>
-                    <span class="summary-badge ${cameraBonus > 0 ? 'active' : ''}">+${cameraBonus}%</span>
-                </div>
-                <div class="summary-line">
-                    <span>✨ 1D Коррекция (${res1D.hasOutliers ? 'без выбросов' : 'полный ансамбль'}):</span>
-                    <span><b>${res1D.avg}%</b> <span class="summary-badge ${res1D.bonus > 0 ? 'active' : ''}">+${res1D.bonus}% консенсус</span></span>
-                </div>
-                <div class="summary-line">
-                    <span>🔮 3D Коррекция (${res3D.hasOutliers ? 'без выбросов' : 'полный ансамбль'}):</span>
-                    <span><b>${res3D.avg}%</b> <span class="summary-badge ${res3D.bonus > 0 ? 'active' : ''}">+${res3D.bonus}% консенсус</span></span>
-                </div>
-                <div class="final-total-row">
-                    <span class="final-total-label">Окончательный результат:</span>
-                    <span class="final-total-value">${finalScore}%</span>
-                </div>
-            </div>
-        </div>
-    `;
-
-    return res.status(200).json({ html });
+    return res.status(200).json({ html: resultData.html });
 }
