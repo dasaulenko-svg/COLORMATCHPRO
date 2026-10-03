@@ -54,20 +54,26 @@ export function getResult(data) {
         rawStatusClass = 'neutral';
     }
 
-    // --- 2. Подсчёт базового среднего по 10 методам (5 из 1D и 5 из 3D) ---
-    const scores = [
-        m1D_1.percent, m1D_2.percent, m1D_3.percent, m1D_4.percent, m1D_5.percent,
+    // --- 2. Раздельный подсчёт среднего для 1D методов ---
+    const scores1D = [
+        m1D_1.percent, m1D_2.percent, m1D_3.percent, m1D_4.percent, m1D_5.percent
+    ];
+    const avg1D = Math.round((scores1D.reduce((acc, val) => acc + val, 0) / scores1D.length) * 10) / 10;
+
+    // --- 3. Раздельный подсчёт среднего для 3D методов ---
+    const scores3D = [
         m3D_1.percent, m3D_2.percent, m3D_3.percent, m3D_4.percent, m3D_5.percent
     ];
+    const avg3D = Math.round((scores3D.reduce((acc, val) => acc + val, 0) / scores3D.length) * 10) / 10;
 
-    const sum = scores.reduce((acc, val) => acc + val, 0);
-    const baseScore = Math.round((sum / scores.length) * 10) / 10;
+    // --- 4. Базовый консенсус (среднее между 1D и 3D) ---
+    const baseScore = Math.round(((avg1D + avg3D) / 2) * 10) / 10;
 
-    // --- 3. Итоговый результат с учётом модификатора ---
+    // --- 5. Итоговый результат с учётом модификатора сырых данных ---
     const calculatedScore = baseScore + rawModifier;
     const finalScore = Math.min(100, Math.max(0, Math.round(calculatedScore * 10) / 10));
 
-    // --- 4. Генерация строки таблицы ---
+    // --- 6. Генерация строки таблицы ---
     const renderMethodRow = (title, resObj, isRaw = false) => {
         const stdLab = isRaw ? resObj.stdColor : resObj.stdCorr;
         const smpLab = isRaw ? resObj.smpColor : resObj.smpCorr;
@@ -93,7 +99,7 @@ export function getResult(data) {
         `;
     };
 
-    // --- 5. Формирование итогового HTML ---
+    // --- 7. Формирование итогового HTML ---
     const html = `
         <div class="comparison-block" style="border: 1px solid rgba(255, 179, 0, 0.4);">
             <div class="comparison-title raw">📷 Прямое сравнение в LAB (без коррекции)</div>
@@ -129,12 +135,20 @@ export function getResult(data) {
             <div class="comparison-title final">🏆 Итоговый вердикт с учётом консенсуса</div>
             <div class="final-summary">
                 <div class="final-total-row">
-                    <span class="final-total-label">Среднее ΔE сырых данных:</span>
-                    <span class="final-total-value">${avgRawDeltaE} (Модификатор: ${rawModifierText})</span>
+                    <span class="final-total-label">Среднее 1D методов (5 методов):</span>
+                    <span class="final-total-value">${avg1D}%</span>
                 </div>
                 <div class="final-total-row">
-                    <span class="final-total-label">Базовое среднее (10 методов 1D + 3D):</span>
+                    <span class="final-total-label">Среднее 3D методов (5 методов):</span>
+                    <span class="final-total-value">${avg3D}%</span>
+                </div>
+                <div class="final-total-row">
+                    <span class="final-total-label">Базовый консенсус (1D + 3D):</span>
                     <span class="final-total-value">${baseScore}%</span>
+                </div>
+                <div class="final-total-row">
+                    <span class="final-total-label">Среднее ΔE сырых данных:</span>
+                    <span class="final-total-value">${avgRawDeltaE} (Модификатор: ${rawModifierText})</span>
                 </div>
                 <div class="final-total-row" style="margin-top: 8px; font-weight: bold; border-top: 1px dashed rgba(255,255,255,0.2); padding-top: 8px;">
                     <span class="final-total-label">Итоговый вердикт (Базовое + Модификатор сырых):</span>
@@ -144,5 +158,5 @@ export function getResult(data) {
         </div>
     `;
 
-    return { html, finalScore };
+    return { html, finalScore, avg1D, avg3D, baseScore };
 }
