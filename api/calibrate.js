@@ -25,6 +25,34 @@ function labToRgb(l, a, b) {
     };
 }
 
+// Вспомогательный линейный solver для систем уравнений
+function solveLinearSystem(A, b) {
+    let n = b.length;
+    let aug = A.map((row, i) => [...row, b[i]]);
+    for (let i = 0; i < n; i++) {
+        let maxRow = i;
+        for (let k = i + 1; k < n; k++) {
+            if (Math.abs(aug[k][i]) > Math.abs(aug[maxRow][i])) maxRow = k;
+        }
+        let tmp = aug[i]; aug[i] = aug[maxRow]; aug[maxRow] = tmp;
+
+        if (Math.abs(aug[i][i]) < 1e-12) return null;
+
+        let pivot = aug[i][i];
+        for (let j = i; j <= n; j++) aug[i][j] /= pivot;
+
+        for (let k = 0; k < n; k++) {
+            if (k !== i) {
+                let factor = aug[k][i];
+                for (let j = i; j <= n; j++) {
+                    aug[k][j] -= factor * aug[i][j];
+                }
+            }
+        }
+    }
+    return aug.map(row => row[n]);
+}
+
 function applyGainOffsetCorrection(rawTarget, patches) {
     const IDEAL = {
         white: { l: 255, a: 128, b: 128 },
@@ -190,6 +218,109 @@ function apply3DIDWCorrection(rawTarget, patches) {
     };
 }
 
+function apply3DAffineCorrection(rawTarget, patches) {
+    const IDEAL = {
+        white:  { l: 255, a: 128, b: 128 },
+        gray:   { l: 128, a: 128, b: 128 },
+        black:  { l: 20,  a: 128, b: 128 },
+        right1: { l: 232, a: 74,  b: 104 },
+        right2: { l: 123, a: 216, b: 102 },
+        right3: { l: 247, a: 110, b: 226 }
+    };
+
+    const keys = ['white', 'gray', 'black', 'right1', 'right2', 'right3'];
+    let A = keys.map(k => [patches[k].l, patches[k].a, patches[k].b, 1]);
+    
+    let AtA = Array(4).fill(0).map(() => Array(4).fill(0));
+    for (let r = 0; r < 4; r++) {
+        for (let c = 0; c < 4; c++) {
+            let sum = 0;
+            for (let i = 0; i < keys.length; i++) {
+                sum += A[i][r] * A[i][c];
+            }
+            AtA[r][c] = sum;
+        }
+    }
+
+    function solveChannel(ch) {
+        let AtB = Array(4).fill(0);
+        for (let r = 0; r < 4; r++) {
+            let sum = 0;
+            for (let i = 0; i < keys.length; i++) {
+                sum += A[i][r] * IDEAL[keys[i]][ch];
+            }
+            AtB[r] = sum;
+        }
+        let coeff = solveLinearSystem(AtA, AtB);
+        if (!coeff) return rawTarget[ch];
+        let val = coeff[0] * rawTarget.l + coeff[1] * rawTarget.a + coeff[2] * rawTarget.b + coeff[3];
+        return Math.max(0, Math.min(255, Math.round(val)));
+    }
+
+    return {
+        l: solveChannel('l'),
+        a: solveChannel('a'),
+        b: solveChannel('b')
+    };
+}
+
+function apply3DTPSCorrection(rawTarget, patches) {
+    const IDEAL = {
+        white:  { l: 255, a: 128, b: 128 },
+        gray:   { l: 128, a: 128, b: 128 },
+        black:  { l: 20,  a: 128, b: 128 },
+        right1: { l: 232, a: 74,  b: 104 },
+        right2: { l: 123, a: 216, b: 102 },
+        right3: { l: 247, a: 110, b: 226 }
+    };
+
+    const keys = ['white', 'gray', 'black', 'right1', 'right2', 'right3'];
+    const N = keys.length;
+
+    let pts = keys.map(k => patches[k]);
+    let M = Array(N + 4).fill(0).map(() => Array(N + 4).fill(0));
+
+    for (let i = 0; i < N; i++) {
+        for (let j = 0; j < N; j++) {
+            let dist = Math.sqrt((pts[i].l - pts[j].l)**2 + (pts[i].a - pts[j].a)**2 + (pts[i].b - pts[j].b)**2);
+            M[i][j] = dist;
+        }
+        M[i][N] = 1;
+        M[i][N + 1] = pts[i].l;
+        M[i][N + 2] = pts[i].a;
+        M[i][N + 3] = pts[i].b;
+
+        M[N][i] = 1;
+        M[N + 1][i] = pts[i].l;
+        M[N + 2][i] = pts[i].a;
+        M[N + 3][i] = pts[i].b;
+    }
+
+    function solveChannel(ch) {
+        let B = Array(N + 4).fill(0);
+        for (let i = 0; i < N; i++) {
+            B[i] = IDEAL[keys[i]][ch];
+        }
+
+        let sol = solveLinearSystem(M, B);
+        if (!sol) return apply3DIDWCorrection(rawTarget, patches)[ch];
+
+        let val = sol[N] + sol[N + 1] * rawTarget.l + sol[N + 2] * rawTarget.a + sol[N + 3] * rawTarget.b;
+        for (let i = 0; i < N; i++) {
+            let dist = Math.sqrt((rawTarget.l - pts[i].l)**2 + (rawTarget.a - pts[i].a)**2 + (rawTarget.b - pts[i].b)**2);
+            val += sol[i] * dist;
+        }
+
+        return Math.max(0, Math.min(255, Math.round(val)));
+    }
+
+    return {
+        l: solveChannel('l'),
+        a: solveChannel('a'),
+        b: solveChannel('b')
+    };
+}
+
 // Перевод процента/Delta E в один из 4 вердиктов
 function getStatusBadge(diff, percent) {
     const score = percent !== undefined ? percent : deltaEToPercent(diff);
@@ -242,6 +373,8 @@ function computeMethodScore(stdRaw, smpRaw, mathMethod, statType) {
     else if (mathMethod === 'linear') corrector = applyLinearCorrection;
     else if (mathMethod === 'spline') corrector = applySplineCorrection;
     else if (mathMethod === '3d_idw') corrector = apply3DIDWCorrection;
+    else if (mathMethod === '3d_affine') corrector = apply3DAffineCorrection;
+    else if (mathMethod === '3d_tps') corrector = apply3DTPSCorrection;
     else corrector = applyLinearCorrection;
 
     const stdCorr = corrector(rawTargetStd, patchesDataStd);
@@ -283,10 +416,10 @@ export default function handler(req, res) {
     const m1D_5 = computeMethodScore(standard, sample, 'spline', 'median');
 
     const m3D_1 = computeMethodScore(standard, sample, '3d_idw', 'mean');
-    const m3D_2 = computeMethodScore(standard, sample, 'gain_offset', 'median');
-    const m3D_3 = computeMethodScore(standard, sample, 'linear', 'mean');
-    const m3D_4 = computeMethodScore(standard, sample, 'spline', 'mean');
-    const m3D_5 = computeMethodScore(standard, sample, 'spline', 'median');
+    const m3D_2 = computeMethodScore(standard, sample, '3d_affine', 'mean');
+    const m3D_3 = computeMethodScore(standard, sample, '3d_affine', 'median');
+    const m3D_4 = computeMethodScore(standard, sample, '3d_tps', 'mean');
+    const m3D_5 = computeMethodScore(standard, sample, '3d_tps', 'median');
 
     // 2. Передача чистых данных в отдельный файл вердикта
     const resultData = getResult({
