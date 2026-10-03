@@ -190,10 +190,20 @@ function apply3DIDWCorrection(rawTarget, patches) {
     };
 }
 
-function getStatusBadge(diff) {
-    if (diff >= 35) return { class: 'match-error', text: 'СОВСЕМ НЕ ТОТ' };
-    if (diff >= 15) return { class: 'match-warning', text: 'ПОЧТИ ТОТ' };
-    return { class: 'match-success', text: 'ТОТ САМЫЙ ЦВЕТ' };
+// Перевод процента/Delta E в один из 4 вердиктов
+function getStatusBadge(diff, percent) {
+    const score = percent !== undefined ? percent : deltaEToPercent(diff);
+
+    if (score >= 93) {
+        return { class: 'match-success', text: 'ТОТ САМЫЙ ЦВЕТ' };
+    }
+    if (score >= 83) {
+        return { class: 'match-warning', text: 'ПОЧТИ ТОТ' };
+    }
+    if (score >= 67) {
+        return { class: 'match-orange', text: 'ПОХОЖ, НО РАЗЛИЧАЕТСЯ' };
+    }
+    return { class: 'match-error', text: 'НЕ ТОТ ЦВЕТ' };
 }
 
 // Перевод Delta E в процент совпадения на основе восприятия человеком
@@ -213,9 +223,9 @@ function computeRawScore(stdRaw, smpRaw, statType) {
         Math.pow(stdColor.b - smpColor.b, 2)
     ));
     
-    // Применение новой нелинейной шкалы строго для сырых данных
+    // Применение нелинейной шкалы строго для сырых данных
     const percent = deltaEToPercent(diff);
-    const status = getStatusBadge(diff);
+    const status = getStatusBadge(diff, percent);
 
     return { stdColor, smpColor, diff, percent, status };
 }
@@ -243,9 +253,8 @@ function computeMethodScore(stdRaw, smpRaw, mathMethod, statType) {
         Math.pow(stdCorr.b - smpCorr.b, 2)
     ));
 
-    // Исправлено: замена старой RGB-формулы на перевод Delta E в проценты по шкале восприятия
     const percent = deltaEToPercent(diff);
-    const status = getStatusBadge(diff);
+    const status = getStatusBadge(diff, percent);
 
     return { stdCorr, smpCorr, diff, percent, status };
 }
