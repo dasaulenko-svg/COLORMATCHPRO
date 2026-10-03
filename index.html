@@ -1488,8 +1488,8 @@
         function extractPercent(htmlString) {
             const temp = document.createElement('div');
             temp.innerHTML = htmlString;
-            const totalVal = temp.querySelector('.final-total-value');
-            return totalVal ? totalVal.innerText.trim() : null;
+            const totalVals = temp.querySelectorAll('.final-total-value');
+            return totalVals.length > 0 ? totalVals[totalVals.length - 1].innerText.trim() : null;
         }
 
         // ================= ЛОГИКА PINCH TO ZOOM ПРОСМОТРА =================
