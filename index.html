@@ -1323,7 +1323,7 @@
                 }
 
                 warpedLab = new cv.Mat();
-                cv.cvtColor(warped, warpedLab, cv.COLOR_BGR2Lab);
+                cv.cvtColor(warped, warpedLab, cv.COLOR_RGBA2Lab);
 
                 const holeCenterX = Math.round(CARD_W * 0.508); 
                 const holeCenterY = Math.round(CARD_H * 0.468);
