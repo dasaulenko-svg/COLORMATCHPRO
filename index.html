@@ -1221,7 +1221,7 @@
         function processImageWithCard(canvasSource, canvasTargetId) {
             let src = null, gray = null, blurred = null, thresh = null;
             let contours = null, hierarchy = null;
-            let warped = null, warpedLab = null, srcMat = null, dstMat = null, M = null;
+            let warped = null, warpedBgr = null, warpedLab = null, srcMat = null, dstMat = null, M = null;
 
             let extractedData = {
                 mainMean: { l: 0, a: 128, b: 128 },
@@ -1322,8 +1322,13 @@
                     cv.resize(src, warped, new cv.Size(CARD_W, CARD_H));
                 }
 
+                // Конвертация в BGR через отдельную переменную warpedBgr,
+                // чтобы не изменять warped (RGBA), необходимый для корректного cv.imshow
+                warpedBgr = new cv.Mat();
+                cv.cvtColor(warped, warpedBgr, cv.COLOR_RGBA2BGR);
+
                 warpedLab = new cv.Mat();
-                cv.cvtColor(warped, warpedLab, cv.COLOR_RGBA2Lab);
+                cv.cvtColor(warpedBgr, warpedLab, cv.COLOR_BGR2Lab);
 
                 const holeCenterX = Math.round(CARD_W * 0.508); 
                 const holeCenterY = Math.round(CARD_H * 0.468);
@@ -1365,6 +1370,7 @@
                 if (contours) contours.delete();
                 if (hierarchy) hierarchy.delete();
                 if (warped) warped.delete();
+                if (warpedBgr) warpedBgr.delete();
                 if (warpedLab) warpedLab.delete();
                 if (srcMat) srcMat.delete();
                 if (dstMat) dstMat.delete();
