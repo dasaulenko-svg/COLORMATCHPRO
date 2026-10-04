@@ -1,21 +1,5 @@
 import { getResult } from './getResult.js';
 
-// Вспомогательная функция для безопасного получения данных плашки (с поддержкой алиасов)
-function getPatch(patches, key) {
-    if (!patches) return null;
-    if (patches[key]) return patches[key];
-    const aliases = {
-        'right1': 'cyan',
-        'right2': 'magenta',
-        'right3': 'yellow',
-        'cyan': 'right1',
-        'magenta': 'right2',
-        'yellow': 'right3'
-    };
-    if (aliases[key] && patches[aliases[key]]) return patches[aliases[key]];
-    return null;
-}
-
 function labToRgb(l, a, b) {
     let y = (l + 16) / 116;
     let x = a / 500 + y;
@@ -75,11 +59,8 @@ function applyGainOffsetCorrection(rawTarget, patches) {
         black: { l: 20,  a: 128, b: 128 }
     };
 
-    const pWhite = getPatch(patches, 'white') || IDEAL.white;
-    const pBlack = getPatch(patches, 'black') || IDEAL.black;
-
     function corrChannel(val, ch) {
-        let wIn = pWhite[ch], bIn = pBlack[ch];
+        let wIn = patches.white[ch], bIn = patches.black[ch];
         let wOut = IDEAL.white[ch], bOut = IDEAL.black[ch];
         let denom = (wIn - bIn) || 1;
         let res = bOut + (val - bIn) * (wOut - bOut) / denom;
@@ -100,16 +81,12 @@ function applyLinearCorrection(rawTarget, patches) {
         black: { l: 20,  a: 128, b: 128 }
     };
 
-    const pWhite = getPatch(patches, 'white') || IDEAL.white;
-    const pGray  = getPatch(patches, 'gray')  || IDEAL.gray;
-    const pBlack = getPatch(patches, 'black') || IDEAL.black;
-
     function interpolateChannel(val, ch) {
         let pts = [
             { x: 0, y: 0 },
-            { x: pBlack[ch], y: IDEAL.black[ch] },
-            { x: pGray[ch],  y: IDEAL.gray[ch] },
-            { x: pWhite[ch], y: IDEAL.white[ch] },
+            { x: patches.black[ch], y: IDEAL.black[ch] },
+            { x: patches.gray[ch],  y: IDEAL.gray[ch] },
+            { x: patches.white[ch], y: IDEAL.white[ch] },
             { x: 255, y: 255 }
         ];
 
@@ -161,16 +138,12 @@ function applySplineCorrection(rawTarget, patches) {
         black: { l: 20,  a: 128, b: 128 }
     };
 
-    const pWhite = getPatch(patches, 'white') || IDEAL.white;
-    const pGray  = getPatch(patches, 'gray')  || IDEAL.gray;
-    const pBlack = getPatch(patches, 'black') || IDEAL.black;
-
     function monotonicSpline(val, ch) {
         let pts = [
             { x: 0, y: 0 },
-            { x: pBlack[ch], y: IDEAL.black[ch] },
-            { x: pGray[ch],  y: IDEAL.gray[ch] },
-            { x: pWhite[ch], y: IDEAL.white[ch] },
+            { x: patches.black[ch], y: IDEAL.black[ch] },
+            { x: patches.gray[ch],  y: IDEAL.gray[ch] },
+            { x: patches.white[ch], y: IDEAL.white[ch] },
             { x: 255, y: 255 }
         ];
 
@@ -223,8 +196,7 @@ function apply3DIDWCorrection(rawTarget, patches) {
     let sumW = 0, sumDL = 0, sumDA = 0, sumDB = 0;
 
     for (let k of keys) {
-        let p = getPatch(patches, k);
-        if (!p) continue;
+        let p = patches[k];
         let target = IDEAL[k];
         let dist = Math.sqrt((rawTarget.l - p.l)**2 + (rawTarget.a - p.a)**2 + (rawTarget.b - p.b)**2);
         let w = 1.0 / (Math.pow(dist, 2) + 1e-4);
@@ -234,8 +206,6 @@ function apply3DIDWCorrection(rawTarget, patches) {
         sumDA += w * (target.a - p.a);
         sumDB += w * (target.b - p.b);
     }
-
-    if (sumW === 0) return rawTarget;
 
     let resL = rawTarget.l + sumDL / sumW;
     let resA = rawTarget.a + sumDA / sumW;
@@ -259,19 +229,13 @@ function apply3DAffineCorrection(rawTarget, patches) {
     };
 
     const keys = ['white', 'gray', 'black', 'right1', 'right2', 'right3'];
-    let validKeys = keys.filter(k => getPatch(patches, k) !== null);
-    if (validKeys.length < 4) return rawTarget;
-
-    let A = validKeys.map(k => {
-        let p = getPatch(patches, k);
-        return [p.l, p.a, p.b, 1];
-    });
+    let A = keys.map(k => [patches[k].l, patches[k].a, patches[k].b, 1]);
     
     let AtA = Array(4).fill(0).map(() => Array(4).fill(0));
     for (let r = 0; r < 4; r++) {
         for (let c = 0; c < 4; c++) {
             let sum = 0;
-            for (let i = 0; i < validKeys.length; i++) {
+            for (let i = 0; i < keys.length; i++) {
                 sum += A[i][r] * A[i][c];
             }
             AtA[r][c] = sum;
@@ -282,8 +246,8 @@ function apply3DAffineCorrection(rawTarget, patches) {
         let AtB = Array(4).fill(0);
         for (let r = 0; r < 4; r++) {
             let sum = 0;
-            for (let i = 0; i < validKeys.length; i++) {
-                sum += A[i][r] * IDEAL[validKeys[i]][ch];
+            for (let i = 0; i < keys.length; i++) {
+                sum += A[i][r] * IDEAL[keys[i]][ch];
             }
             AtB[r] = sum;
         }
@@ -311,11 +275,9 @@ function apply3DTPSCorrection(rawTarget, patches) {
     };
 
     const keys = ['white', 'gray', 'black', 'right1', 'right2', 'right3'];
-    let validKeys = keys.filter(k => getPatch(patches, k) !== null);
-    const N = validKeys.length;
-    if (N < 4) return rawTarget;
+    const N = keys.length;
 
-    let pts = validKeys.map(k => getPatch(patches, k));
+    let pts = keys.map(k => patches[k]);
     let M = Array(N + 4).fill(0).map(() => Array(N + 4).fill(0));
 
     for (let i = 0; i < N; i++) {
@@ -337,7 +299,7 @@ function apply3DTPSCorrection(rawTarget, patches) {
     function solveChannel(ch) {
         let B = Array(N + 4).fill(0);
         for (let i = 0; i < N; i++) {
-            B[i] = IDEAL[validKeys[i]][ch];
+            B[i] = IDEAL[keys[i]][ch];
         }
 
         let sol = solveLinearSystem(M, B);
@@ -349,160 +311,6 @@ function apply3DTPSCorrection(rawTarget, patches) {
             val += sol[i] * dist;
         }
 
-        return Math.max(0, Math.min(255, Math.round(val)));
-    }
-
-    return {
-        l: solveChannel('l'),
-        a: solveChannel('a'),
-        b: solveChannel('b')
-    };
-}
-
-// 3D Матрица 3x3 (без сдвига)
-function apply3DMatrix3x3Correction(rawTarget, patches) {
-    const IDEAL = {
-        white:  { l: 255, a: 128, b: 128 },
-        gray:   { l: 128, a: 128, b: 128 },
-        black:  { l: 20,  a: 128, b: 128 },
-        right1: { l: 232, a: 74,  b: 104 },
-        right2: { l: 123, a: 216, b: 102 },
-        right3: { l: 247, a: 110, b: 226 }
-    };
-
-    const keys = ['white', 'gray', 'black', 'right1', 'right2', 'right3'];
-    let validKeys = keys.filter(k => getPatch(patches, k) !== null);
-    if (validKeys.length < 3) return rawTarget;
-
-    let A = validKeys.map(k => {
-        let p = getPatch(patches, k);
-        return [p.l, p.a, p.b];
-    });
-
-    let AtA = Array(3).fill(0).map(() => Array(3).fill(0));
-    for (let r = 0; r < 3; r++) {
-        for (let c = 0; c < 3; c++) {
-            let sum = 0;
-            for (let i = 0; i < validKeys.length; i++) {
-                sum += A[i][r] * A[i][c];
-            }
-            AtA[r][c] = sum;
-        }
-    }
-
-    function solveChannel(ch) {
-        let AtB = Array(3).fill(0);
-        for (let r = 0; r < 3; r++) {
-            let sum = 0;
-            for (let i = 0; i < validKeys.length; i++) {
-                sum += A[i][r] * IDEAL[validKeys[i]][ch];
-            }
-            AtB[r] = sum;
-        }
-        let coeff = solveLinearSystem(AtA, AtB);
-        if (!coeff) return rawTarget[ch];
-        let val = coeff[0] * rawTarget.l + coeff[1] * rawTarget.a + coeff[2] * rawTarget.b;
-        return Math.max(0, Math.min(255, Math.round(val)));
-    }
-
-    return {
-        l: solveChannel('l'),
-        a: solveChannel('a'),
-        b: solveChannel('b')
-    };
-}
-
-// 3D Полиномиальная модель 2-го порядка
-function apply3DPoly2Correction(rawTarget, patches) {
-    const IDEAL = {
-        white:  { l: 255, a: 128, b: 128 },
-        gray:   { l: 128, a: 128, b: 128 },
-        black:  { l: 20,  a: 128, b: 128 },
-        right1: { l: 232, a: 74,  b: 104 },
-        right2: { l: 123, a: 216, b: 102 },
-        right3: { l: 247, a: 110, b: 226 }
-    };
-
-    const keys = ['white', 'gray', 'black', 'right1', 'right2', 'right3'];
-    let validKeys = keys.filter(k => getPatch(patches, k) !== null);
-    if (validKeys.length < 6) return apply3DAffineCorrection(rawTarget, patches);
-
-    let A = validKeys.map(k => {
-        let p = getPatch(patches, k);
-        return [p.l, p.a, p.b, (p.l**2)/255, (p.a**2)/255, (p.b**2)/255];
-    });
-
-    let AtA = Array(6).fill(0).map(() => Array(6).fill(0));
-    for (let r = 0; r < 6; r++) {
-        for (let c = 0; c < 6; c++) {
-            let sum = 0;
-            for (let i = 0; i < validKeys.length; i++) {
-                sum += A[i][r] * A[i][c];
-            }
-            AtA[r][c] = sum + (r === c ? 1e-4 : 0);
-        }
-    }
-
-    function solveChannel(ch) {
-        let AtB = Array(6).fill(0);
-        for (let r = 0; r < 6; r++) {
-            let sum = 0;
-            for (let i = 0; i < validKeys.length; i++) {
-                sum += A[i][r] * IDEAL[validKeys[i]][ch];
-            }
-            AtB[r] = sum;
-        }
-        let coeff = solveLinearSystem(AtA, AtB);
-        if (!coeff) return rawTarget[ch];
-        let val = coeff[0] * rawTarget.l + coeff[1] * rawTarget.a + coeff[2] * rawTarget.b +
-                  coeff[3] * (rawTarget.l**2)/255 + coeff[4] * (rawTarget.a**2)/255 + coeff[5] * (rawTarget.b**2)/255;
-        return Math.max(0, Math.min(255, Math.round(val)));
-    }
-
-    return {
-        l: solveChannel('l'),
-        a: solveChannel('a'),
-        b: solveChannel('b')
-    };
-}
-
-// 3D RBF (Радиально-базисная функция)
-function apply3DRBFCorrection(rawTarget, patches) {
-    const IDEAL = {
-        white:  { l: 255, a: 128, b: 128 },
-        gray:   { l: 128, a: 128, b: 128 },
-        black:  { l: 20,  a: 128, b: 128 },
-        right1: { l: 232, a: 74,  b: 104 },
-        right2: { l: 123, a: 216, b: 102 },
-        right3: { l: 247, a: 110, b: 226 }
-    };
-
-    const keys = ['white', 'gray', 'black', 'right1', 'right2', 'right3'];
-    let validKeys = keys.filter(k => getPatch(patches, k) !== null);
-    const N = validKeys.length;
-    if (N < 3) return rawTarget;
-
-    let pts = validKeys.map(k => getPatch(patches, k));
-    const sigma = 100;
-
-    let K = Array(N).fill(0).map(() => Array(N).fill(0));
-    for (let i = 0; i < N; i++) {
-        for (let j = 0; j < N; j++) {
-            let distSq = (pts[i].l - pts[j].l)**2 + (pts[i].a - pts[j].a)**2 + (pts[i].b - pts[j].b)**2;
-            K[i][j] = Math.exp(-distSq / (2 * sigma * sigma)) + (i === j ? 1e-4 : 0);
-        }
-    }
-
-    function solveChannel(ch) {
-        let B = validKeys.map(k => IDEAL[k][ch]);
-        let w = solveLinearSystem(K, B);
-        if (!w) return apply3DIDWCorrection(rawTarget, patches)[ch];
-
-        let val = 0;
-        for (let i = 0; i < N; i++) {
-            let distSq = (rawTarget.l - pts[i].l)**2 + (rawTarget.a - pts[i].a)**2 + (rawTarget.b - pts[i].b)**2;
-            val += w[i] * Math.exp(-distSq / (2 * sigma * sigma));
-        }
         return Math.max(0, Math.min(255, Math.round(val)));
     }
 
@@ -558,7 +366,7 @@ function computeMethodScore(stdRaw, smpRaw, mathMethod, statType) {
     const rawTargetSmp = statType === 'mean' ? smpRaw.mainMean : (smpRaw.mainMedian || smpRaw.mainMean);
     
     const patchesDataStd = statType === 'mean' ? stdRaw.patchesMean : (stdRaw.patchesMedian || stdRaw.patchesMean);
-    const patchesDataSmp = statType === 'mean' ? smpRaw.patchesMedian || smpRaw.patchesMean : (smpRaw.patchesMedian || smpRaw.patchesMean);
+    const patchesDataSmp = statType === 'mean' ? smpRaw.patchesMean : (smpRaw.patchesMedian || smpRaw.patchesMean);
 
     let corrector;
     if (mathMethod === 'gain_offset') corrector = applyGainOffsetCorrection;
@@ -567,9 +375,6 @@ function computeMethodScore(stdRaw, smpRaw, mathMethod, statType) {
     else if (mathMethod === '3d_idw') corrector = apply3DIDWCorrection;
     else if (mathMethod === '3d_affine') corrector = apply3DAffineCorrection;
     else if (mathMethod === '3d_tps') corrector = apply3DTPSCorrection;
-    else if (mathMethod === '3d_matrix3x3') corrector = apply3DMatrix3x3Correction;
-    else if (mathMethod === '3d_poly2') corrector = apply3DPoly2Correction;
-    else if (mathMethod === '3d_rbf') corrector = apply3DRBFCorrection;
     else corrector = applyLinearCorrection;
 
     const stdCorr = corrector(rawTargetStd, patchesDataStd);
@@ -616,17 +421,11 @@ export default function handler(req, res) {
     const m3D_4 = computeMethodScore(standard, sample, '3d_tps', 'mean');
     const m3D_5 = computeMethodScore(standard, sample, '3d_tps', 'median');
 
-    // Дополнительные методы 3D для просмотра в Pro режиме
-    const m3D_6 = computeMethodScore(standard, sample, '3d_matrix3x3', 'mean');
-    const m3D_7 = computeMethodScore(standard, sample, '3d_poly2', 'mean');
-    const m3D_8 = computeMethodScore(standard, sample, '3d_rbf', 'mean');
-
     // 2. Передача чистых данных в отдельный файл вердикта
     const resultData = getResult({
         rawMean, rawMedian,
         m1D_1, m1D_2, m1D_3, m1D_4, m1D_5,
-        m3D_1, m3D_2, m3D_3, m3D_4, m3D_5,
-        m3D_6, m3D_7, m3D_8
+        m3D_1, m3D_2, m3D_3, m3D_4, m3D_5
     });
 
     return res.status(200).json({ html: resultData.html });

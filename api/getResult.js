@@ -28,8 +28,7 @@ export function getResult(data) {
     const {
         rawMean, rawMedian,
         m1D_1, m1D_2, m1D_3, m1D_4, m1D_5,
-        m3D_1, m3D_2, m3D_3, m3D_4, m3D_5,
-        m3D_6, m3D_7, m3D_8
+        m3D_1, m3D_2, m3D_3, m3D_4, m3D_5
     } = data;
 
     // --- 1. Обработка сырых данных и подсчёт бонуса/штрафа ---
@@ -62,8 +61,9 @@ export function getResult(data) {
     const avg1D = Math.round((scores1D.reduce((acc, val) => acc + val, 0) / scores1D.length) * 10) / 10;
 
     // --- 3. Раздельный подсчёт среднего для 3D методов ---
-    const all3D = [m3D_1, m3D_2, m3D_3, m3D_4, m3D_5, m3D_6, m3D_7, m3D_8].filter(Boolean);
-    const scores3D = all3D.map(m => m.percent);
+    const scores3D = [
+        m3D_1.percent, m3D_2.percent, m3D_3.percent, m3D_4.percent, m3D_5.percent
+    ];
     const avg3D = Math.round((scores3D.reduce((acc, val) => acc + val, 0) / scores3D.length) * 10) / 10;
 
     // --- 4. Базовый консенсус (среднее между 1D и 3D) ---
@@ -75,7 +75,6 @@ export function getResult(data) {
 
     // --- 6. Генерация строки таблицы ---
     const renderMethodRow = (title, resObj, isRaw = false) => {
-        if (!resObj) return '';
         const stdLab = isRaw ? resObj.stdColor : resObj.stdCorr;
         const smpLab = isRaw ? resObj.smpColor : resObj.smpCorr;
         const stdRgb = labToRgb(stdLab.l, stdLab.a, stdLab.b);
@@ -129,9 +128,6 @@ export function getResult(data) {
                 ${renderMethodRow('3D Аффинное + Медианное', m3D_3)}
                 ${renderMethodRow('3D TPS Сплайн + Среднее', m3D_4)}
                 ${renderMethodRow('3D TPS Сплайн + Медианное', m3D_5)}
-                ${renderMethodRow('3D Матрица 3x3 + Среднее', m3D_6)}
-                ${renderMethodRow('3D Модель 2-го порядка (Poly2)', m3D_7)}
-                ${renderMethodRow('3D RBF (Радиально-базисная)', m3D_8)}
             </div>
         </div>
 
@@ -143,7 +139,7 @@ export function getResult(data) {
                     <span class="final-total-value">${avg1D}%</span>
                 </div>
                 <div class="final-total-row">
-                    <span class="final-total-label">Среднее 3D методов (${all3D.length} методов):</span>
+                    <span class="final-total-label">Среднее 3D методов (5 методов):</span>
                     <span class="final-total-value">${avg3D}%</span>
                 </div>
                 <div class="final-total-row">
