@@ -38,42 +38,83 @@ export function getResult(data) {
 
     let rawModifier = 0;
     let rawModifierText = '0%';
-    let rawStatusClass = 'neutral';
 
     if (avgRawDeltaE < 4) {
         rawModifier = 2;
-        rawModifierText = '+2% (Бонус)';
-        rawStatusClass = 'good';
+        rawModifierText = '+2% (Бонус камеры)';
     } else if (avgRawDeltaE > 8) {
         rawModifier = -2;
-        rawModifierText = '-2% (Штраф)';
-        rawStatusClass = 'bad';
+        rawModifierText = '-2% (Штраф камеры)';
     } else {
         rawModifier = 0;
         rawModifierText = '0% (Без изменений)';
-        rawStatusClass = 'neutral';
     }
 
-    // --- 2. Раздельный подсчёт среднего для 1D методов ---
-    const scores1D = [
-        m1D_1.percent, m1D_2.percent, m1D_3.percent, m1D_4.percent, m1D_5.percent
-    ];
-    const avg1D = Math.round((scores1D.reduce((acc, val) => acc + val, 0) / scores1D.length) * 10) / 10;
+    // --- 2. Функция расчёта группы с проверкой выбросов и бонусов (до 5% разброс, балл >= 90) ---
+    const processGroup = (methodsArray) => {
+        let scores = methodsArray.map(m => m.percent);
+        let min = Math.min(...scores);
+        let max = Math.max(...scores);
+        let spread = max - min;
 
-    // --- 3. Раздельный подсчёт среднего для 3D методов ---
-    const scores3D = [
-        m3D_1.percent, m3D_2.percent, m3D_3.percent, m3D_4.percent, m3D_5.percent
-    ];
-    const avg3D = Math.round((scores3D.reduce((acc, val) => acc + val, 0) / scores3D.length) * 10) / 10;
+        let hasOutlier = false;
+        let validScores = [...scores];
 
-    // --- 4. Базовый консенсус (среднее между 1D и 3D) ---
-    const baseScore = Math.round(((avg1D + avg3D) / 2) * 10) / 10;
+        // Если есть сильный отстрел (например, разброс больше 15 или явный вылет одного метода)
+        // Для примера отсекаем крайнее значение, если оно сильно удалено от медианы
+        scores.sort((a, b) => a - b);
+        const median = scores[Math.floor(scores.length / 2)];
+        
+        // Проверяем элементы на сильный выброс (> 15% от медианы)
+        let filtered = methodsArray.filter(m => {
+            if (Math.abs(m.percent - median) > 15) {
+                hasOutlier = true;
+                return false;
+            }
+            return true;
+        });
 
-    // --- 5. Итоговый результат с учётом модификатора сырых данных ---
+        // Если отсекли, пересчитываем валидные баллы
+        let activeScores = filtered.map(m => m.percent);
+        let groupAvg = activeScores.reduce((acc, val) => acc + val, 0) / activeScores.length;
+        groupAvg = Math.round(groupAvg * 10) / 10;
+
+        let newSpread = Math.max(...activeScores) - Math.min(...activeScores);
+        let groupBonus = 0;
+        let groupBonusText = '0%';
+
+        // Условие бонуса: среднее >= 90, разброс < 5% и нет отсеянных выбросов
+        if (groupAvg >= 90 && newSpread < 5 && !hasOutlier) {
+            groupBonus = 2;
+            groupBonusText = '+2% (Консенсус)';
+        }
+
+        const finalGroupScore = Math.min(100, Math.max(0, groupAvg + groupBonus));
+
+        return {
+            avg: groupAvg,
+            bonus: groupBonus,
+            bonusText: groupBonusText,
+            final: finalGroupScore,
+            hasOutlier
+        };
+    };
+
+    // Обрабатываем 1D и 3D группы независимо
+    const raw1DList = [m1D_1, m1D_2, m1D_3, m1D_4, m1D_5];
+    const raw3DList = [m3D_1, m3D_2, m3D_3, m3D_4, m3D_5];
+
+    const res1D = processGroup(raw1DList);
+    const res3D = processGroup(raw3DList);
+
+    // --- 3. Базовый консенсус между группами ---
+    const baseScore = Math.round(((res1D.final + res3D.final) / 2) * 10) / 10;
+
+    // --- 4. Итоговый результат с учётом модификатора сырых данных ---
     const calculatedScore = baseScore + rawModifier;
     const finalScore = Math.min(100, Math.max(0, Math.round(calculatedScore * 10) / 10));
 
-    // --- 6. Генерация строки таблицы ---
+    // --- 5. Генерация строки таблицы ---
     const renderMethodRow = (title, resObj, isRaw = false) => {
         const stdLab = isRaw ? resObj.stdColor : resObj.stdCorr;
         const smpLab = isRaw ? resObj.smpColor : resObj.smpCorr;
@@ -99,7 +140,7 @@ export function getResult(data) {
         `;
     };
 
-    // --- 7. Формирование итогового HTML ---
+    // --- 6. Формирование итогового HTML ---
     const html = `
         <div class="comparison-block" style="border: 1px solid rgba(255, 179, 0, 0.4);">
             <div class="comparison-title raw">📷 Прямое сравнение в LAB (без коррекции)</div>
@@ -135,12 +176,12 @@ export function getResult(data) {
             <div class="comparison-title final">🏆 Итоговый вердикт с учётом консенсуса</div>
             <div class="final-summary">
                 <div class="final-total-row">
-                    <span class="final-total-label">Среднее 1D методов (5 методов):</span>
-                    <span class="final-total-value">${avg1D}%</span>
+                    <span class="final-total-label">1D Группа (Среднее: ${res1D.avg}%, Бонус: ${res1D.bonusText}):</span>
+                    <span class="final-total-value">${res1D.final}%</span>
                 </div>
                 <div class="final-total-row">
-                    <span class="final-total-label">Среднее 3D методов (5 методов):</span>
-                    <span class="final-total-value">${avg3D}%</span>
+                    <span class="final-total-label">3D Группа (Среднее: ${res3D.avg}%, Бонус: ${res3D.bonusText}):</span>
+                    <span class="final-total-value">${res3D.final}%</span>
                 </div>
                 <div class="final-total-row">
                     <span class="final-total-label">Базовый консенсус (1D + 3D):</span>
@@ -151,12 +192,18 @@ export function getResult(data) {
                     <span class="final-total-value">${avgRawDeltaE} (Модификатор: ${rawModifierText})</span>
                 </div>
                 <div class="final-total-row" style="margin-top: 8px; font-weight: bold; border-top: 1px dashed rgba(255,255,255,0.2); padding-top: 8px;">
-                    <span class="final-total-label">Итоговый вердикт (Базовое + Модификатор сырых):</span>
+                    <span class="final-total-label">Итоговый вердикт:</span>
                     <span class="final-total-value" style="font-size: 1.2em;">${finalScore}%</span>
                 </div>
             </div>
         </div>
     `;
 
-    return { html, finalScore, avg1D, avg3D, baseScore };
+    return { 
+        html, 
+        finalScore, 
+        avg1D: res1D.final, 
+        avg3D: res3D.final, 
+        baseScore 
+    };
 }
