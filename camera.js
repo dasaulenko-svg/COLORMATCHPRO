@@ -1,4 +1,4 @@
-// Запуск камеры и получение потока высокго разрешения
+// Запуск камеры и получение потока высокого разрешения
 async function openCamera(mode) {
     activeMode = mode;
     document.getElementById('cameraTitle').innerText = mode === 'standard' ? 'Съемка Эталона' : 'Съемка Образца';
@@ -89,7 +89,7 @@ function closeCamera() {
     cameraModal.classList.remove('active');
 }
 
-// Захват кадра с использованием ImageCapture (с фоллбэком на видео)
+// Захват кадра с паузой на стабилизацию и ресайзом до 1280px для OpenCV
 async function takeSnapshot() {
     if (!video.videoWidth || !video.videoHeight) return;
 
@@ -105,6 +105,9 @@ async function takeSnapshot() {
     // Попытка получить снимок высокого разрешения через ImageCapture
     if ('ImageCapture' in window && track) {
         try {
+            // Задержка 150 мс для переключения режима камеры и фиксации фокуса
+            await new Promise(resolve => setTimeout(resolve, 150));
+
             const imageCapture = new ImageCapture(track);
             const blob = await imageCapture.takePhoto();
             const bitmap = await createImageBitmap(blob);
@@ -157,12 +160,23 @@ async function takeSnapshot() {
     const cropW = Math.min(imgW - cropX, Math.round(rectViewportW * scaleX));
     const cropH = Math.min(imgH - cropY, Math.round(rectViewportH * scaleY));
 
+    // Приводим кропнутый кадр к рабочей ширине 1280px для OpenCV
+    const TARGET_WIDTH = 1280;
+    let finalW = cropW;
+    let finalH = cropH;
+
+    if (cropW > TARGET_WIDTH) {
+        finalW = TARGET_WIDTH;
+        finalH = Math.round((cropH * TARGET_WIDTH) / cropW);
+    }
+
     const croppedCanvas = document.createElement('canvas');
-    croppedCanvas.width = cropW;
-    croppedCanvas.height = cropH;
+    croppedCanvas.width = finalW;
+    croppedCanvas.height = finalH;
 
     const ctx = croppedCanvas.getContext('2d');
-    ctx.drawImage(sourceElement, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
+    // Масштабируем с сохранением пропорций
+    ctx.drawImage(sourceElement, cropX, cropY, cropW, cropH, 0, 0, finalW, finalH);
 
     closeCamera();
     handleImageSource(croppedCanvas, activeMode);
