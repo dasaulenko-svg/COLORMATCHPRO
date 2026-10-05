@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>SPECTRIX</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Внешние стили -->
+    <link rel="stylesheet" href="styles.css">
+    
+    <!-- Подключение OpenCV.js -->
+    <script async src="https://docs.opencv.org/4.5.5/opencv.js" onload="onOpenCvReady()"></script>
+</head>
+<body>
+
+    <div class="container">
+        <!-- ТРОЙНОЙ ТАП ПО ШАПКЕ АКТИВИРУЕТ PRO -->
+        <div class="header">
+            <div class="brand" id="brandTrigger">
+                <div class="logo-badge">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z"/>
+                    </svg>
+                </div>
+                <div class="title-group">
+                    <h1>SPECTRIX</h1>
+                    <div class="pro-badge">PRO</div>
+                </div>
+            </div>
+
+            <div class="menu-container">
+                <button class="menu-btn" onclick="toggleMenu()">
+                    <span id="activeMenuLabel">🎯 Сравнение</span> ▾
+                </button>
+                <div class="menu-dropdown" id="menuDropdown">
+                    <div class="menu-item active" onclick="switchMode('compare', '🎯 Сравнение')">
+                        🎯 Сравнение цвета
+                    </div>
+                    <div class="menu-item" onclick="switchMode('calibrate', '🖥️ Калибровка')">
+                        🖥️ Калибровка экрана
+                    </div>
+                    <div class="menu-item" onclick="switchMode('camCalibrate', '📷 Калибровка камеры')">
+                        📷 Калибровка камеры
+                    </div>
+                    <div class="menu-item" onclick="switchMode('correct', '🎨 Цветокоррекция')">
+                        🎨 Цветокоррекция снимка
+                    </div>
+                    <div class="menu-item" onclick="switchMode('catalog', '🎨 Цвет из каталога')">
+                        🎨 Цвет из каталога
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="status-pill" id="cvStatus">
+            <span class="status-dot loading"></span> Загрузка ядра OpenCV...
+        </div>
+
+        <div class="view-pane active" id="paneCompare">
+            <div class="grid">
+                <div class="col">
+                    <div class="col-header">
+                        <h3>1. Эталон</h3>
+                        <span class="step-tag">01</span>
+                    </div>
+                    <div class="preview-box" onclick="openZoomModal('canvasStandard')">
+                        <canvas id="canvasStandard"></canvas>
+                    </div>
+                    <button class="btn-action" id="btnStandard" onclick="openCamera('standard')" disabled>
+                        📷 Снять Эталон
+                    </button>
+                    <div class="info-container" id="infoStandard"></div>
+                </div>
+
+                <div class="col">
+                    <div class="col-header">
+                        <h3>2. Образец</h3>
+                        <span class="step-tag">02</span>
+                    </div>
+                    <div class="preview-box" onclick="openZoomModal('canvasSample')">
+                        <canvas id="canvasSample"></canvas>
+                    </div>
+                    <button class="btn-action secondary" id="btnSample" onclick="openCamera('sample')" disabled>
+                        📸 Снять Образец
+                    </button>
+                    <div class="info-container" id="infoSample"></div>
+                </div>
+            </div>
+
+            <div class="card" id="infoCard" style="display:none;">
+                <div id="result"></div>
+                <button class="reset-btn" id="resetBtn">🔄 Начать новый тест</button>
+            </div>
+        </div>
+
+        <div class="view-pane" id="paneCalibrate">
+            <div class="stub-box">
+                🖥️ <b>Калибровка экрана</b><br><br>
+                Режим настройки яркости и цветового профиля дисплея.
+            </div>
+        </div>
+
+        <div class="view-pane" id="paneCamCalibrate">
+            <div class="stub-box">
+                📷 <b>Калибровка камеры</b><br><br>
+                Настройка профиля сенсора, экспозиции и баланса белого.
+            </div>
+        </div>
+
+        <div class="view-pane" id="paneCorrect">
+            <div class="stub-box">
+                🎨 <b>Цветокоррекция снимка</b><br><br>
+                Выравнивание баланса белого и экспозиции.
+            </div>
+        </div>
+
+        <div class="view-pane" id="paneCatalog">
+            <div class="stub-box">
+                🎨 <b>Цвет из каталога</b><br><br>
+                Подбор артикула и кода цвета по палитрам (NCS, RAL, Caparol, Pantone).
+            </div>
+        </div>
+    </div>
+
+    <!-- МОДАЛЬНОЕ ОКНО КАМЕРЫ -->
+    <div class="camera-modal" id="cameraModal">
+        <div class="camera-card">
+            <div class="camera-header">
+                <span id="cameraTitle">Сканирование карточки</span>
+                <button class="close-btn" onclick="closeCamera()">✕</button>
+            </div>
+            
+            <div class="camera-viewport">
+                <div class="ev-control-panel" id="evControlPanel">
+                    <button class="ev-btn" onclick="adjustEV(-1)">-</button>
+                    <span class="ev-display" id="evValueDisplay">EV: 0.0</span>
+                    <button class="ev-btn" onclick="adjustEV(1)">+</button>
+                </div>
+
+                <video id="webcam" autoplay playsinline></video>
+                <svg class="camera-overlay" viewBox="0 0 400 320">
+                    <defs>
+                        <mask id="card-mask">
+                            <rect width="100%" height="100%" fill="white"/>
+                            <rect x="50" y="55" width="300" height="190" rx="12" fill="black"/>
+                        </mask>
+                    </defs>
+
+                    <rect width="100%" height="100%" fill="rgba(0,0,0,0.55)" mask="url(#card-mask)"/>
+                    <rect x="50" y="55" width="300" height="190" rx="12" fill="none" stroke="#00E5FF" stroke-width="2" stroke-dasharray="6 4"/>
+                    <circle cx="200" cy="150" r="26" fill="none" stroke="#00E676" stroke-width="2"/>
+                    <line x1="200" y1="115" x2="200" y2="185" stroke="#00E676" stroke-width="1.5"/>
+                    <line x1="165" y1="150" x2="235" y2="150" stroke="#00E676" stroke-width="1.5"/>
+
+                    <text x="200" y="32" fill="#FFFFFF" font-size="12" font-weight="600" text-anchor="middle">
+                        Совместите карту с рамкой
+                    </text>
+                </svg>
+            </div>
+
+            <button class="btn-action" onclick="takeSnapshot()">
+                📸 Сделать снимок
+            </button>
+        </div>
+    </div>
+
+    <!-- МОДАЛЬНОЕ ОКНО ZOOM ПРОСМОТРА -->
+    <div class="zoom-modal" id="zoomModal">
+        <div class="zoom-header">
+            <span id="zoomTitle">Просмотр снимка</span>
+            <button class="close-btn" onclick="closeZoomModal()">✕</button>
+        </div>
+        <div class="zoom-viewport" id="zoomViewport">
+            <canvas id="zoomCanvas"></canvas>
+        </div>
+        <div class="zoom-hint">🤏 Используйте Pinch-to-zoom для детального просмотра</div>
+    </div>
+
+    <!-- ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ И ОБРАБОТЧИКИ UI -->
+    <script>
+        let isOpenCvReady = false;
+        let standardColorData = null;
+        let sampleColorData = null;
+        let activeMode = 'standard';
+        let mediaStream = null;
+
+        let currentEV = 0;
+        let minEV = -2;
+        let maxEV = 2;
+        let stepEV = 0.1;
+
+        const cvStatus = document.getElementById('cvStatus');
+        const btnStandard = document.getElementById('btnStandard');
+        const btnSample = document.getElementById('btnSample');
+
+        const infoStandard = document.getElementById('infoStandard');
+        const infoSample = document.getElementById('infoSample');
+        const infoCard = document.getElementById('infoCard');
+        const resultDiv = document.getElementById('result');
+        const resetBtn = document.getElementById('resetBtn');
+
+        const cameraModal = document.getElementById('cameraModal');
+        const video = document.getElementById('webcam');
+
+        // Активация PRO режима по 3 тапам
+        let brandTapCount = 0;
+        let brandTapTimer = null;
+        const brandTrigger = document.getElementById('brandTrigger');
+
+        brandTrigger.addEventListener('click', () => {
+            brandTapCount++;
+            clearTimeout(brandTapTimer);
+
+            if (brandTapCount === 3) {
+                document.body.classList.toggle('pro-mode-active');
+                if (navigator.vibrate) navigator.vibrate([30, 50, 30]);
+                brandTapCount = 0;
+            } else {
+                brandTapTimer = setTimeout(() => { brandTapCount = 0; }, 400);
+            }
+        });
+
+        function toggleMenu() {
+            document.getElementById('menuDropdown').classList.toggle('active');
+        }
+
+        function switchMode(modeKey, labelText) {
+            document.getElementById('activeMenuLabel').innerText = labelText;
+            document.getElementById('menuDropdown').classList.remove('active');
+
+            document.querySelectorAll('.menu-item').forEach(el => el.classList.remove('active'));
+            event.target.classList.add('active');
+
+            document.querySelectorAll('.view-pane').forEach(el => el.classList.remove('active'));
+            if (modeKey === 'compare') document.getElementById('paneCompare').classList.add('active');
+            if (modeKey === 'calibrate') document.getElementById('paneCalibrate').classList.add('active');
+            if (modeKey === 'camCalibrate') document.getElementById('paneCamCalibrate').classList.add('active');
+            if (modeKey === 'correct') document.getElementById('paneCorrect').classList.add('active');
+            if (modeKey === 'catalog') document.getElementById('paneCatalog').classList.add('active');
+        }
+
+        window.addEventListener('click', (e) => {
+            if (!e.target.closest('.menu-container')) {
+                document.getElementById('menuDropdown').classList.remove('active');
+            }
+        });
+
+        function onOpenCvReady() {
+            isOpenCvReady = true;
+            cvStatus.innerHTML = '<span class="status-dot"></span> Готов к работе';
+            btnStandard.disabled = false;
+            restoreState();
+        }
+
+        resetBtn.addEventListener('click', () => {
+            localStorage.removeItem('cm_card_standard_data');
+            standardColorData = null;
+            sampleColorData = null;
+
+            infoStandard.innerHTML = '';
+            infoSample.innerHTML = '';
+            infoCard.style.display = 'none';
+            resultDiv.innerText = '';
+
+            btnSample.disabled = true;
+
+            const canvasStd = document.getElementById('canvasStandard');
+            const canvasSmp = document.getElementById('canvasSample');
+            canvasStd.getContext('2d').clearRect(0, 0, canvasStd.width, canvasStd.height);
+            canvasSmp.getContext('2d').clearRect(0, 0, canvasSmp.width, canvasSmp.height);
+        });
+    </script>
+
+    <!-- Внешние JS модули -->
+    <script src="camera.js"></script>
+    <script src="cv-processor.js"></script>
+</body>
+</html>
