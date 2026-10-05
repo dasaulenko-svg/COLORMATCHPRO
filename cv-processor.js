@@ -101,51 +101,61 @@ function processImageWithCard(canvasSource, canvasTargetId) {
         }
     };
 
+    const scaleFactor = 1.5;
+    const CARD_W = Math.round(856 * scaleFactor);
+    const CARD_H = Math.round(540 * scaleFactor);
+
     try {
         src = cv.imread(canvasSource);
-
-        // 1. Поиск ArUco маркеров через легкий js-aruco2
-        const ctx = canvasSource.getContext('2d');
-        const imageData = ctx.getImageData(0, 0, canvasSource.width, canvasSource.height);
-        const detector = new AR.Detector();
-        const markers = detector.detect(imageData);
-
-        const scaleFactor = 1.5;
-        const CARD_W = Math.round(856 * scaleFactor);
-        const CARD_H = Math.round(540 * scaleFactor);
         warped = new cv.Mat();
 
-        if (markers && markers.length >= 4) {
-            // Вычисляем центры всех обнаруженных ArUco маркеров
-            let points = markers.map(m => {
-                let cx = (m.corners[0].x + m.corners[1].x + m.corners[2].x + m.corners[3].x) / 4;
-                let cy = (m.corners[0].y + m.corners[1].y + m.corners[2].y + m.corners[3].y) / 4;
-                return { x: cx, y: cy };
-            });
+        let warpSuccess = false;
 
-            // Сортировка маркеров по углам (TL, TR, BR, BL)
-            let add = points.map(p => p.x + p.y);
-            let diff = points.map(p => p.y - p.x);
+        // Безопасная детекция ArUco
+        if (typeof AR !== 'undefined' && AR.Detector) {
+            try {
+                const ctx = canvasSource.getContext('2d');
+                if (ctx) {
+                    const imageData = ctx.getImageData(0, 0, canvasSource.width, canvasSource.height);
+                    const detector = new AR.Detector();
+                    const markers = detector.detect(imageData);
 
-            let tl = points[add.indexOf(Math.min(...add))];
-            let br = points[add.indexOf(Math.max(...add))];
-            let tr = points[diff.indexOf(Math.min(...diff))];
-            let bl = points[diff.indexOf(Math.max(...diff))];
+                    if (markers && markers.length >= 4) {
+                        // Вычисляем центры первых 4 маркеров
+                        let points = markers.slice(0, 4).map(m => {
+                            let cx = (m.corners[0].x + m.corners[1].x + m.corners[2].x + m.corners[3].x) / 4;
+                            let cy = (m.corners[0].y + m.corners[1].y + m.corners[2].y + m.corners[3].y) / 4;
+                            return { x: cx, y: cy };
+                        });
 
-            srcMat = cv.matFromArray(4, 1, cv.CV_32FC2, [tl.x, tl.y, tr.x, tr.y, br.x, br.y, bl.x, bl.y]);
-            
-            // Координаты центров 4 угловых маркеров на целевой эталонной сетке карты
-            dstMat = cv.matFromArray(4, 1, cv.CV_32FC2, [
-                CARD_W * 0.095, CARD_H * 0.140, // TL
-                CARD_W * 0.905, CARD_H * 0.140, // TR
-                CARD_W * 0.905, CARD_H * 0.860, // BR
-                CARD_W * 0.095, CARD_H * 0.860  // BL
-            ]);
+                        let add = points.map(p => p.x + p.y);
+                        let diff = points.map(p => p.y - p.x);
 
-            M = cv.getPerspectiveTransform(srcMat, dstMat);
-            cv.warpPerspective(src, warped, M, new cv.Size(CARD_W, CARD_H));
-        } else {
-            // Фолбэк на случай недостаточного освещения или перекрытия меток
+                        let tl = points[add.indexOf(Math.min(...add))];
+                        let br = points[add.indexOf(Math.max(...add))];
+                        let tr = points[diff.indexOf(Math.min(...diff))];
+                        let bl = points[diff.indexOf(Math.max(...diff))];
+
+                        srcMat = cv.matFromArray(4, 1, cv.CV_32FC2, [tl.x, tl.y, tr.x, tr.y, br.x, br.y, bl.x, bl.y]);
+                        dstMat = cv.matFromArray(4, 1, cv.CV_32FC2, [
+                            CARD_W * 0.095, CARD_H * 0.140, // TL
+                            CARD_W * 0.905, CARD_H * 0.140, // TR
+                            CARD_W * 0.905, CARD_H * 0.860, // BR
+                            CARD_W * 0.095, CARD_H * 0.860  // BL
+                        ]);
+
+                        M = cv.getPerspectiveTransform(srcMat, dstMat);
+                        cv.warpPerspective(src, warped, M, new cv.Size(CARD_W, CARD_H));
+                        warpSuccess = true;
+                    }
+                }
+            } catch (arucoErr) {
+                console.warn("Ошибка при работе ArUco дeтектора, переходим на ресайз:", arucoErr);
+            }
+        }
+
+        // Фолбэк: если маркеры не были найдены или библиотека недоступна
+        if (!warpSuccess) {
             cv.resize(src, warped, new cv.Size(CARD_W, CARD_H));
         }
 
@@ -187,8 +197,11 @@ function processImageWithCard(canvasSource, canvasTargetId) {
             drawTargetCrosshair(warped, p.x, p.y, greenColor, Math.round(12 * scaleFactor));
         });
 
+        // Запись готового превью на элемент canvas
         cv.imshow(canvasTargetId, warped);
 
+    } catch (err) {
+        console.error("Ошибка в processImageWithCard:", err);
     } finally {
         if (src) src.delete();
         if (warped) warped.delete();
