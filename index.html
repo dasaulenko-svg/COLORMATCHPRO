@@ -795,7 +795,6 @@
                     <button class="btn-action" id="btnStandard" onclick="openCamera('standard')" disabled>
                         📷 Снять Эталон
                     </button>
-                    <!-- В PRO выводит LAB/RGB, в Light скрыто -->
                     <div class="info-container" id="infoStandard"></div>
                 </div>
 
@@ -810,7 +809,6 @@
                     <button class="btn-action secondary" id="btnSample" onclick="openCamera('sample')" disabled>
                         📸 Снять Образец
                     </button>
-                    <!-- В PRO выводит LAB/RGB, в Light скрыто -->
                     <div class="info-container" id="infoSample"></div>
                 </div>
             </div>
@@ -1218,6 +1216,7 @@
             }
         }
 
+        // --- ПОЛНОСТЬЮ ОБНОВЛЕННЫЙ АЛГОРИТМ РАСПОЗНАВАНИЯ КАРТОЧКИ ---
         function processImageWithCard(canvasSource, canvasTargetId) {
             let src = null, gray = null, blurred = null, thresh = null;
             let contours = null, hierarchy = null;
@@ -1264,39 +1263,114 @@
                 const imgWidth = src.cols;
                 const imgHeight = src.rows;
                 const totalArea = imgWidth * imgHeight;
-
-                cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
-                cv.GaussianBlur(gray, blurred, new cv.Size(7, 7), 0);
-                cv.adaptiveThreshold(blurred, thresh, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY_INV, 15, 3);
-                cv.findContours(thresh, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
+                const centerX = imgWidth / 2;
+                const centerY = imgHeight / 2;
 
                 let bestQuad = null;
-                let maxArea = 0;
 
-                for (let i = 0; i < contours.size(); ++i) {
-                    let cnt = contours.get(i);
-                    let area = cv.contourArea(cnt);
+                // 1. ПОПЫТКА ИСПОЛЬЗОВАТЬ ARUCO МАРКЕРЫ (Идеальная точность)
+                if (typeof cv.aruco !== 'undefined' && cv.aruco.Dictionary) {
+                    try {
+                        let dictionary = new cv.aruco.Dictionary(cv.aruco.DICT_4X4_50);
+                        let markerCorners = new cv.MatVector();
+                        let markerIds = new cv.Mat();
+                        cv.aruco.detectMarkers(src, dictionary, markerCorners, markerIds);
 
-                    if (area > totalArea * 0.20) {
-                        let peri = cv.arcLength(cnt, true);
-                        let approx = new cv.Mat();
-                        cv.approxPolyDP(cnt, approx, 0.03 * peri, true);
-
-                        if (approx.rows === 4 && cv.isContourConvex(approx)) {
-                            if (area > maxArea) {
-                                maxArea = area;
-                                bestQuad = [];
-                                for (let j = 0; j < 4; j++) {
-                                    bestQuad.push({
-                                        x: approx.data32S[j * 2],
-                                        y: approx.data32S[j * 2 + 1]
-                                    });
+                        if (markerIds.rows >= 4) {
+                            let corners = {};
+                            for (let i = 0; i < markerIds.rows; i++) {
+                                let id = markerIds.data32S[i];
+                                if (id >= 0 && id <= 3) {
+                                    corners[id] = markerCorners.get(i);
                                 }
                             }
+                            
+                            // Если найдены все 4 нужных ID (0, 1, 2, 3)
+                            if (corners[0] && corners[1] && corners[2] && corners[3]) {
+                                bestQuad = [
+                                    { x: corners[0].data32F[0], y: corners[0].data32F[1] }, // Точка TL (Top-Left маркера 0)
+                                    { x: corners[1].data32F[2], y: corners[1].data32F[3] }, // Точка TR (Top-Right маркера 1)
+                                    { x: corners[2].data32F[4], y: corners[2].data32F[5] }, // Точка BR (Bottom-Right маркера 2)
+                                    { x: corners[3].data32F[6], y: corners[3].data32F[7] }  // Точка BL (Bottom-Left маркера 3)
+                                ];
+                            }
                         }
-                        approx.delete();
+                        markerCorners.delete();
+                        markerIds.delete();
+                    } catch(e) {
+                        console.warn("ArUco error:", e);
                     }
-                    cnt.delete();
+                }
+
+                // 2. УЛУЧШЕННЫЙ FALLBACK: Поиск контура с морфологией и защитой от шума
+                if (!bestQuad) {
+                    cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
+                    cv.GaussianBlur(gray, blurred, new cv.Size(7, 7), 0);
+                    // Адаптивный порог отсекает блики и тени
+                    cv.adaptiveThreshold(blurred, thresh, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY_INV, 15, 3);
+                    
+                    // Морфологическое расширение граней (замыкание разрывов на контуре)
+                    let kernel = cv.Mat.ones(3, 3, cv.CV_8U);
+                    cv.dilate(thresh, thresh, kernel, new cv.Point(-1, -1), 1);
+                    kernel.delete();
+
+                    cv.findContours(thresh, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
+
+                    let maxScore = -1;
+
+                    for (let i = 0; i < contours.size(); ++i) {
+                        let cnt = contours.get(i);
+                        let area = cv.contourArea(cnt);
+
+                        // Ограничение площади: отбрасываем мелкий мусор и фон
+                        if (area > totalArea * 0.05 && area < totalArea * 0.90) {
+                            let peri = cv.arcLength(cnt, true);
+                            let approx = new cv.Mat();
+                            cv.approxPolyDP(cnt, approx, 0.02 * peri, true);
+
+                            if (approx.rows === 4 && cv.isContourConvex(approx)) {
+                                let rect = cv.boundingRect(approx);
+                                let aspect = rect.width / rect.height;
+                                
+                                // Проверка правильных пропорций карточки (1.58:1) с учетом наклона
+                                let isCardProp = (aspect > 1.2 && aspect < 1.9) || (aspect > 0.5 && aspect < 0.85);
+
+                                if (isCardProp) {
+                                    // Приоритет к центру кадра (Center Weighting)
+                                    let rectCX = rect.x + rect.width / 2;
+                                    let rectCY = rect.y + rect.height / 2;
+                                    let distToCenter = Math.sqrt(Math.pow(rectCX - centerX, 2) + Math.pow(rectCY - centerY, 2));
+                                    let score = area - (distToCenter * 50);
+
+                                    if (score > maxScore) {
+                                        maxScore = score;
+                                        bestQuad = [];
+                                        for (let j = 0; j < 4; j++) {
+                                            bestQuad.push({
+                                                x: approx.data32S[j * 2],
+                                                y: approx.data32S[j * 2 + 1]
+                                            });
+                                        }
+                                    }
+                                }
+                            }
+                            approx.delete();
+                        }
+                        cnt.delete();
+                    }
+
+                    // Определение углов контура (TL, TR, BR, BL) для трансформации
+                    if (bestQuad) {
+                        let add = bestQuad.map(p => p.x + p.y);
+                        let diff = bestQuad.map(p => p.y - p.x);
+
+                        let tl = bestQuad[add.indexOf(Math.min(...add))];
+                        let br = bestQuad[add.indexOf(Math.max(...add))];
+                        let tr = bestQuad[diff.indexOf(Math.min(...diff))];
+                        let bl = bestQuad[diff.indexOf(Math.max(...diff))];
+
+                        bestQuad = [tl, tr, br, bl];
+                    }
                 }
 
                 warped = new cv.Mat();
@@ -1305,25 +1379,36 @@
                 const CARD_H = Math.round(540 * scaleFactor);
 
                 if (bestQuad) {
-                    let add = bestQuad.map(p => p.x + p.y);
-                    let diff = bestQuad.map(p => p.y - p.x);
+                    // Отрисовка найденного контура (жёлтая рамка для визуальной отладки)
+                    let pts = cv.matFromArray(4, 1, cv.CV_32SC2, [
+                        bestQuad[0].x, bestQuad[0].y,
+                        bestQuad[1].x, bestQuad[1].y,
+                        bestQuad[2].x, bestQuad[2].y,
+                        bestQuad[3].x, bestQuad[3].y
+                    ]);
+                    let color = new cv.Scalar(0, 255, 255, 255);
+                    let ptsVec = new cv.MatVector();
+                    ptsVec.push(pts);
+                    cv.polylines(src, ptsVec, true, color, 4, cv.LINE_AA);
+                    ptsVec.delete();
+                    pts.delete();
 
-                    let tl = bestQuad[add.indexOf(Math.min(...add))];
-                    let br = bestQuad[add.indexOf(Math.max(...add))];
-                    let tr = bestQuad[diff.indexOf(Math.min(...diff))];
-                    let bl = bestQuad[diff.indexOf(Math.max(...diff))];
-
-                    srcMat = cv.matFromArray(4, 1, cv.CV_32FC2, [tl.x, tl.y, tr.x, tr.y, br.x, br.y, bl.x, bl.y]);
+                    // Трансформация перспективы по 4 углам
+                    srcMat = cv.matFromArray(4, 1, cv.CV_32FC2, [
+                        bestQuad[0].x, bestQuad[0].y,
+                        bestQuad[1].x, bestQuad[1].y,
+                        bestQuad[2].x, bestQuad[2].y,
+                        bestQuad[3].x, bestQuad[3].y
+                    ]);
                     dstMat = cv.matFromArray(4, 1, cv.CV_32FC2, [0, 0, CARD_W, 0, CARD_W, CARD_H, 0, CARD_H]);
 
                     M = cv.getPerspectiveTransform(srcMat, dstMat);
                     cv.warpPerspective(src, warped, M, new cv.Size(CARD_W, CARD_H));
                 } else {
+                    // Страховочный вариант (простое масштабирование, если карточка в упор не найдена)
                     cv.resize(src, warped, new cv.Size(CARD_W, CARD_H));
                 }
 
-                // Конвертация в BGR через отдельную переменную warpedBgr,
-                // чтобы не изменять warped (RGBA), необходимый для корректного cv.imshow
                 warpedBgr = new cv.Mat();
                 cv.cvtColor(warped, warpedBgr, cv.COLOR_RGBA2BGR);
 
