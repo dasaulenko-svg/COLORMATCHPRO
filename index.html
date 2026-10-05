@@ -134,12 +134,6 @@
             </div>
             
             <div class="camera-viewport">
-                <div class="ev-control-panel" id="evControlPanel">
-                    <button class="ev-btn" onclick="adjustEV(-1)">-</button>
-                    <span class="ev-display" id="evValueDisplay">EV: 0.0</span>
-                    <button class="ev-btn" onclick="adjustEV(1)">+</button>
-                </div>
-
                 <video id="webcam" autoplay playsinline></video>
                 <svg class="camera-overlay" viewBox="0 0 400 320">
                     <defs>
@@ -186,11 +180,6 @@
         let sampleColorData = null;
         let activeMode = 'standard';
         let mediaStream = null;
-
-        let currentEV = 0;
-        let minEV = -2;
-        let maxEV = 2;
-        let stepEV = 0.1;
 
         const cvStatus = document.getElementById('cvStatus');
         const btnStandard = document.getElementById('btnStandard');
