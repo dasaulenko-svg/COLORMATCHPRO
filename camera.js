@@ -1,4 +1,4 @@
-// Запуск камеры и получение потока из видео
+// Запуск камеры и получение потока высокго разрешения
 async function openCamera(mode) {
     activeMode = mode;
     document.getElementById('cameraTitle').innerText = mode === 'standard' ? 'Съемка Эталона' : 'Съемка Образца';
@@ -6,12 +6,76 @@ async function openCamera(mode) {
 
     try {
         mediaStream = await navigator.mediaDevices.getUserMedia({
-            video: { facingMode: "environment" }
+            video: { 
+                facingMode: { exact: "environment" },
+                width: { ideal: 3840 },
+                height: { ideal: 2160 }
+            }
         });
-        video.srcObject = mediaStream;
     } catch (err) {
-        alert('Ошибка доступа к камере: ' + err.message);
-        closeCamera();
+        try {
+            mediaStream = await navigator.mediaDevices.getUserMedia({ 
+                video: { 
+                    width: { ideal: 3840 },
+                    height: { ideal: 2160 }
+                } 
+            });
+        } catch (fallbackErr) {
+            alert('Ошибка доступа к камере: ' + fallbackErr.message);
+            closeCamera();
+            return;
+        }
+    }
+
+    video.srcObject = mediaStream;
+    initExposureControl();
+}
+
+// Инициализация регулировки экспозиции (EV)
+function initExposureControl() {
+    const track = mediaStream ? mediaStream.getVideoTracks()[0] : null;
+    if (!track) return;
+
+    const capabilities = track.getCapabilities ? track.getCapabilities() : {};
+    if ('exposureCompensation' in capabilities) {
+        minEV = capabilities.exposureCompensation.min || -2;
+        maxEV = capabilities.exposureCompensation.max || 2;
+        stepEV = capabilities.exposureCompensation.step || 0.1;
+
+        const settings = track.getSettings ? track.getSettings() : {};
+        currentEV = settings.exposureCompensation || 0;
+    } else {
+        currentEV = 0;
+    }
+    updateEVDisplay();
+}
+
+// Изменение значения EV
+async function adjustEV(direction) {
+    const track = mediaStream ? mediaStream.getVideoTracks()[0] : null;
+    if (!track) return;
+
+    let targetEV = currentEV + (direction * stepEV);
+    targetEV = Math.max(minEV, Math.min(maxEV, targetEV));
+    targetEV = Math.round(targetEV / stepEV) * stepEV;
+
+    try {
+        await track.applyConstraints({
+            advanced: [{ exposureCompensation: targetEV }]
+        });
+        currentEV = targetEV;
+        updateEVDisplay();
+    } catch (err) {
+        console.warn('Не удалось изменить экспозицию:', err);
+    }
+}
+
+// Обновление интерфейса EV
+function updateEVDisplay() {
+    const display = document.getElementById('evValueDisplay');
+    if (display) {
+        const sign = currentEV > 0 ? '+' : '';
+        display.innerText = `EV: ${sign}${currentEV.toFixed(1)}`;
     }
 }
 
@@ -25,15 +89,32 @@ function closeCamera() {
     cameraModal.classList.remove('active');
 }
 
-// Прямой захват кадра из видеопотока (Frame Grab)
-function takeSnapshot() {
+// Захват кадра с использованием ImageCapture (с фоллбэком на видео)
+async function takeSnapshot() {
     if (!video.videoWidth || !video.videoHeight) return;
 
     const viewportRect = video.getBoundingClientRect();
     if (!viewportRect.width || !viewportRect.height) return;
 
-    const imgW = video.videoWidth;
-    const imgH = video.videoHeight;
+    let sourceElement = video;
+    let imgW = video.videoWidth;
+    let imgH = video.videoHeight;
+
+    const track = mediaStream ? mediaStream.getVideoTracks()[0] : null;
+
+    // Попытка получить снимок высокого разрешения через ImageCapture
+    if ('ImageCapture' in window && track) {
+        try {
+            const imageCapture = new ImageCapture(track);
+            const blob = await imageCapture.takePhoto();
+            const bitmap = await createImageBitmap(blob);
+            sourceElement = bitmap;
+            imgW = bitmap.width;
+            imgH = bitmap.height;
+        } catch (err) {
+            console.warn('ImageCapture не сработал, фоллбэк на кадр из видео:', err);
+        }
+    }
 
     // Параметры рамки оверлея (400x320)
     const strokeOffset = 2;
@@ -81,8 +162,7 @@ function takeSnapshot() {
     croppedCanvas.height = cropH;
 
     const ctx = croppedCanvas.getContext('2d');
-    // Захват производится прямо из элемента <video>
-    ctx.drawImage(video, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
+    ctx.drawImage(sourceElement, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
 
     closeCamera();
     handleImageSource(croppedCanvas, activeMode);
