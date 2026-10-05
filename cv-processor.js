@@ -117,7 +117,7 @@ function processImageWithCard(canvasSource, canvasTargetId) {
                 const ctx = canvasSource.getContext('2d');
                 if (ctx) {
                     const imageData = ctx.getImageData(0, 0, canvasSource.width, canvasSource.height);
-                    const detector = new AR.Detector();
+                    const detector = new AR.Detector({ dictionaryName: 'DICT_4X4_50' });
                     const markers = detector.detect(imageData);
 
                     if (markers && markers.length >= 4) {
