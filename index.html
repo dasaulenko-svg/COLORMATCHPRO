@@ -359,165 +359,6 @@
             text-shadow: 0 0 12px rgba(0, 230, 118, 0.4);
         }
 
-        .lite-verdict-info {
-            margin-top: 10px;
-            padding: 12px;
-            background: rgba(0, 0, 0, 0.2);
-            border: 1px solid var(--card-border);
-            border-radius: 12px;
-            font-size: 11px;
-            line-height: 1.5;
-            color: var(--text-muted);
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-        }
-
-        .comparison-block {
-            padding: 12px;
-            border-radius: 14px;
-            background: rgba(0, 0, 0, 0.3);
-            border: 1px solid var(--card-border);
-            margin-bottom: 12px;
-        }
-
-        .comparison-title {
-            font-size: 11px;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-bottom: 10px;
-            color: var(--text-muted);
-            text-align: center;
-        }
-
-        .comparison-title.raw { color: var(--accent-warning); }
-        .comparison-title.corrected { color: var(--accent-cyan); }
-        .comparison-title.corrected-3d { color: var(--accent-purple); }
-        .comparison-title.final { color: var(--accent-green); }
-
-        .methods-list {
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-        }
-
-        .method-row {
-            background: rgba(255, 255, 255, 0.03);
-            border: 1px solid rgba(255, 255, 255, 0.06);
-            border-radius: 8px;
-            padding: 6px 10px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-
-        .method-info {
-            display: flex;
-            flex-direction: column;
-            gap: 2px;
-        }
-
-        .method-name {
-            font-size: 11px;
-            font-weight: 600;
-            color: #fff;
-        }
-
-        .method-subtext {
-            font-size: 9px;
-            color: var(--text-muted);
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        .method-score {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .score-val {
-            font-size: 15px;
-            font-weight: 800;
-        }
-
-        .match-success { color: var(--accent-green); }
-        .match-warning { color: var(--accent-warning); }
-        .match-error { color: var(--accent-red); }
-
-        .swatches-pair {
-            display: flex;
-            align-items: center;
-            gap: 4px;
-        }
-
-        .swatch-mini {
-            width: 14px;
-            height: 14px;
-            border-radius: 50%;
-            border: 1px solid rgba(255,255,255,0.25);
-        }
-
-        .final-summary {
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-            margin-top: 4px;
-            padding: 10px;
-            background: rgba(0, 230, 118, 0.05);
-            border-radius: 10px;
-            border: 1px solid rgba(0, 230, 118, 0.2);
-        }
-
-        .summary-line {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-size: 11px;
-            color: var(--text-muted);
-        }
-
-        .summary-line b {
-            color: #fff;
-        }
-
-        .summary-badge {
-            font-size: 10px;
-            font-weight: 700;
-            padding: 2px 6px;
-            border-radius: 4px;
-            background: rgba(255, 255, 255, 0.08);
-        }
-
-        .summary-badge.active {
-            background: rgba(0, 230, 118, 0.2);
-            color: var(--accent-green);
-        }
-
-        .final-total-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-top: 6px;
-            padding-top: 8px;
-            border-top: 1px dashed rgba(255, 255, 255, 0.15);
-        }
-
-        .final-total-label {
-            font-size: 13px;
-            font-weight: 800;
-            color: #fff;
-        }
-
-        .final-total-value {
-            font-size: 22px;
-            font-weight: 900;
-            color: var(--accent-green);
-            text-shadow: 0 0 12px rgba(0, 230, 118, 0.4);
-        }
-
         .reset-btn { 
             background: rgba(255, 82, 82, 0.12); 
             color: var(--accent-red); 
@@ -600,52 +441,6 @@
             pointer-events: none;
         }
 
-        /* ПАНЕЛЬ РУЧНОЙ РЕГУЛИРОВКИ ЭКСПОЗИЦИИ */
-        .ev-control-panel {
-            position: absolute;
-            top: 10px;
-            left: 50%;
-            transform: translateX(-50%);
-            z-index: 10;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            background: rgba(11, 14, 20, 0.85);
-            border: 1px solid var(--card-border);
-            padding: 4px 10px;
-            border-radius: 12px;
-            backdrop-filter: blur(8px);
-        }
-
-        .ev-btn {
-            background: rgba(255, 255, 255, 0.15);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            color: #fff;
-            width: 32px;
-            height: 32px;
-            border-radius: 8px;
-            font-weight: 800;
-            font-size: 16px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            user-select: none;
-        }
-
-        .ev-btn:active {
-            background: rgba(255, 255, 255, 0.3);
-        }
-
-        .ev-display {
-            color: var(--accent-cyan);
-            font-weight: 700;
-            font-size: 13px;
-            min-width: 75px;
-            text-align: center;
-            font-family: monospace;
-        }
-
         /* ZOOM MODAL STYLES */
         .zoom-modal {
             display: none;
@@ -721,8 +516,7 @@
             display: block;
         }
 
-        body.pro-mode-active .lite-verdict-box,
-        body.pro-mode-active .lite-verdict-info {
+        body.pro-mode-active .lite-verdict-box {
             display: none;
         }
 
@@ -764,9 +558,6 @@
                     </div>
                     <div class="menu-item" onclick="switchMode('calibrate', '🖥️ Калибровка')">
                         🖥️ Калибровка экрана
-                    </div>
-                    <div class="menu-item" onclick="switchMode('camCalibrate', '📷 Калибровка камеры')">
-                        📷 Калибровка камеры
                     </div>
                     <div class="menu-item" onclick="switchMode('correct', '🎨 Цветокоррекция')">
                         🎨 Цветокоррекция снимка
@@ -828,13 +619,6 @@
             </div>
         </div>
 
-        <div class="view-pane" id="paneCamCalibrate">
-            <div class="stub-box">
-                📷 <b>Калибровка камеры</b><br><br>
-                Настройка профиля сенсора, экспозиции и баланса белого.
-            </div>
-        </div>
-
         <div class="view-pane" id="paneCorrect">
             <div class="stub-box">
                 🎨 <b>Цветокоррекция снимка</b><br><br>
@@ -858,13 +642,6 @@
             </div>
             
             <div class="camera-viewport">
-                <!-- ПАНЕЛЬ РУЧНОЙ РЕГУЛИРОВКИ ЭКСПОЗИЦИИ -->
-                <div class="ev-control-panel" id="evControlPanel">
-                    <button class="ev-btn" onclick="adjustEV(-1)">-</button>
-                    <span class="ev-display" id="evValueDisplay">EV: 0.0</span>
-                    <button class="ev-btn" onclick="adjustEV(1)">+</button>
-                </div>
-
                 <video id="webcam" autoplay playsinline></video>
                 <svg class="camera-overlay" viewBox="0 0 400 320">
                     <defs>
@@ -911,12 +688,6 @@
         let activeMode = 'standard';
         let mediaStream = null;
 
-        // ПЕРЕМЕННЫЕ УПРАВЛЕНИЯ ЭКСПОЗИЦИЕЙ
-        let currentEV = 0;
-        let minEV = -2;
-        let maxEV = 2;
-        let stepEV = 0.1;
-
         const cvStatus = document.getElementById('cvStatus');
         const btnStandard = document.getElementById('btnStandard');
         const btnSample = document.getElementById('btnSample');
@@ -930,7 +701,7 @@
         const cameraModal = document.getElementById('cameraModal');
         const video = document.getElementById('webcam');
 
-        // Тройной тап по логотипу SPECTRIX
+        // Тройной тап по логотипу SPECTRIX для PRO режима
         let brandTapCount = 0;
         let brandTapTimer = null;
         const brandTrigger = document.getElementById('brandTrigger');
@@ -971,7 +742,6 @@
             document.querySelectorAll('.view-pane').forEach(el => el.classList.remove('active'));
             if (modeKey === 'compare') document.getElementById('paneCompare').classList.add('active');
             if (modeKey === 'calibrate') document.getElementById('paneCalibrate').classList.add('active');
-            if (modeKey === 'camCalibrate') document.getElementById('paneCamCalibrate').classList.add('active');
             if (modeKey === 'correct') document.getElementById('paneCorrect').classList.add('active');
             if (modeKey === 'catalog') document.getElementById('paneCatalog').classList.add('active');
         }
@@ -989,6 +759,7 @@
             restoreState();
         }
 
+        // Чистая техника камеры из 244 (без автоэкспозиции и статус-бейджей)
         async function openCamera(mode) {
             activeMode = mode;
             document.getElementById('cameraTitle').innerText = mode === 'standard' ? 'Съемка Эталона' : 'Съемка Образца';
@@ -996,20 +767,11 @@
 
             try {
                 mediaStream = await navigator.mediaDevices.getUserMedia({
-                    video: { 
-                        facingMode: { exact: "environment" },
-                        width: { ideal: 3840 },
-                        height: { ideal: 2160 }
-                    }
+                    video: { facingMode: { exact: "environment" } }
                 });
             } catch (err) {
                 try {
-                    mediaStream = await navigator.mediaDevices.getUserMedia({ 
-                        video: { 
-                            width: { ideal: 3840 },
-                            height: { ideal: 2160 }
-                        } 
-                    });
+                    mediaStream = await navigator.mediaDevices.getUserMedia({ video: true });
                 } catch (fallbackErr) {
                     alert('Ошибка доступа к камере: ' + fallbackErr.message);
                     closeCamera();
@@ -1018,52 +780,6 @@
             }
 
             video.srcObject = mediaStream;
-            initExposureControl();
-        }
-
-        function initExposureControl() {
-            const track = mediaStream ? mediaStream.getVideoTracks()[0] : null;
-            if (!track) return;
-
-            const capabilities = track.getCapabilities ? track.getCapabilities() : {};
-            if ('exposureCompensation' in capabilities) {
-                minEV = capabilities.exposureCompensation.min || -2;
-                maxEV = capabilities.exposureCompensation.max || 2;
-                stepEV = capabilities.exposureCompensation.step || 0.1;
-
-                const settings = track.getSettings ? track.getSettings() : {};
-                currentEV = settings.exposureCompensation || 0;
-            } else {
-                currentEV = 0;
-            }
-            updateEVDisplay();
-        }
-
-        async function adjustEV(direction) {
-            const track = mediaStream ? mediaStream.getVideoTracks()[0] : null;
-            if (!track) return;
-
-            let targetEV = currentEV + (direction * stepEV);
-            targetEV = Math.max(minEV, Math.min(maxEV, targetEV));
-            targetEV = Math.round(targetEV / stepEV) * stepEV;
-
-            try {
-                await track.applyConstraints({
-                    advanced: [{ exposureCompensation: targetEV }]
-                });
-                currentEV = targetEV;
-                updateEVDisplay();
-            } catch (err) {
-                console.warn('Не удалось изменить экспозицию:', err);
-            }
-        }
-
-        function updateEVDisplay() {
-            const display = document.getElementById('evValueDisplay');
-            if (display) {
-                const sign = currentEV > 0 ? '+' : '';
-                display.innerText = `EV: ${sign}${currentEV.toFixed(1)}`;
-            }
         }
 
         function closeCamera() {
@@ -1075,30 +791,11 @@
             cameraModal.classList.remove('active');
         }
 
-        async function takeSnapshot() {
+        function takeSnapshot() {
             if (!video.videoWidth || !video.videoHeight) return;
 
             const viewportRect = video.getBoundingClientRect();
             if (!viewportRect.width || !viewportRect.height) return;
-
-            let sourceElement = video;
-            let imgW = video.videoWidth;
-            let imgH = video.videoHeight;
-
-            const track = mediaStream ? mediaStream.getVideoTracks()[0] : null;
-
-            if ('ImageCapture' in window && track) {
-                try {
-                    const imageCapture = new ImageCapture(track);
-                    const blob = await imageCapture.takePhoto();
-                    const bitmap = await createImageBitmap(blob);
-                    sourceElement = bitmap;
-                    imgW = bitmap.width;
-                    imgH = bitmap.height;
-                } catch (err) {
-                    console.warn('ImageCapture не сработал, фоллбэк на кадр из видео:', err);
-                }
-            }
 
             const strokeOffset = 2;
             const overlayFrame = {
@@ -1110,25 +807,25 @@
             const overlayW = 400;
             const overlayH = 320;
 
-            const imgRatio = imgW / imgH;
+            const videoRatio = video.videoWidth / video.videoHeight;
             const containerRatio = viewportRect.width / viewportRect.height;
 
             let renderW, renderH, offsetX, offsetY;
 
-            if (containerRatio > imgRatio) {
+            if (containerRatio > videoRatio) {
                 renderW = viewportRect.width;
-                renderH = viewportRect.width / imgRatio;
+                renderH = viewportRect.width / videoRatio;
                 offsetX = 0;
                 offsetY = (renderH - viewportRect.height) / 2;
             } else {
                 renderH = viewportRect.height;
-                renderW = viewportRect.height * imgRatio;
+                renderW = viewportRect.height * videoRatio;
                 offsetX = (renderW - viewportRect.width) / 2;
                 offsetY = 0;
             }
 
-            const scaleX = imgW / renderW;
-            const scaleY = imgH / renderH;
+            const scaleX = video.videoWidth / renderW;
+            const scaleY = video.videoHeight / renderH;
 
             const rectViewportX = (overlayFrame.x / overlayW) * viewportRect.width;
             const rectViewportY = (overlayFrame.y / overlayH) * viewportRect.height;
@@ -1137,15 +834,15 @@
 
             const cropX = Math.max(0, Math.round((rectViewportX + offsetX) * scaleX));
             const cropY = Math.max(0, Math.round((rectViewportY + offsetY) * scaleY));
-            const cropW = Math.min(imgW - cropX, Math.round(rectViewportW * scaleX));
-            const cropH = Math.min(imgH - cropY, Math.round(rectViewportH * scaleY));
+            const cropW = Math.min(video.videoWidth - cropX, Math.round(rectViewportW * scaleX));
+            const cropH = Math.min(video.videoHeight - cropY, Math.round(rectViewportH * scaleY));
 
             const croppedCanvas = document.createElement('canvas');
             croppedCanvas.width = cropW;
             croppedCanvas.height = cropH;
 
             const ctx = croppedCanvas.getContext('2d');
-            ctx.drawImage(sourceElement, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
+            ctx.drawImage(video, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
 
             closeCamera();
             handleImageSource(croppedCanvas, activeMode);
@@ -1322,8 +1019,6 @@
                     cv.resize(src, warped, new cv.Size(CARD_W, CARD_H));
                 }
 
-                // Конвертация в BGR через отдельную переменную warpedBgr,
-                // чтобы не изменять warped (RGBA), необходимый для корректного cv.imshow
                 warpedBgr = new cv.Mat();
                 cv.cvtColor(warped, warpedBgr, cv.COLOR_RGBA2BGR);
 
@@ -1469,11 +1164,6 @@
                         <span class="lite-verdict-title">Совпадение цвета</span>
                         <span class="lite-verdict-value">${matchPercent}</span>
                     </div>
-                    <div class="lite-verdict-info">
-                        <div><b class="match-success">90-100%</b> - Идеальное совпадение, можно красить различные детали авто, класть плитку через шов затирки, красить стены красками из разных партий.</div>
-                        <div><b class="match-warning">64-89%</b> - Частичное совпадение. Можно класть отличную по цвету плитку в гардеробных и малозаметных участках, красить авто с градиентным переходом, красить стены с градиентным растворением на малоосвещенных местах.</div>
-                        <div><b class="match-error">Менее 63%</b> - Нет совпадения.</div>
-                    </div>
 
                     <!-- Pro UI Verdict (подробные матрицы и дельты) -->
                     <div class="pro-details" style="display:none;">
@@ -1494,8 +1184,8 @@
         function extractPercent(htmlString) {
             const temp = document.createElement('div');
             temp.innerHTML = htmlString;
-            const totalVals = temp.querySelectorAll('.final-total-value');
-            return totalVals.length > 0 ? totalVals[totalVals.length - 1].innerText.trim() : null;
+            const totalVal = temp.querySelector('.final-total-value');
+            return totalVal ? totalVal.innerText.trim() : null;
         }
 
         // ================= ЛОГИКА PINCH TO ZOOM ПРОСМОТРА =================
@@ -1533,7 +1223,7 @@
 
         function updateZoomTransform() {
             const zoomCanvas = document.getElementById('zoomCanvas');
-            zoomCanvas.style.transform = `translate(${zoomPosX}px) scale(${zoomScale})`;
+            zoomCanvas.style.transform = `translate(${zoomPosX}px, ${zoomPosY}px) scale(${zoomScale})`;
         }
 
         const zoomViewport = document.getElementById('zoomViewport');
