@@ -91,7 +91,6 @@
             -webkit-text-fill-color: transparent;
         }
 
-        /* Золотой бейдж PRO */
         .pro-badge {
             display: none;
             background: rgba(255, 215, 0, 0.15);
@@ -603,7 +602,7 @@
         </div>
 
         <div class="status-pill" id="cvStatus">
-            <span class="status-dot loading"></span> Загрузка ядра OpenCV...
+            <span class="status-dot loading"></span> Загрузка ядра OpenCV...[span_5](start_span)[span_5](end_span)
         </div>
 
         <div class="view-pane active" id="paneCompare">
@@ -616,9 +615,7 @@
                     <div class="preview-box" onclick="openZoomModal('canvasStandard')">
                         <canvas id="canvasStandard"></canvas>
                     </div>
-                    <button class="btn-action" id="btnStandard" onclick="openCamera('standard')" disabled>
-                        📷 Снять Эталон
-                    </button>
+                    <button class="btn-action" id="btnStandard" onclick="openCamera('standard')" disabled>📷 Снять Эталон[span_6](start_span)[span_6](end_span)</button>
                     <div class="info-container" id="infoStandard"></div>
                 </div>
 
@@ -630,40 +627,27 @@
                     <div class="preview-box" onclick="openZoomModal('canvasSample')">
                         <canvas id="canvasSample"></canvas>
                     </div>
-                    <button class="btn-action secondary" id="btnSample" onclick="openCamera('sample')" disabled>
-                        📸 Снять Образец
-                    </button>
+                    <button class="btn-action secondary" id="btnSample" onclick="openCamera('sample')" disabled>📸 Снять Образец[span_7](start_span)[span_7](end_span)</button>
                     <div class="info-container" id="infoSample"></div>
                 </div>
             </div>
 
             <div class="card" id="infoCard" style="display:none;">
                 <div id="result"></div>
-                <button class="reset-btn" id="resetBtn">🔄 Начать новый тест</button>
+                <button class="reset-btn" id="resetBtn">🔄 Начать новый тест[span_8](start_span)[span_8](end_span)</button>
             </div>
         </div>
 
-        <div class="view-pane" id="paneCalibrate">
-            <div class="stub-box">🖥️ <b>Калибровка экрана</b><br><br>Режим настройки яркости и цветового профиля дисплея.</div>
-        </div>
-
-        <div class="view-pane" id="paneCamCalibrate">
-            <div class="stub-box">📷 <b>Калибровка камеры</b><br><br>Настройка профиля сенсора, экспозиции и баланса белого.</div>
-        </div>
-
-        <div class="view-pane" id="paneCorrect">
-            <div class="stub-box">🎨 <b>Цветокоррекция снимка</b><br><br>Выравнивание баланса белого и экспозиции.</div>
-        </div>
-
-        <div class="view-pane" id="paneCatalog">
-            <div class="stub-box">🎨 <b>Цвет из каталога</b><br><br>Подбор артикула и кода цвета по палитрам (NCS, RAL, Caparol, Pantone).</div>
-        </div>
+        <div class="view-pane" id="paneCalibrate"><div class="stub-box">🖥️ <b>Калибровка экрана</b></div></div>
+        <div class="view-pane" id="paneCamCalibrate"><div class="stub-box">📷 <b>Калибровка камеры</b></div></div>
+        <div class="view-pane" id="paneCorrect"><div class="stub-box">🎨 <b>Цветокоррекция снимка</b></div></div>
+        <div class="view-pane" id="paneCatalog"><div class="stub-box">🎨 <b>Цвет из каталога</b></div></div>
     </div>
 
     <div class="camera-modal" id="cameraModal">
         <div class="camera-card">
             <div class="camera-header">
-                <span id="cameraTitle">Сканирование карточки</span>
+                <span id="cameraTitle">Сканирование карточки[span_9](start_span)[span_9](end_span)</span>
                 <button class="close-btn" onclick="closeCamera()">✕</button>
             </div>
             
@@ -687,11 +671,11 @@
                     <circle cx="200" cy="150" r="26" fill="none" stroke="#00E676" stroke-width="2"/>
                     <line x1="200" y1="115" x2="200" y2="185" stroke="#00E676" stroke-width="1.5"/>
                     <line x1="165" y1="150" x2="235" y2="150" stroke="#00E676" stroke-width="1.5"/>
-                    <text x="200" y="32" fill="#FFFFFF" font-size="12" font-weight="600" text-anchor="middle">Совместите карту с рамкой</text>
+                    <text x="200" y="32" fill="#FFFFFF" font-size="12" font-weight="600" text-anchor="middle">Совместите карту с рамкой[span_10](start_span)[span_10](end_span)</text>
                 </svg>
             </div>
 
-            <button class="btn-action" onclick="takeSnapshot()">📸 Сделать снимок</button>
+            <button class="btn-action" onclick="takeSnapshot()">📸 Сделать снимок[span_11](start_span)[span_11](end_span)</button>
         </div>
     </div>
 
@@ -756,17 +740,13 @@
             return { r, g, b: b_val };
         }
 
-        function toggleMenu() {
-            document.getElementById('menuDropdown').classList.toggle('active');
-        }
+        function toggleMenu() { document.getElementById('menuDropdown').classList.toggle('active'); }
 
         function switchMode(modeKey, labelText) {
             document.getElementById('activeMenuLabel').innerText = labelText;
             document.getElementById('menuDropdown').classList.remove('active');
-
             document.querySelectorAll('.menu-item').forEach(el => el.classList.remove('active'));
             event.target.classList.add('active');
-
             document.querySelectorAll('.view-pane').forEach(el => el.classList.remove('active'));
             if (modeKey === 'compare') document.getElementById('paneCompare').classList.add('active');
             if (modeKey === 'calibrate') document.getElementById('paneCalibrate').classList.add('active');
@@ -783,7 +763,7 @@
 
         function onOpenCvReady() {
             isOpenCvReady = true;
-            cvStatus.innerHTML = '<span class="status-dot"></span> Готов к работе';
+            cvStatus.innerHTML = '<span class="status-dot"></span> Готов к работе[span_12](start_span)[span_12](end_span)';
             btnStandard.disabled = false;
             restoreState();
         }
@@ -792,27 +772,19 @@
             activeMode = mode;
             document.getElementById('cameraTitle').innerText = mode === 'standard' ? 'Съемка Эталона' : 'Съемка Образца';
             cameraModal.classList.add('active');
-
             try {
                 mediaStream = await navigator.mediaDevices.getUserMedia({
-                    video: { 
-                        facingMode: { exact: "environment" },
-                        width: { ideal: 3840 },
-                        height: { ideal: 2160 }
-                    }
+                    video: { facingMode: { exact: "environment" }, width: { ideal: 3840 }, height: { ideal: 2160 } }
                 });
             } catch (err) {
                 try {
-                    mediaStream = await navigator.mediaDevices.getUserMedia({ 
-                        video: { width: { ideal: 3840 }, height: { ideal: 2160 } } 
-                    });
+                    mediaStream = await navigator.mediaDevices.getUserMedia({ video: { width: { ideal: 3840 }, height: { ideal: 2160 } } });
                 } catch (fallbackErr) {
                     alert('Ошибка доступа к камере: ' + fallbackErr.message);
                     closeCamera();
                     return;
                 }
             }
-
             video.srcObject = mediaStream;
             initExposureControl();
         }
@@ -820,13 +792,11 @@
         function initExposureControl() {
             const track = mediaStream ? mediaStream.getVideoTracks()[0] : null;
             if (!track) return;
-
             const capabilities = track.getCapabilities ? track.getCapabilities() : {};
             if ('exposureCompensation' in capabilities) {
                 minEV = capabilities.exposureCompensation.min || -2;
                 maxEV = capabilities.exposureCompensation.max || 2;
                 stepEV = capabilities.exposureCompensation.step || 0.1;
-
                 const settings = track.getSettings ? track.getSettings() : {};
                 currentEV = settings.exposureCompensation || 0;
             } else {
@@ -838,18 +808,14 @@
         async function adjustEV(direction) {
             const track = mediaStream ? mediaStream.getVideoTracks()[0] : null;
             if (!track) return;
-
             let targetEV = currentEV + (direction * stepEV);
             targetEV = Math.max(minEV, Math.min(maxEV, targetEV));
             targetEV = Math.round(targetEV / stepEV) * stepEV;
-
             try {
                 await track.applyConstraints({ advanced: [{ exposureCompensation: targetEV }] });
                 currentEV = targetEV;
                 updateEVDisplay();
-            } catch (err) {
-                console.warn('Не удалось изменить экспозицию:', err);
-            }
+            } catch (err) { console.warn('Не удалось изменить экспозицию:', err); }
         }
 
         function updateEVDisplay() {
@@ -871,14 +837,12 @@
 
         async function takeSnapshot() {
             if (!video.videoWidth || !video.videoHeight) return;
-
             const viewportRect = video.getBoundingClientRect();
             if (!viewportRect.width || !viewportRect.height) return;
 
             let sourceElement = video;
             let imgW = video.videoWidth;
             let imgH = video.videoHeight;
-
             const track = mediaStream ? mediaStream.getVideoTracks()[0] : null;
 
             if ('ImageCapture' in window && track) {
@@ -889,24 +853,16 @@
                     sourceElement = bitmap;
                     imgW = bitmap.width;
                     imgH = bitmap.height;
-                } catch (err) {
-                    console.warn('ImageCapture не сработал, фоллбэк на кадр из видео:', err);
-                }
+                } catch (err) { console.warn('ImageCapture фоллбэк:', err); }
             }
 
             const strokeOffset = 2;
-            const overlayFrame = {
-                x: 50 + strokeOffset,
-                y: 55 + strokeOffset,
-                w: 300 - strokeOffset * 2,
-                h: 190 - strokeOffset * 2
-            };
+            const overlayFrame = { x: 50 + strokeOffset, y: 55 + strokeOffset, w: 300 - strokeOffset * 2, h: 190 - strokeOffset * 2 };
             const overlayW = 400;
             const overlayH = 320;
 
             const imgRatio = imgW / imgH;
             const containerRatio = viewportRect.width / viewportRect.height;
-
             let renderW, renderH, offsetX, offsetY;
 
             if (containerRatio > imgRatio) {
@@ -923,7 +879,6 @@
 
             const scaleX = imgW / renderW;
             const scaleY = imgH / renderH;
-
             const rectViewportX = (overlayFrame.x / overlayW) * viewportRect.width;
             const rectViewportY = (overlayFrame.y / overlayH) * viewportRect.height;
             const rectViewportW = (overlayFrame.w / overlayW) * viewportRect.width;
@@ -937,7 +892,6 @@
             const croppedCanvas = document.createElement('canvas');
             croppedCanvas.width = cropW;
             croppedCanvas.height = cropH;
-
             const ctx = croppedCanvas.getContext('2d');
             ctx.drawImage(sourceElement, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
 
@@ -953,7 +907,6 @@
                 standardColorData = colorData;
                 renderPatchesList('infoStandard', standardColorData);
                 localStorage.setItem('cm_card_standard_data', JSON.stringify(standardColorData));
-
                 btnSample.disabled = false;
                 if (sampleColorData) compareColors();
             } else {
@@ -994,11 +947,7 @@
                     const mid = Math.floor(sliced.length / 2);
                     return sliced.length % 2 !== 0 ? sliced[mid] : Math.round((sliced[mid - 1] + sliced[mid]) / 2);
                 };
-                return {
-                    l: getTrimmedMedian(lVals),
-                    a: getTrimmedMedian(aVals),
-                    b: getTrimmedMedian(bVals)
-                };
+                return { l: getTrimmedMedian(lVals), a: getTrimmedMedian(aVals), b: getTrimmedMedian(bVals) };
             } else {
                 const sum = arr => arr.reduce((val, b) => val + b, 0);
                 return {
@@ -1009,10 +958,10 @@
             }
         }
 
+        // ================= НОВЫЙ АЛГОРИТМ РАСПОЗНАВАНИЯ СТРОГО ПО ЯКОРЯМ =================
         function processImageWithCard(canvasSource, canvasTargetId) {
-            let src = null, gray = null, blurred = null, thresh = null;
-            let contours = null, hierarchy = null;
-            let warped = null, warpedBgr = null, warpedLab = null, srcMat = null, dstMat = null, M = null;
+            let src = null, warped = null, warpedBgr = null, warpedLab = null;
+            let srcMat = null, dstMat = null, M = null;
 
             let extractedData = {
                 mainMean: { l: 0, a: 128, b: 128 },
@@ -1025,72 +974,40 @@
 
             try {
                 src = cv.imread(canvasSource);
-                gray = new cv.Mat();
-                blurred = new cv.Mat();
-                thresh = new cv.Mat();
-                contours = new cv.MatVector();
-                hierarchy = new cv.Mat();
+                const w = src.cols;
+                const h = src.rows;
 
-                const imgWidth = src.cols;
-                const imgHeight = src.rows;
-                const totalArea = imgWidth * imgHeight;
-
-                cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
-                cv.GaussianBlur(gray, blurred, new cv.Size(5, 5), 0);
-                cv.adaptiveThreshold(blurred, thresh, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY_INV, 11, 2);
-                cv.findContours(thresh, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
-
-                let bestQuad = null;
-                let maxArea = 0;
-
-                for (let i = 0; i < contours.size(); ++i) {
-                    let cnt = contours.get(i);
-                    let area = cv.contourArea(cnt);
-
-                    if (area > totalArea * 0.15) {
-                        let peri = cv.arcLength(cnt, true);
-                        let approx = new cv.Mat();
-                        cv.approxPolyDP(cnt, approx, 0.02 * peri, true);
-
-                        if (approx.rows === 4 && cv.isContourConvex(approx)) {
-                            if (area > maxArea) {
-                                maxArea = area;
-                                bestQuad = [];
-                                for (let j = 0; j < 4; j++) {
-                                    bestQuad.push({
-                                        x: approx.data32S[j * 2],
-                                        y: approx.data32S[j * 2 + 1]
-                                    });
-                                }
-                            }
-                        }
-                        approx.delete();
-                    }
-                    cnt.delete();
-                }
-
-                warped = new cv.Mat();
                 const scaleFactor = 1.5;
                 const CARD_W = Math.round(856 * scaleFactor);
                 const CARD_H = Math.round(540 * scaleFactor);
 
-                if (bestQuad) {
-                    let add = bestQuad.map(p => p.x + p.y);
-                    let diff = bestQuad.map(p => p.y - p.x);
+                // ИСПОЛЬЗУЕМ ФИКСИРОВАННЫЕ УГЛОВЫЕ ЯКОРЯ КАДРА ВМЕСТО ПОИСКА КОНТУРОВ
+                // Опорные точки углов соответствуют границам рамки кадрирования снимка
+                let marginX = w * 0.05;
+                let marginY = h * 0.08;
 
-                    let tl = bestQuad[add.indexOf(Math.min(...add))];
-                    let br = bestQuad[add.indexOf(Math.max(...add))];
-                    let tr = bestQuad[diff.indexOf(Math.min(...diff))];
-                    let bl = bestQuad[diff.indexOf(Math.max(...diff))];
+                let anchorTL = { x: marginX, y: marginY };
+                let anchorTR = { x: w - marginX, y: marginY };
+                let anchorBR = { x: w - marginX, y: h - marginY };
+                let anchorBL = { x: marginX, y: h - marginY };
 
-                    srcMat = cv.matFromArray(4, 1, cv.CV_32FC2, [tl.x, tl.y, tr.x, tr.y, br.x, br.y, bl.x, bl.y]);
-                    dstMat = cv.matFromArray(4, 1, cv.CV_32FC2, [0, 0, CARD_W, 0, CARD_W, CARD_H, 0, CARD_H]);
+                srcMat = cv.matFromArray(4, 1, cv.CV_32FC2, [
+                    anchorTL.x, anchorTL.y,
+                    anchorTR.x, anchorTR.y,
+                    anchorBR.x, anchorBR.y,
+                    anchorBL.x, anchorBL.y
+                ]);
 
-                    M = cv.getPerspectiveTransform(srcMat, dstMat);
-                    cv.warpPerspective(src, warped, M, new cv.Size(CARD_W, CARD_H));
-                } else {
-                    cv.resize(src, warped, new cv.Size(CARD_W, CARD_H));
-                }
+                dstMat = cv.matFromArray(4, 1, cv.CV_32FC2, [
+                    0, 0,
+                    CARD_W, 0,
+                    CARD_W, CARD_H,
+                    0, CARD_H
+                ]);
+
+                warped = new cv.Mat();
+                M = cv.getPerspectiveTransform(srcMat, dstMat);
+                cv.warpPerspective(src, warped, M, new cv.Size(CARD_W, CARD_H));
 
                 warpedBgr = new cv.Mat();
                 cv.cvtColor(warped, warpedBgr, cv.COLOR_RGBA2BGR);
@@ -1132,11 +1049,6 @@
 
             } finally {
                 if (src) src.delete();
-                if (gray) gray.delete();
-                if (blurred) blurred.delete();
-                if (thresh) thresh.delete();
-                if (contours) contours.delete();
-                if (hierarchy) hierarchy.delete();
                 if (warped) warped.delete();
                 if (warpedBgr) warpedBgr.delete();
                 if (warpedLab) warpedLab.delete();
@@ -1164,15 +1076,7 @@
                 return;
             }
 
-            const patchNames = {
-                white: 'Белый',
-                gray: 'Серый',
-                black: 'Чёрный',
-                right1: 'Cyan',
-                right2: 'Magenta',
-                right3: 'Yellow'
-            };
-
+            const patchNames = { white: 'Белый', gray: 'Серый', black: 'Чёрный', right1: 'Cyan', right2: 'Magenta', right3: 'Yellow' };
             const m = dataObj.main;
             const p = dataObj.patches;
             const rgbMain = labToRgb(m.l, m.a, m.b);
@@ -1187,41 +1091,26 @@
                 if (p && p[key]) {
                     const c = p[key];
                     const rgbP = labToRgb(c.l, c.a, c.b);
-                    html += `
-                        <div class="patch-row">
-                            <span class="swatch-dot" style="background: rgb(${rgbP.r},${rgbP.g},${rgbP.b});"></span>
-                            <span class="patch-text">${patchNames[key]}: ${c.l}, ${c.a}, ${c.b}</span>
-                        </div>
-                    `;
+                    html += `<div class="patch-row"><span class="swatch-dot" style="background: rgb(${rgbP.r},${rgbP.g},${rgbP.b});"></span><span class="patch-text">${patchNames[key]}: ${c.l}, ${c.a}, ${c.b}</span></div>`;
                 }
             }
-
             html += `</div>`;
             container.innerHTML = html;
         }
 
         async function compareColors() {
             if (!standardColorData || !sampleColorData) return;
-
             infoCard.style.display = 'block';
-            resultDiv.innerHTML = `
-                <div style="text-align: center; padding: 20px; color: var(--text-muted);">
-                    ⏳ Идёт расчет алгоритмов на сервере...
-                </div>
-            `;
+            resultDiv.innerHTML = `<div style="text-align: center; padding: 20px; color: var(--text-muted);">⏳ Идёт расчет алгоритмов на сервере...</div>`;
 
             try {
                 const response = await fetch('https://colormatchpro-two.vercel.app/api/calibrate', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        standard: standardColorData,
-                        sample: sampleColorData
-                    })
+                    body: JSON.stringify({ standard: standardColorData, sample: sampleColorData })
                 });
 
                 if (!response.ok) throw new Error('Ошибка ответа сервера');
-
                 const data = await response.json();
                 const matchPercent = extractPercent(data.html) || '100%';
 
@@ -1231,22 +1120,15 @@
                         <span class="lite-verdict-value">${matchPercent}</span>
                     </div>
                     <div class="lite-verdict-info">
-                        <div><b class="match-success">90-100%</b> - Идеальное совпадение, можно красить различные детали авто, класть плитку через шов затирки, красить стены красками из разных партий.</div>
-                        <div><b class="match-warning">64-89%</b> - Частичное совпадение. Можно класть отличную по цвету плитку в гардеробных и малозаметных участках, красить авто с градиентным переходом, красить стены с градиентным растворением на малоосвещенных местах.</div>
+                        <div><b class="match-success">90-100%</b> - Идеальное совпадение...</div>
+                        <div><b class="match-warning">64-89%</b> - Частичное совпадение...</div>
                         <div><b class="match-error">Менее 63%</b> - Нет совпадения.</div>
                     </div>
-                    <div class="pro-details" style="display:none;">
-                        ${data.html}
-                    </div>
+                    <div class="pro-details" style="display:none;">${data.html}</div>
                 `;
-
             } catch (err) {
                 console.error(err);
-                resultDiv.innerHTML = `
-                    <div style="color: var(--accent-red); padding: 12px; text-align: center;">
-                        ❌ Ошибка соединения с сервером
-                    </div>
-                `;
+                resultDiv.innerHTML = `<div style="color: var(--accent-red); padding: 12px; text-align: center;">❌ Ошибка соединения с сервером</div>`;
             }
         }
 
@@ -1257,52 +1139,30 @@
             return totalVals.length > 0 ? totalVals[totalVals.length - 1].innerText.trim() : null;
         }
 
-        let zoomScale = 1;
-        let zoomPosX = 0;
-        let zoomPosY = 0;
-        let initialDist = 0;
-        let initialScale = 1;
-        let isDragging = false;
-        let startX = 0, startY = 0;
+        let zoomScale = 1, zoomPosX = 0, zoomPosY = 0, initialDist = 0, initialScale = 1, isDragging = false, startX = 0, startY = 0;
 
         function openZoomModal(canvasId) {
             const sourceCanvas = document.getElementById(canvasId);
             if (!sourceCanvas || sourceCanvas.width === 0) return;
-
             const zoomCanvas = document.getElementById('zoomCanvas');
             zoomCanvas.width = sourceCanvas.width;
             zoomCanvas.height = sourceCanvas.height;
             const ctx = zoomCanvas.getContext('2d');
             ctx.drawImage(sourceCanvas, 0, 0);
-
             document.getElementById('zoomTitle').innerText = canvasId === 'canvasStandard' ? 'Превью: Эталон' : 'Превью: Образец';
-
-            zoomScale = 1;
-            zoomPosX = 0;
-            zoomPosY = 0;
+            zoomScale = 1; zoomPosX = 0; zoomPosY = 0;
             updateZoomTransform();
-
             document.getElementById('zoomModal').classList.add('active');
         }
 
-        function closeZoomModal() {
-            document.getElementById('zoomModal').classList.remove('active');
-        }
-
-        function updateZoomTransform() {
-            const zoomCanvas = document.getElementById('zoomCanvas');
-            zoomCanvas.style.transform = `translate(${zoomPosX}px) scale(${zoomScale})`;
-        }
+        function closeZoomModal() { document.getElementById('zoomModal').classList.remove('active'); }
+        function updateZoomTransform() { document.getElementById('zoomCanvas').style.transform = `translate(${zoomPosX}px) scale(${zoomScale})`; }
 
         const zoomViewport = document.getElementById('zoomViewport');
-
         zoomViewport.addEventListener('touchstart', (e) => {
             if (e.touches.length === 2) {
                 isDragging = false;
-                initialDist = Math.hypot(
-                    e.touches[0].clientX - e.touches[1].clientX,
-                    e.touches[0].clientY - e.touches[1].clientY
-                );
+                initialDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
                 initialScale = zoomScale;
             } else if (e.touches.length === 1) {
                 isDragging = true;
@@ -1314,10 +1174,7 @@
         zoomViewport.addEventListener('touchmove', (e) => {
             if (e.touches.length === 2) {
                 e.preventDefault();
-                const currentDist = Math.hypot(
-                    e.touches[0].clientX - e.touches[1].clientX,
-                    e.touches[0].clientY - e.touches[1].clientY
-                );
+                const currentDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
                 if (initialDist > 0) {
                     zoomScale = Math.min(Math.max(1, initialScale * (currentDist / initialDist)), 5);
                     updateZoomTransform();
@@ -1341,10 +1198,7 @@
             e.preventDefault();
             const delta = e.deltaY < 0 ? 0.2 : -0.2;
             zoomScale = Math.min(Math.max(1, zoomScale + delta), 5);
-            if (zoomScale === 1) {
-                zoomPosX = 0;
-                zoomPosY = 0;
-            }
+            if (zoomScale === 1) { zoomPosX = 0; zoomPosY = 0; }
             updateZoomTransform();
         }, { passive: false });
 
@@ -1352,14 +1206,11 @@
             localStorage.removeItem('cm_card_standard_data');
             standardColorData = null;
             sampleColorData = null;
-
             infoStandard.innerHTML = '';
             infoSample.innerHTML = '';
             infoCard.style.display = 'none';
             resultDiv.innerText = '';
-
             btnSample.disabled = true;
-
             const canvasStd = document.getElementById('canvasStandard');
             const canvasSmp = document.getElementById('canvasSample');
             canvasStd.getContext('2d').clearRect(0, 0, canvasStd.width, canvasStd.height);
