@@ -359,6 +359,165 @@
             text-shadow: 0 0 12px rgba(0, 230, 118, 0.4);
         }
 
+        .lite-verdict-info {
+            margin-top: 10px;
+            padding: 12px;
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            font-size: 11px;
+            line-height: 1.5;
+            color: var(--text-muted);
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .comparison-block {
+            padding: 12px;
+            border-radius: 14px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--card-border);
+            margin-bottom: 12px;
+        }
+
+        .comparison-title {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 10px;
+            color: var(--text-muted);
+            text-align: center;
+        }
+
+        .comparison-title.raw { color: var(--accent-warning); }
+        .comparison-title.corrected { color: var(--accent-cyan); }
+        .comparison-title.corrected-3d { color: var(--accent-purple); }
+        .comparison-title.final { color: var(--accent-green); }
+
+        .methods-list {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .method-row {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 8px;
+            padding: 6px 10px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .method-info {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .method-name {
+            font-size: 11px;
+            font-weight: 600;
+            color: #fff;
+        }
+
+        .method-subtext {
+            font-size: 9px;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .method-score {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .score-val {
+            font-size: 15px;
+            font-weight: 800;
+        }
+
+        .match-success { color: var(--accent-green); }
+        .match-warning { color: var(--accent-warning); }
+        .match-error { color: var(--accent-red); }
+
+        .swatches-pair {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .swatch-mini {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            border: 1px solid rgba(255,255,255,0.25);
+        }
+
+        .final-summary {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            margin-top: 4px;
+            padding: 10px;
+            background: rgba(0, 230, 118, 0.05);
+            border-radius: 10px;
+            border: 1px solid rgba(0, 230, 118, 0.2);
+        }
+
+        .summary-line {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 11px;
+            color: var(--text-muted);
+        }
+
+        .summary-line b {
+            color: #fff;
+        }
+
+        .summary-badge {
+            font-size: 10px;
+            font-weight: 700;
+            padding: 2px 6px;
+            border-radius: 4px;
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .summary-badge.active {
+            background: rgba(0, 230, 118, 0.2);
+            color: var(--accent-green);
+        }
+
+        .final-total-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 6px;
+            padding-top: 8px;
+            border-top: 1px dashed rgba(255, 255, 255, 0.15);
+        }
+
+        .final-total-label {
+            font-size: 13px;
+            font-weight: 800;
+            color: #fff;
+        }
+
+        .final-total-value {
+            font-size: 22px;
+            font-weight: 900;
+            color: var(--accent-green);
+            text-shadow: 0 0 12px rgba(0, 230, 118, 0.4);
+        }
+
         .reset-btn { 
             background: rgba(255, 82, 82, 0.12); 
             color: var(--accent-red); 
@@ -516,7 +675,8 @@
             display: block;
         }
 
-        body.pro-mode-active .lite-verdict-box {
+        body.pro-mode-active .lite-verdict-box,
+        body.pro-mode-active .lite-verdict-info {
             display: none;
         }
 
@@ -759,7 +919,6 @@
             restoreState();
         }
 
-        // Чистая техника камеры из 244 (без автоэкспозиции и статус-бейджей)
         async function openCamera(mode) {
             activeMode = mode;
             document.getElementById('cameraTitle').innerText = mode === 'standard' ? 'Съемка Эталона' : 'Съемка Образца';
@@ -1154,15 +1313,18 @@
 
                 const data = await response.json();
                 
-                // Извлекаем итоговый процент из полученного HTML
                 const matchPercent = extractPercent(data.html) || '100%';
 
-                // Обертка: в Light показан только чистый блок, в Pro — вся серверная аналитика
                 resultDiv.innerHTML = `
                     <!-- Light UI Verdict -->
                     <div class="lite-verdict-box">
                         <span class="lite-verdict-title">Совпадение цвета</span>
                         <span class="lite-verdict-value">${matchPercent}</span>
+                    </div>
+                    <div class="lite-verdict-info">
+                        <div><b class="match-success">90-100%</b> - Идеальное совпадение, можно красить различные детали авто, класть плитку через шов затирки, красить стены красками из разных партий.</div>
+                        <div><b class="match-warning">64-89%</b> - Частичное совпадение. Можно класть отличную по цвету плитку в гардеробных и малозаметных участках, красить авто с градиентным переходом, красить стены с градиентным растворением на малоосвещенных местах.</div>
+                        <div><b class="match-error">Менее 63%</b> - Нет совпадения.</div>
                     </div>
 
                     <!-- Pro UI Verdict (подробные матрицы и дельты) -->
@@ -1184,8 +1346,8 @@
         function extractPercent(htmlString) {
             const temp = document.createElement('div');
             temp.innerHTML = htmlString;
-            const totalVal = temp.querySelector('.final-total-value');
-            return totalVal ? totalVal.innerText.trim() : null;
+            const totalVals = temp.querySelectorAll('.final-total-value');
+            return totalVals.length > 0 ? totalVals[totalVals.length - 1].innerText.trim() : null;
         }
 
         // ================= ЛОГИКА PINCH TO ZOOM ПРОСМОТРА =================
@@ -1223,7 +1385,7 @@
 
         function updateZoomTransform() {
             const zoomCanvas = document.getElementById('zoomCanvas');
-            zoomCanvas.style.transform = `translate(${zoomPosX}px, ${zoomPosY}px) scale(${zoomScale})`;
+            zoomCanvas.style.transform = `translate(${zoomPosX}px) scale(${zoomScale})`;
         }
 
         const zoomViewport = document.getElementById('zoomViewport');
