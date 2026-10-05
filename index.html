@@ -1277,7 +1277,7 @@
                     let cnt = contours.get(i);
                     let area = cv.contourArea(cnt);
 
-                    if (area > totalArea * 0.15) {
+                    if (area > totalArea * 0.20) {
                         let peri = cv.arcLength(cnt, true);
                         let approx = new cv.Mat();
                         cv.approxPolyDP(cnt, approx, 0.03 * peri, true);
@@ -1322,31 +1322,33 @@
                     cv.resize(src, warped, new cv.Size(CARD_W, CARD_H));
                 }
 
+                // Конвертация в BGR через отдельную переменную warpedBgr,
+                // чтобы не изменять warped (RGBA), необходимый для корректного cv.imshow
                 warpedBgr = new cv.Mat();
                 cv.cvtColor(warped, warpedBgr, cv.COLOR_RGBA2BGR);
 
                 warpedLab = new cv.Mat();
                 cv.cvtColor(warpedBgr, warpedLab, cv.COLOR_BGR2Lab);
 
-                const holeCenterX = Math.round(CARD_W * 0.50); 
-                const holeCenterY = Math.round(CARD_H * 0.50);
+                const holeCenterX = Math.round(CARD_W * 0.508); 
+                const holeCenterY = Math.round(CARD_H * 0.468);
                 const holeRadius = Math.round(35 * scaleFactor);
 
                 const colorPatches = [
-                    { key: 'white',  x: Math.round(CARD_W * 0.155), y: Math.round(CARD_H * 0.250) },
-                    { key: 'gray',   x: Math.round(CARD_W * 0.155), y: Math.round(CARD_H * 0.500) },
-                    { key: 'black',  x: Math.round(CARD_W * 0.155), y: Math.round(CARD_H * 0.750) },
-                    { key: 'right1', x: Math.round(CARD_W * 0.845), y: Math.round(CARD_H * 0.250) },
-                    { key: 'right2', x: Math.round(CARD_W * 0.845), y: Math.round(CARD_H * 0.500) },
-                    { key: 'right3', x: Math.round(CARD_W * 0.845), y: Math.round(CARD_H * 0.750) }
+                    { key: 'white',  x: Math.round(CARD_W * 0.155), y: Math.round(CARD_H * 0.310) - Math.round(20 * scaleFactor) },
+                    { key: 'gray',   x: Math.round(CARD_W * 0.155), y: Math.round(CARD_H * 0.525) - Math.round(5 * scaleFactor) },
+                    { key: 'black',  x: Math.round(CARD_W * 0.155), y: Math.round(CARD_H * 0.740) },
+                    { key: 'right1', x: Math.round(CARD_W * 0.845), y: Math.round(CARD_H * 0.310) - Math.round(20 * scaleFactor) },
+                    { key: 'right2', x: Math.round(CARD_W * 0.845), y: Math.round(CARD_H * 0.525) - Math.round(5 * scaleFactor) },
+                    { key: 'right3', x: Math.round(CARD_W * 0.845), y: Math.round(CARD_H * 0.740) }
                 ];
 
                 extractedData.mainMean = getRegionColorLAB(warpedLab, holeCenterX, holeCenterY, Math.round(holeRadius * 0.6), false);
                 extractedData.mainMedian = getRegionColorLAB(warpedLab, holeCenterX, holeCenterY, Math.round(holeRadius * 0.6), true);
 
                 colorPatches.forEach(p => {
-                    extractedData.patchesMean[p.key] = getRegionColorLAB(warpedLab, p.x, p.y, Math.round(8 * scaleFactor), false);
-                    extractedData.patchesMedian[p.key] = getRegionColorLAB(warpedLab, p.x, p.y, Math.round(8 * scaleFactor), true);
+                    extractedData.patchesMean[p.key] = getRegionColorLAB(warpedLab, p.x, p.y, Math.round(6 * scaleFactor), false);
+                    extractedData.patchesMedian[p.key] = getRegionColorLAB(warpedLab, p.x, p.y, Math.round(6 * scaleFactor), true);
                 });
 
                 extractedData.main = extractedData.mainMean;
