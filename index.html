@@ -91,6 +91,7 @@
             -webkit-text-fill-color: transparent;
         }
 
+        /* Золотой бейдж PRO */
         .pro-badge {
             display: none;
             background: rgba(255, 215, 0, 0.15);
@@ -281,7 +282,10 @@
 
         .btn-action:disabled { opacity: 0.3; pointer-events: none; filter: grayscale(1); }
 
-        .info-container { display: none; }
+        /* СКРЫВАЕМЫЕ ЭЛЕМЕНТЫ ЛАЙТ РЕЖИМА */
+        .info-container {
+            display: none;
+        }
 
         .patches-list {
             display: flex;
@@ -331,6 +335,7 @@
             box-shadow: 0 12px 32px rgba(0,0,0,0.4);
         }
 
+        /* ЛАЙТ ВЕРДИКТ */
         .lite-verdict-box {
             display: flex;
             align-items: center;
@@ -366,6 +371,151 @@
             display: flex;
             flex-direction: column;
             gap: 6px;
+        }
+
+        .comparison-block {
+            padding: 12px;
+            border-radius: 14px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--card-border);
+            margin-bottom: 12px;
+        }
+
+        .comparison-title {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 10px;
+            color: var(--text-muted);
+            text-align: center;
+        }
+
+        .comparison-title.raw { color: var(--accent-warning); }
+        .comparison-title.corrected { color: var(--accent-cyan); }
+        .comparison-title.corrected-3d { color: var(--accent-purple); }
+        .comparison-title.final { color: var(--accent-green); }
+
+        .methods-list {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .method-row {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 8px;
+            padding: 6px 10px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .method-info {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .method-name {
+            font-size: 11px;
+            font-weight: 600;
+            color: #fff;
+        }
+
+        .method-subtext {
+            font-size: 9px;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .method-score {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .score-val {
+            font-size: 15px;
+            font-weight: 800;
+        }
+
+        .match-success { color: var(--accent-green); }
+        .match-warning { color: var(--accent-warning); }
+        .match-error { color: var(--accent-red); }
+
+        .swatches-pair {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .swatch-mini {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            border: 1px solid rgba(255,255,255,0.25);
+        }
+
+        .final-summary {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            margin-top: 4px;
+            padding: 10px;
+            background: rgba(0, 230, 118, 0.05);
+            border-radius: 10px;
+            border: 1px solid rgba(0, 230, 118, 0.2);
+        }
+
+        .summary-line {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 11px;
+            color: var(--text-muted);
+        }
+
+        .summary-line b {
+            color: #fff;
+        }
+
+        .summary-badge {
+            font-size: 10px;
+            font-weight: 700;
+            padding: 2px 6px;
+            border-radius: 4px;
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .summary-badge.active {
+            background: rgba(0, 230, 118, 0.2);
+            color: var(--accent-green);
+        }
+
+        .final-total-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 6px;
+            padding-top: 8px;
+            border-top: 1px dashed rgba(255, 255, 255, 0.15);
+        }
+
+        .final-total-label {
+            font-size: 13px;
+            font-weight: 800;
+            color: #fff;
+        }
+
+        .final-total-value {
+            font-size: 22px;
+            font-weight: 900;
+            color: var(--accent-green);
+            text-shadow: 0 0 12px rgba(0, 230, 118, 0.4);
         }
 
         .reset-btn { 
@@ -450,6 +600,7 @@
             pointer-events: none;
         }
 
+        /* ПАНЕЛЬ РУЧНОЙ РЕГУЛИРОВКИ ЭКСПОЗИЦИИ */
         .ev-control-panel {
             position: absolute;
             top: 10px;
@@ -482,7 +633,9 @@
             user-select: none;
         }
 
-        .ev-btn:active { background: rgba(255, 255, 255, 0.3); }
+        .ev-btn:active {
+            background: rgba(255, 255, 255, 0.3);
+        }
 
         .ev-display {
             color: var(--accent-cyan);
@@ -493,6 +646,7 @@
             font-family: monospace;
         }
 
+        /* ZOOM MODAL STYLES */
         .zoom-modal {
             display: none;
             position: fixed;
@@ -558,11 +712,23 @@
             font-size: 13px;
         }
 
-        body.pro-mode-active .pro-badge { display: inline-block; }
-        body.pro-mode-active .info-container { display: block; }
+        /* ПРАВИЛА АКТИВАЦИИ РЕЖИМА PRO */
+        body.pro-mode-active .pro-badge {
+            display: inline-block;
+        }
+
+        body.pro-mode-active .info-container {
+            display: block;
+        }
+
         body.pro-mode-active .lite-verdict-box,
-        body.pro-mode-active .lite-verdict-info { display: none; }
-        body.pro-mode-active .pro-details { display: block !important; }
+        body.pro-mode-active .lite-verdict-info {
+            display: none;
+        }
+
+        body.pro-mode-active .pro-details {
+            display: block !important;
+        }
 
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(-4px); }
@@ -574,6 +740,7 @@
 <body>
 
     <div class="container">
+        <!-- ТРОЙНОЙ ТАП ПО ШАПКЕ АКТИВИРУЕТ PRO -->
         <div class="header">
             <div class="brand" id="brandTrigger">
                 <div class="logo-badge">
@@ -628,6 +795,7 @@
                     <button class="btn-action" id="btnStandard" onclick="openCamera('standard')" disabled>
                         📷 Снять Эталон
                     </button>
+                    <!-- В PRO выводит LAB/RGB, в Light скрыто -->
                     <div class="info-container" id="infoStandard"></div>
                 </div>
 
@@ -642,6 +810,7 @@
                     <button class="btn-action secondary" id="btnSample" onclick="openCamera('sample')" disabled>
                         📸 Снять Образец
                     </button>
+                    <!-- В PRO выводит LAB/RGB, в Light скрыто -->
                     <div class="info-container" id="infoSample"></div>
                 </div>
             </div>
@@ -689,6 +858,7 @@
             </div>
             
             <div class="camera-viewport">
+                <!-- ПАНЕЛЬ РУЧНОЙ РЕГУЛИРОВКИ ЭКСПОЗИЦИИ -->
                 <div class="ev-control-panel" id="evControlPanel">
                     <button class="ev-btn" onclick="adjustEV(-1)">-</button>
                     <span class="ev-display" id="evValueDisplay">EV: 0.0</span>
@@ -722,6 +892,7 @@
         </div>
     </div>
 
+    <!-- МОДАЛЬНОЕ ОКНО ZOOM ПРОСМОТРА -->
     <div class="zoom-modal" id="zoomModal">
         <div class="zoom-header">
             <span id="zoomTitle">Просмотр снимка</span>
@@ -740,6 +911,7 @@
         let activeMode = 'standard';
         let mediaStream = null;
 
+        // ПЕРЕМЕННЫЕ УПРАВЛЕНИЯ ЭКСПОЗИЦИЕЙ
         let currentEV = 0;
         let minEV = -2;
         let maxEV = 2;
@@ -758,6 +930,7 @@
         const cameraModal = document.getElementById('cameraModal');
         const video = document.getElementById('webcam');
 
+        // Тройной тап по логотипу SPECTRIX
         let brandTapCount = 0;
         let brandTapTimer = null;
         const brandTrigger = document.getElementById('brandTrigger');
@@ -1045,8 +1218,6 @@
             }
         }
 
-        // ================= РАСПОЗНАВАНИЕ КАРТЫ ПО МИШЕНЯМ И КОРРЕКЦИЯ ПЕРСПЕКТИВЫ =================
-
         function processImageWithCard(canvasSource, canvasTargetId) {
             let src = null, gray = null, blurred = null, thresh = null;
             let contours = null, hierarchy = null;
@@ -1094,56 +1265,38 @@
                 const imgHeight = src.rows;
                 const totalArea = imgWidth * imgHeight;
 
-                // 1. Поиск круглых элементов мишеней по углам
                 cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
-                cv.GaussianBlur(gray, blurred, new cv.Size(5, 5), 0);
-                cv.adaptiveThreshold(blurred, thresh, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY_INV, 11, 2);
-                cv.findContours(thresh, contours, hierarchy, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE);
+                cv.GaussianBlur(gray, blurred, new cv.Size(7, 7), 0);
+                cv.adaptiveThreshold(blurred, thresh, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY_INV, 15, 3);
+                cv.findContours(thresh, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
 
-                let targetCandidates = [];
+                let bestQuad = null;
+                let maxArea = 0;
 
                 for (let i = 0; i < contours.size(); ++i) {
                     let cnt = contours.get(i);
                     let area = cv.contourArea(cnt);
 
-                    // Фильтрация по площади: мишени занимают от 0.01% до 5% кадра
-                    if (area > totalArea * 0.0001 && area < totalArea * 0.05) {
+                    if (area > totalArea * 0.15) {
                         let peri = cv.arcLength(cnt, true);
-                        if (peri > 0) {
-                            let circularity = (4 * Math.PI * area) / (peri * peri);
-                            // Ищем круглые объекты мишеней (округлость > 0.60)
-                            if (circularity > 0.60) {
-                                let moments = cv.moments(cnt);
-                                if (moments.m00 !== 0) {
-                                    let cx = moments.m10 / moments.m00;
-                                    let cy = moments.m01 / moments.m00;
-                                    targetCandidates.push({ x: cx, y: cy, area: area, circularity: circularity });
+                        let approx = new cv.Mat();
+                        cv.approxPolyDP(cnt, approx, 0.03 * peri, true);
+
+                        if (approx.rows === 4 && cv.isContourConvex(approx)) {
+                            if (area > maxArea) {
+                                maxArea = area;
+                                bestQuad = [];
+                                for (let j = 0; j < 4; j++) {
+                                    bestQuad.push({
+                                        x: approx.data32S[j * 2],
+                                        y: approx.data32S[j * 2 + 1]
+                                    });
                                 }
                             }
                         }
+                        approx.delete();
                     }
                     cnt.delete();
-                }
-
-                // 2. Кластеризация концентрических колец мишеней около их центров
-                let clusteredTargets = [];
-                const mergeDist = Math.sqrt(totalArea) * 0.03;
-
-                for (let cand of targetCandidates) {
-                    let foundCluster = false;
-                    for (let cluster of clusteredTargets) {
-                        let dist = Math.hypot(cand.x - cluster.x, cand.y - cluster.y);
-                        if (dist < mergeDist) {
-                            cluster.x = (cluster.x * cluster.count + cand.x) / (cluster.count + 1);
-                            cluster.y = (cluster.y * cluster.count + cand.y) / (cluster.count + 1);
-                            cluster.count += 1;
-                            foundCluster = true;
-                            break;
-                        }
-                    }
-                    if (!foundCluster) {
-                        clusteredTargets.push({ x: cand.x, y: cand.y, count: 1 });
-                    }
                 }
 
                 warped = new cv.Mat();
@@ -1151,42 +1304,17 @@
                 const CARD_W = Math.round(856 * scaleFactor);
                 const CARD_H = Math.round(540 * scaleFactor);
 
-                // Эталонные координаты 4 мишеней на целевой выровненной карточке
-                const dstTL = { x: Math.round(CARD_W * 0.08), y: Math.round(CARD_H * 0.12) };
-                const dstTR = { x: Math.round(CARD_W * 0.92), y: Math.round(CARD_H * 0.12) };
-                const dstBR = { x: Math.round(CARD_W * 0.92), y: Math.round(CARD_H * 0.88) };
-                const dstBL = { x: Math.round(CARD_W * 0.08), y: Math.round(CARD_H * 0.88) };
+                if (bestQuad) {
+                    let add = bestQuad.map(p => p.x + p.y);
+                    let diff = bestQuad.map(p => p.y - p.x);
 
-                let bestTargets = null;
+                    let tl = bestQuad[add.indexOf(Math.min(...add))];
+                    let br = bestQuad[add.indexOf(Math.max(...add))];
+                    let tr = bestQuad[diff.indexOf(Math.min(...diff))];
+                    let bl = bestQuad[diff.indexOf(Math.max(...diff))];
 
-                if (clusteredTargets.length >= 4) {
-                    let add = clusteredTargets.map(p => p.x + p.y);
-                    let diff = clusteredTargets.map(p => p.y - p.x);
-
-                    let tl = clusteredTargets[add.indexOf(Math.min(...add))];
-                    let br = clusteredTargets[add.indexOf(Math.max(...add))];
-                    let tr = clusteredTargets[diff.indexOf(Math.min(...diff))];
-                    let bl = clusteredTargets[diff.indexOf(Math.max(...diff))];
-
-                    if (tl !== br && tr !== bl && tl !== tr && bl !== br) {
-                        bestTargets = { tl, tr, br, bl };
-                    }
-                }
-
-                // 3. Выравнивание перспективы по найденным мишеням
-                if (bestTargets) {
-                    srcMat = cv.matFromArray(4, 1, cv.CV_32FC2, [
-                        bestTargets.tl.x, bestTargets.tl.y,
-                        bestTargets.tr.x, bestTargets.tr.y,
-                        bestTargets.br.x, bestTargets.br.y,
-                        bestTargets.bl.x, bestTargets.bl.y
-                    ]);
-                    dstMat = cv.matFromArray(4, 1, cv.CV_32FC2, [
-                        dstTL.x, dstTL.y,
-                        dstTR.x, dstTR.y,
-                        dstBR.x, dstBR.y,
-                        dstBL.x, dstBL.y
-                    ]);
+                    srcMat = cv.matFromArray(4, 1, cv.CV_32FC2, [tl.x, tl.y, tr.x, tr.y, br.x, br.y, bl.x, bl.y]);
+                    dstMat = cv.matFromArray(4, 1, cv.CV_32FC2, [0, 0, CARD_W, 0, CARD_W, CARD_H, 0, CARD_H]);
 
                     M = cv.getPerspectiveTransform(srcMat, dstMat);
                     cv.warpPerspective(src, warped, M, new cv.Size(CARD_W, CARD_H));
@@ -1200,25 +1328,25 @@
                 warpedLab = new cv.Mat();
                 cv.cvtColor(warpedBgr, warpedLab, cv.COLOR_BGR2Lab);
 
-                const holeCenterX = Math.round(CARD_W * 0.508); 
-                const holeCenterY = Math.round(CARD_H * 0.468);
+                const holeCenterX = Math.round(CARD_W * 0.50); 
+                const holeCenterY = Math.round(CARD_H * 0.50);
                 const holeRadius = Math.round(35 * scaleFactor);
 
                 const colorPatches = [
-                    { key: 'white',  x: Math.round(CARD_W * 0.155), y: Math.round(CARD_H * 0.310) - Math.round(20 * scaleFactor) },
-                    { key: 'gray',   x: Math.round(CARD_W * 0.155), y: Math.round(CARD_H * 0.525) - Math.round(5 * scaleFactor) },
-                    { key: 'black',  x: Math.round(CARD_W * 0.155), y: Math.round(CARD_H * 0.740) },
-                    { key: 'right1', x: Math.round(CARD_W * 0.845), y: Math.round(CARD_H * 0.310) - Math.round(20 * scaleFactor) },
-                    { key: 'right2', x: Math.round(CARD_W * 0.845), y: Math.round(CARD_H * 0.525) - Math.round(5 * scaleFactor) },
-                    { key: 'right3', x: Math.round(CARD_W * 0.845), y: Math.round(CARD_H * 0.740) }
+                    { key: 'white',  x: Math.round(CARD_W * 0.155), y: Math.round(CARD_H * 0.250) },
+                    { key: 'gray',   x: Math.round(CARD_W * 0.155), y: Math.round(CARD_H * 0.500) },
+                    { key: 'black',  x: Math.round(CARD_W * 0.155), y: Math.round(CARD_H * 0.750) },
+                    { key: 'right1', x: Math.round(CARD_W * 0.845), y: Math.round(CARD_H * 0.250) },
+                    { key: 'right2', x: Math.round(CARD_W * 0.845), y: Math.round(CARD_H * 0.500) },
+                    { key: 'right3', x: Math.round(CARD_W * 0.845), y: Math.round(CARD_H * 0.750) }
                 ];
 
                 extractedData.mainMean = getRegionColorLAB(warpedLab, holeCenterX, holeCenterY, Math.round(holeRadius * 0.6), false);
                 extractedData.mainMedian = getRegionColorLAB(warpedLab, holeCenterX, holeCenterY, Math.round(holeRadius * 0.6), true);
 
                 colorPatches.forEach(p => {
-                    extractedData.patchesMean[p.key] = getRegionColorLAB(warpedLab, p.x, p.y, Math.round(6 * scaleFactor), false);
-                    extractedData.patchesMedian[p.key] = getRegionColorLAB(warpedLab, p.x, p.y, Math.round(6 * scaleFactor), true);
+                    extractedData.patchesMean[p.key] = getRegionColorLAB(warpedLab, p.x, p.y, Math.round(8 * scaleFactor), false);
+                    extractedData.patchesMedian[p.key] = getRegionColorLAB(warpedLab, p.x, p.y, Math.round(8 * scaleFactor), true);
                 });
 
                 extractedData.main = extractedData.mainMean;
@@ -1228,9 +1356,6 @@
                 drawTargetCrosshair(warped, holeCenterX, holeCenterY, greenColor, holeRadius);
                 colorPatches.forEach(p => {
                     drawTargetCrosshair(warped, p.x, p.y, greenColor, Math.round(12 * scaleFactor));
-                });
-                [dstTL, dstTR, dstBR, dstBL].forEach(t => {
-                    drawTargetCrosshair(warped, t.x, t.y, greenColor, Math.round(14 * scaleFactor));
                 });
 
                 cv.imshow(canvasTargetId, warped);
@@ -1306,6 +1431,8 @@
             container.innerHTML = html;
         }
 
+        // ================= ВЫЗОВ СЕРВЕРНОЙ МАТЕМАТИКИ =================
+
         async function compareColors() {
             if (!standardColorData || !sampleColorData) return;
 
@@ -1329,9 +1456,13 @@
                 if (!response.ok) throw new Error('Ошибка ответа сервера');
 
                 const data = await response.json();
+                
+                // Извлекаем итоговый процент из полученного HTML
                 const matchPercent = extractPercent(data.html) || '100%';
 
+                // Обертка: в Light показан только чистый блок, в Pro — вся серверная аналитика
                 resultDiv.innerHTML = `
+                    <!-- Light UI Verdict -->
                     <div class="lite-verdict-box">
                         <span class="lite-verdict-title">Совпадение цвета</span>
                         <span class="lite-verdict-value">${matchPercent}</span>
@@ -1342,6 +1473,7 @@
                         <div><b class="match-error">Менее 63%</b> - Нет совпадения.</div>
                     </div>
 
+                    <!-- Pro UI Verdict (подробные матрицы и дельты) -->
                     <div class="pro-details" style="display:none;">
                         ${data.html}
                     </div>
@@ -1364,6 +1496,7 @@
             return totalVals.length > 0 ? totalVals[totalVals.length - 1].innerText.trim() : null;
         }
 
+        // ================= ЛОГИКА PINCH TO ZOOM ПРОСМОТРА =================
         let zoomScale = 1;
         let zoomPosX = 0;
         let zoomPosY = 0;
