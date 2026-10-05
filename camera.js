@@ -1,4 +1,4 @@
-// Запуск камеры и получение потока высокого разрешения
+// Запуск камеры и получение потока высокого разрешения (чистая автоэкспозиция)
 async function openCamera(mode) {
     activeMode = mode;
     document.getElementById('cameraTitle').innerText = mode === 'standard' ? 'Съемка Эталона' : 'Съемка Образца';
@@ -28,55 +28,6 @@ async function openCamera(mode) {
     }
 
     video.srcObject = mediaStream;
-    initExposureControl();
-}
-
-// Инициализация регулировки экспозиции (EV)
-function initExposureControl() {
-    const track = mediaStream ? mediaStream.getVideoTracks()[0] : null;
-    if (!track) return;
-
-    const capabilities = track.getCapabilities ? track.getCapabilities() : {};
-    if ('exposureCompensation' in capabilities) {
-        minEV = capabilities.exposureCompensation.min || -2;
-        maxEV = capabilities.exposureCompensation.max || 2;
-        stepEV = capabilities.exposureCompensation.step || 0.1;
-
-        const settings = track.getSettings ? track.getSettings() : {};
-        currentEV = settings.exposureCompensation || 0;
-    } else {
-        currentEV = 0;
-    }
-    updateEVDisplay();
-}
-
-// Изменение значения EV
-async function adjustEV(direction) {
-    const track = mediaStream ? mediaStream.getVideoTracks()[0] : null;
-    if (!track) return;
-
-    let targetEV = currentEV + (direction * stepEV);
-    targetEV = Math.max(minEV, Math.min(maxEV, targetEV));
-    targetEV = Math.round(targetEV / stepEV) * stepEV;
-
-    try {
-        await track.applyConstraints({
-            advanced: [{ exposureCompensation: targetEV }]
-        });
-        currentEV = targetEV;
-        updateEVDisplay();
-    } catch (err) {
-        console.warn('Не удалось изменить экспозицию:', err);
-    }
-}
-
-// Обновление интерфейса EV
-function updateEVDisplay() {
-    const display = document.getElementById('evValueDisplay');
-    if (display) {
-        const sign = currentEV > 0 ? '+' : '';
-        display.innerText = `EV: ${sign}${currentEV.toFixed(1)}`;
-    }
 }
 
 // Закрытие камеры и остановка потока
