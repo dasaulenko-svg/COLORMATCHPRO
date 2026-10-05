@@ -925,12 +925,22 @@
             cameraModal.classList.add('active');
 
             try {
+                // Запрашиваем максимальное разрешение (4K/HD) для потока, убирая сжатие и мыло
                 mediaStream = await navigator.mediaDevices.getUserMedia({
-                    video: { facingMode: { exact: "environment" } }
+                    video: { 
+                        facingMode: { exact: "environment" },
+                        width: { ideal: 3840 },
+                        height: { ideal: 2160 }
+                    }
                 });
             } catch (err) {
                 try {
-                    mediaStream = await navigator.mediaDevices.getUserMedia({ video: true });
+                    mediaStream = await navigator.mediaDevices.getUserMedia({ 
+                        video: { 
+                            width: { ideal: 3840 },
+                            height: { ideal: 2160 }
+                        } 
+                    });
                 } catch (fallbackErr) {
                     alert('Ошибка доступа к камере: ' + fallbackErr.message);
                     closeCamera();
