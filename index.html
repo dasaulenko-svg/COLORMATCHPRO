@@ -282,6 +282,7 @@
 
         .btn-action:disabled { opacity: 0.3; pointer-events: none; filter: grayscale(1); }
 
+        /* СКРЫВАЕМЫЕ ЭЛЕМЕНТЫ ЛАЙТ РЕЖИМА */
         .info-container {
             display: none;
         }
@@ -334,6 +335,7 @@
             box-shadow: 0 12px 32px rgba(0,0,0,0.4);
         }
 
+        /* ЛАЙТ ВЕРДИКТ */
         .lite-verdict-box {
             display: flex;
             align-items: center;
@@ -389,9 +391,132 @@
             text-align: center;
         }
 
+        .comparison-title.raw { color: var(--accent-warning); }
+        .comparison-title.corrected { color: var(--accent-cyan); }
+        .comparison-title.corrected-3d { color: var(--accent-purple); }
+        .comparison-title.final { color: var(--accent-green); }
+
+        .methods-list {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .method-row {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 8px;
+            padding: 6px 10px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .method-info {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .method-name {
+            font-size: 11px;
+            font-weight: 600;
+            color: #fff;
+        }
+
+        .method-subtext {
+            font-size: 9px;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .method-score {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .score-val {
+            font-size: 15px;
+            font-weight: 800;
+        }
+
         .match-success { color: var(--accent-green); }
         .match-warning { color: var(--accent-warning); }
         .match-error { color: var(--accent-red); }
+
+        .swatches-pair {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .swatch-mini {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            border: 1px solid rgba(255,255,255,0.25);
+        }
+
+        .final-summary {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            margin-top: 4px;
+            padding: 10px;
+            background: rgba(0, 230, 118, 0.05);
+            border-radius: 10px;
+            border: 1px solid rgba(0, 230, 118, 0.2);
+        }
+
+        .summary-line {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 11px;
+            color: var(--text-muted);
+        }
+
+        .summary-line b {
+            color: #fff;
+        }
+
+        .summary-badge {
+            font-size: 10px;
+            font-weight: 700;
+            padding: 2px 6px;
+            border-radius: 4px;
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .summary-badge.active {
+            background: rgba(0, 230, 118, 0.2);
+            color: var(--accent-green);
+        }
+
+        .final-total-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 6px;
+            padding-top: 8px;
+            border-top: 1px dashed rgba(255, 255, 255, 0.15);
+        }
+
+        .final-total-label {
+            font-size: 13px;
+            font-weight: 800;
+            color: #fff;
+        }
+
+        .final-total-value {
+            font-size: 22px;
+            font-weight: 900;
+            color: var(--accent-green);
+            text-shadow: 0 0 12px rgba(0, 230, 118, 0.4);
+        }
 
         .reset-btn { 
             background: rgba(255, 82, 82, 0.12); 
@@ -475,6 +600,7 @@
             pointer-events: none;
         }
 
+        /* ПАНЕЛЬ РУЧНОЙ РЕГУЛИРОВКИ ЭКСПОЗИЦИИ */
         .ev-control-panel {
             position: absolute;
             top: 10px;
@@ -520,6 +646,7 @@
             font-family: monospace;
         }
 
+        /* ZOOM MODAL STYLES */
         .zoom-modal {
             display: none;
             position: fixed;
@@ -585,6 +712,7 @@
             font-size: 13px;
         }
 
+        /* ПРАВИЛА АКТИВАЦИИ РЕЖИМА PRO */
         body.pro-mode-active .pro-badge {
             display: inline-block;
         }
@@ -612,6 +740,7 @@
 <body>
 
     <div class="container">
+        <!-- ТРОЙНОЙ ТАП ПО ШАПКЕ АКТИВИРУЕТ PRO -->
         <div class="header">
             <div class="brand" id="brandTrigger">
                 <div class="logo-badge">
@@ -666,6 +795,7 @@
                     <button class="btn-action" id="btnStandard" onclick="openCamera('standard')" disabled>
                         📷 Снять Эталон
                     </button>
+                    <!-- В PRO выводит LAB/RGB, в Light скрыто -->
                     <div class="info-container" id="infoStandard"></div>
                 </div>
 
@@ -680,6 +810,7 @@
                     <button class="btn-action secondary" id="btnSample" onclick="openCamera('sample')" disabled>
                         📸 Снять Образец
                     </button>
+                    <!-- В PRO выводит LAB/RGB, в Light скрыто -->
                     <div class="info-container" id="infoSample"></div>
                 </div>
             </div>
@@ -727,6 +858,7 @@
             </div>
             
             <div class="camera-viewport">
+                <!-- ПАНЕЛЬ РУЧНОЙ РЕГУЛИРОВКИ ЭКСПОЗИЦИИ -->
                 <div class="ev-control-panel" id="evControlPanel">
                     <button class="ev-btn" onclick="adjustEV(-1)">-</button>
                     <span class="ev-display" id="evValueDisplay">EV: 0.0</span>
@@ -760,6 +892,7 @@
         </div>
     </div>
 
+    <!-- МОДАЛЬНОЕ ОКНО ZOOM ПРОСМОТРА -->
     <div class="zoom-modal" id="zoomModal">
         <div class="zoom-header">
             <span id="zoomTitle">Просмотр снимка</span>
@@ -778,6 +911,7 @@
         let activeMode = 'standard';
         let mediaStream = null;
 
+        // ПЕРЕМЕННЫЕ УПРАВЛЕНИЯ ЭКСПОЗИЦИЕЙ
         let currentEV = 0;
         let minEV = -2;
         let maxEV = 2;
@@ -796,6 +930,7 @@
         const cameraModal = document.getElementById('cameraModal');
         const video = document.getElementById('webcam');
 
+        // Тройной тап по логотипу SPECTRIX
         let brandTapCount = 0;
         let brandTapTimer = null;
         const brandTrigger = document.getElementById('brandTrigger');
@@ -1083,7 +1218,6 @@
             }
         }
 
-        // ================= НОВЫЙ АЛГОРИТМ РАСПОЗНАВАНИЯ ПО ЯКОРЯМ В УГЛАХ =================
         function processImageWithCard(canvasSource, canvasTargetId) {
             let src = null, gray = null, blurred = null, thresh = null;
             let contours = null, hierarchy = null;
@@ -1127,31 +1261,36 @@
                 contours = new cv.MatVector();
                 hierarchy = new cv.Mat();
 
-                cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
-                cv.GaussianBlur(gray, blurred, new cv.Size(5, 5), 0);
-                cv.threshold(blurred, thresh, 100, 255, cv.THRESH_BINARY_INV);
-                cv.findContours(thresh, contours, hierarchy, cv.RETR_LIST, cv.CHAIN_APPROX_SIMPLE);
+                const imgWidth = src.cols;
+                const imgHeight = src.rows;
+                const totalArea = imgWidth * imgHeight;
 
-                let anchorCenters = [];
+                cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
+                cv.GaussianBlur(gray, blurred, new cv.Size(7, 7), 0);
+                cv.adaptiveThreshold(blurred, thresh, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY_INV, 15, 3);
+                cv.findContours(thresh, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
+
+                let bestQuad = null;
+                let maxArea = 0;
 
                 for (let i = 0; i < contours.size(); ++i) {
                     let cnt = contours.get(i);
                     let area = cv.contourArea(cnt);
-                    
-                    if (area > 15 && area < 5000) {
+
+                    if (area > totalArea * 0.20) {
                         let peri = cv.arcLength(cnt, true);
                         let approx = new cv.Mat();
-                        cv.approxPolyDP(cnt, approx, 0.04 * peri, true);
+                        cv.approxPolyDP(cnt, approx, 0.03 * peri, true);
 
-                        if (approx.rows >= 4 && approx.rows <= 8) {
-                            let rect = cv.boundingRect(cnt);
-                            let aspect = rect.width / rect.height;
-                            if (aspect >= 0.7 && aspect <= 1.3) {
-                                let M_cnt = cv.moments(cnt);
-                                if (M_cnt.m00 > 0) {
-                                    let cx = M_cnt.m10 / M_cnt.m00;
-                                    let cy = M_cnt.m01 / M_cnt.m00;
-                                    anchorCenters.push({ x: cx, y: cy });
+                        if (approx.rows === 4 && cv.isContourConvex(approx)) {
+                            if (area > maxArea) {
+                                maxArea = area;
+                                bestQuad = [];
+                                for (let j = 0; j < 4; j++) {
+                                    bestQuad.push({
+                                        x: approx.data32S[j * 2],
+                                        y: approx.data32S[j * 2 + 1]
+                                    });
                                 }
                             }
                         }
@@ -1160,29 +1299,20 @@
                     cnt.delete();
                 }
 
-                let tl = null, tr = null, br = null, bl = null;
-
-                if (anchorCenters.length >= 4) {
-                    let add = anchorCenters.map(p => p.x + p.y);
-                    let diff = anchorCenters.map(p => p.y - p.x);
-
-                    let tlIdx = add.indexOf(Math.min(...add));
-                    let brIdx = add.indexOf(Math.max(...add));
-                    let trIdx = diff.indexOf(Math.min(...diff));
-                    let blIdx = diff.indexOf(Math.max(...diff));
-
-                    tl = anchorCenters[tlIdx];
-                    br = anchorCenters[brIdx];
-                    tr = anchorCenters[trIdx];
-                    bl = anchorCenters[blIdx];
-                }
-
                 warped = new cv.Mat();
                 const scaleFactor = 1.5;
                 const CARD_W = Math.round(856 * scaleFactor);
                 const CARD_H = Math.round(540 * scaleFactor);
 
-                if (tl && tr && br && bl) {
+                if (bestQuad) {
+                    let add = bestQuad.map(p => p.x + p.y);
+                    let diff = bestQuad.map(p => p.y - p.x);
+
+                    let tl = bestQuad[add.indexOf(Math.min(...add))];
+                    let br = bestQuad[add.indexOf(Math.max(...add))];
+                    let tr = bestQuad[diff.indexOf(Math.min(...diff))];
+                    let bl = bestQuad[diff.indexOf(Math.max(...diff))];
+
                     srcMat = cv.matFromArray(4, 1, cv.CV_32FC2, [tl.x, tl.y, tr.x, tr.y, br.x, br.y, bl.x, bl.y]);
                     dstMat = cv.matFromArray(4, 1, cv.CV_32FC2, [0, 0, CARD_W, 0, CARD_W, CARD_H, 0, CARD_H]);
 
@@ -1192,6 +1322,8 @@
                     cv.resize(src, warped, new cv.Size(CARD_W, CARD_H));
                 }
 
+                // Конвертация в BGR через отдельную переменную warpedBgr,
+                // чтобы не изменять warped (RGBA), необходимый для корректного cv.imshow
                 warpedBgr = new cv.Mat();
                 cv.cvtColor(warped, warpedBgr, cv.COLOR_RGBA2BGR);
 
@@ -1301,6 +1433,8 @@
             container.innerHTML = html;
         }
 
+        // ================= ВЫЗОВ СЕРВЕРНОЙ МАТЕМАТИКИ =================
+
         async function compareColors() {
             if (!standardColorData || !sampleColorData) return;
 
@@ -1324,9 +1458,13 @@
                 if (!response.ok) throw new Error('Ошибка ответа сервера');
 
                 const data = await response.json();
+                
+                // Извлекаем итоговый процент из полученного HTML
                 const matchPercent = extractPercent(data.html) || '100%';
 
+                // Обертка: в Light показан только чистый блок, в Pro — вся серверная аналитика
                 resultDiv.innerHTML = `
+                    <!-- Light UI Verdict -->
                     <div class="lite-verdict-box">
                         <span class="lite-verdict-title">Совпадение цвета</span>
                         <span class="lite-verdict-value">${matchPercent}</span>
@@ -1337,6 +1475,7 @@
                         <div><b class="match-error">Менее 63%</b> - Нет совпадения.</div>
                     </div>
 
+                    <!-- Pro UI Verdict (подробные матрицы и дельты) -->
                     <div class="pro-details" style="display:none;">
                         ${data.html}
                     </div>
@@ -1359,6 +1498,7 @@
             return totalVals.length > 0 ? totalVals[totalVals.length - 1].innerText.trim() : null;
         }
 
+        // ================= ЛОГИКА PINCH TO ZOOM ПРОСМОТРА =================
         let zoomScale = 1;
         let zoomPosX = 0;
         let zoomPosY = 0;
