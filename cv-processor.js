@@ -117,7 +117,7 @@ function processImageWithCard(canvasSource, canvasTargetId) {
                 const ctx = canvasSource.getContext('2d');
                 if (ctx) {
                     const imageData = ctx.getImageData(0, 0, canvasSource.width, canvasSource.height);
-                    const detector = new AR.Detector({ dictionaryName: 'DICT_4X4_50' });
+                    const detector = new AR.Detector({ dictionaryName: 'ARUCO' });
                     const markers = detector.detect(imageData);
 
                     if (markers && markers.length >= 4) {
@@ -150,7 +150,7 @@ function processImageWithCard(canvasSource, canvasTargetId) {
                     }
                 }
             } catch (arucoErr) {
-                console.warn("Ошибка при работе ArUco дeтектора, переходим на ресайз:", arucoErr);
+                console.warn("Ошибка при работе ArUco детектора, переходим на ресайз:", arucoErr);
             }
         }
 
@@ -354,45 +354,47 @@ function updateZoomTransform() {
 
 const zoomViewport = document.getElementById('zoomViewport');
 
-zoomViewport.addEventListener('touchstart', (e) => {
-    if (e.touches.length === 2) {
-        isDragging = false;
-        initialDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
-        initialScale = zoomScale;
-    } else if (e.touches.length === 1) {
-        isDragging = true;
-        startX = e.touches[0].clientX - zoomPosX;
-        startY = e.touches[0].clientY - zoomPosY;
-    }
-});
-
-zoomViewport.addEventListener('touchmove', (e) => {
-    if (e.touches.length === 2) {
-        e.preventDefault();
-        const currentDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
-        if (initialDist > 0) {
-            zoomScale = Math.min(Math.max(1, initialScale * (currentDist / initialDist)), 5);
-            updateZoomTransform();
+if (zoomViewport) {
+    zoomViewport.addEventListener('touchstart', (e) => {
+        if (e.touches.length === 2) {
+            isDragging = false;
+            initialDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+            initialScale = zoomScale;
+        } else if (e.touches.length === 1) {
+            isDragging = true;
+            startX = e.touches[0].clientX - zoomPosX;
+            startY = e.touches[0].clientY - zoomPosY;
         }
-    } else if (e.touches.length === 1 && isDragging) {
-        e.preventDefault();
-        if (zoomScale > 1) {
-            zoomPosX = e.touches[0].clientX - startX;
-            zoomPosY = e.touches[0].clientY - startY;
-            updateZoomTransform();
+    });
+
+    zoomViewport.addEventListener('touchmove', (e) => {
+        if (e.touches.length === 2) {
+            e.preventDefault();
+            const currentDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+            if (initialDist > 0) {
+                zoomScale = Math.min(Math.max(1, initialScale * (currentDist / initialDist)), 5);
+                updateZoomTransform();
+            }
+        } else if (e.touches.length === 1 && isDragging) {
+            e.preventDefault();
+            if (zoomScale > 1) {
+                zoomPosX = e.touches[0].clientX - startX;
+                zoomPosY = e.touches[0].clientY - startY;
+                updateZoomTransform();
+            }
         }
-    }
-}, { passive: false });
+    }, { passive: false });
 
-zoomViewport.addEventListener('touchend', (e) => {
-    if (e.touches.length < 2) initialDist = 0;
-    if (e.touches.length === 0) isDragging = false;
-});
+    zoomViewport.addEventListener('touchend', (e) => {
+        if (e.touches.length < 2) initialDist = 0;
+        if (e.touches.length === 0) isDragging = false;
+    });
 
-zoomViewport.addEventListener('wheel', (e) => {
-    e.preventDefault();
-    const delta = e.deltaY < 0 ? 0.2 : -0.2;
-    zoomScale = Math.min(Math.max(1, zoomScale + delta), 5);
-    if (zoomScale === 1) { zoomPosX = 0; zoomPosY = 0; }
-    updateZoomTransform();
-}, { passive: false });
+    zoomViewport.addEventListener('wheel', (e) => {
+        e.preventDefault();
+        const delta = e.deltaY < 0 ? 0.2 : -0.2;
+        zoomScale = Math.min(Math.max(1, zoomScale + delta), 5);
+        if (zoomScale === 1) { zoomPosX = 0; zoomPosY = 0; }
+        updateZoomTransform();
+    }, { passive: false });
+}
