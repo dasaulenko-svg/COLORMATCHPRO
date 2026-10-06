@@ -118,36 +118,12 @@ function processImageWithCard(canvasSource, canvasTargetId) {
                 if (ctx) {
                     const imageData = ctx.getImageData(0, 0, canvasSource.width, canvasSource.height);
                     
-                    let markers = [];
-                    let detector = null;
-                    const dictionariesToTry = ['DICT_5X5_50', 'DICT_4X4_50', 'ARUCO'];
+                    // Прямой запуск стандартного детектора ArUco
+                    const detector = new AR.Detector();
+                    let markers = detector.detect(imageData) || [];
 
-                    // Пробуем доступные словари в порядке приоритета
-                    for (const dictName of dictionariesToTry) {
-                        try {
-                            detector = new AR.Detector({ dictionaryName: dictName });
-                            const res = detector.detect(imageData);
-                            if (res && res.length > 0) {
-                                markers = res;
-                                console.log(`[ArUco] Найдено маркеров: ${markers.length} (словарь: ${dictName})`);
-                                break;
-                            }
-                        } catch (dictErr) {
-                            // Пропускаем словарь, если он не поддерживается
-                        }
-                    }
-
-                    // Если через словари ничего не нашлось, пробуем конструктор по умолчанию
-                    if (markers.length === 0) {
-                        try {
-                            detector = new AR.Detector();
-                            markers = detector.detect(imageData) || [];
-                            if (markers.length > 0) {
-                                console.log(`[ArUco] Найдено маркеров: ${markers.length} (базовый словарь)`);
-                            }
-                        } catch (defaultErr) {
-                            console.warn("[ArUco] Ошибка детекции с базовым словарем:", defaultErr);
-                        }
+                    if (markers.length > 0) {
+                        console.log(`[ArUco] Успешно найдено маркеров: ${markers.length}`);
                     }
 
                     // Извлекаем центры найденных маркеров
