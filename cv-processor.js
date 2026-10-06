@@ -117,17 +117,81 @@ function processImageWithCard(canvasSource, canvasTargetId) {
                 const ctx = canvasSource.getContext('2d');
                 if (ctx) {
                     const imageData = ctx.getImageData(0, 0, canvasSource.width, canvasSource.height);
-                    const detector = new AR.Detector({ dictionaryName: 'ARUCO' });
-                    const markers = detector.detect(imageData);
+                    
+                    let markers = [];
+                    let detector = null;
+                    const dictionariesToTry = ['DICT_5X5_50', 'DICT_4X4_50', 'ARUCO'];
 
-                    if (markers && markers.length >= 4) {
-                        // Вычисляем центры первых 4 маркеров
-                        let points = markers.slice(0, 4).map(m => {
-                            let cx = (m.corners[0].x + m.corners[1].x + m.corners[2].x + m.corners[3].x) / 4;
-                            let cy = (m.corners[0].y + m.corners[1].y + m.corners[2].y + m.corners[3].y) / 4;
-                            return { x: cx, y: cy };
-                        });
+                    // Пробуем доступные словари в порядке приоритета
+                    for (const dictName of dictionariesToTry) {
+                        try {
+                            detector = new AR.Detector({ dictionaryName: dictName });
+                            const res = detector.detect(imageData);
+                            if (res && res.length > 0) {
+                                markers = res;
+                                console.log(`[ArUco] Найдено маркеров: ${markers.length} (словарь: ${dictName})`);
+                                break;
+                            }
+                        } catch (dictErr) {
+                            // Пропускаем словарь, если он не поддерживается
+                        }
+                    }
 
+                    // Если через словари ничего не нашлось, пробуем конструктор по умолчанию
+                    if (markers.length === 0) {
+                        try {
+                            detector = new AR.Detector();
+                            markers = detector.detect(imageData) || [];
+                            if (markers.length > 0) {
+                                console.log(`[ArUco] Найдено маркеров: ${markers.length} (базовый словарь)`);
+                            }
+                        } catch (defaultErr) {
+                            console.warn("[ArUco] Ошибка детекции с базовым словарем:", defaultErr);
+                        }
+                    }
+
+                    // Извлекаем центры найденных маркеров
+                    let points = markers.map(m => {
+                        let cx = (m.corners[0].x + m.corners[1].x + m.corners[2].x + m.corners[3].x) / 4;
+                        let cy = (m.corners[0].y + m.corners[1].y + m.corners[2].y + m.corners[3].y) / 4;
+                        return { x: cx, y: cy };
+                    });
+
+                    // Если найдено больше 4 маркеров, оставляем первые 4
+                    if (points.length >= 4) {
+                        points = points.slice(0, 4);
+                    } 
+                    // Если найдено ровно 3 маркера, восстанавливаем 4-й угол математически
+                    else if (points.length === 3) {
+                        console.warn("[ArUco] Найдено 3 маркера из 4. Восстанавливаем 4-й угол...");
+                        const p = points;
+                        const getCosAngle = (m, p1, p2) => {
+                            const v1 = { x: p1.x - m.x, y: p1.y - m.y };
+                            const v2 = { x: p2.x - m.x, y: p2.y - m.y };
+                            const len1 = Math.hypot(v1.x, v1.y);
+                            const len2 = Math.hypot(v2.x, v2.y);
+                            if (len1 === 0 || len2 === 0) return 1;
+                            return Math.abs((v1.x * v2.x + v1.y * v2.y) / (len1 * len2));
+                        };
+
+                        const cos0 = getCosAngle(p[0], p[1], p[2]);
+                        const cos1 = getCosAngle(p[1], p[0], p[2]);
+                        const cos2 = getCosAngle(p[2], p[0], p[1]);
+
+                        let mIdx = 0;
+                        if (cos1 < cos0 && cos1 < cos2) mIdx = 1;
+                        else if (cos2 < cos0 && cos2 < cos1) mIdx = 2;
+
+                        const M_pt = p[mIdx];
+                        const others = p.filter((_, idx) => idx !== mIdx);
+                        const P1 = others[0];
+                        const P2 = others[1];
+
+                        const P4 = { x: P1.x + P2.x - M_pt.x, y: P1.y + P2.y - M_pt.y };
+                        points.push(P4);
+                    }
+
+                    if (points.length === 4) {
                         let add = points.map(p => p.x + p.y);
                         let diff = points.map(p => p.y - p.x);
 
@@ -147,6 +211,8 @@ function processImageWithCard(canvasSource, canvasTargetId) {
                         M = cv.getPerspectiveTransform(srcMat, dstMat);
                         cv.warpPerspective(src, warped, M, new cv.Size(CARD_W, CARD_H));
                         warpSuccess = true;
+                    } else {
+                        console.warn(`[ArUco] Недостаточно маркеров для выпрямления. Найдено: ${markers.length}`);
                     }
                 }
             } catch (arucoErr) {
@@ -154,7 +220,7 @@ function processImageWithCard(canvasSource, canvasTargetId) {
             }
         }
 
-        // Фолбэк: если маркеры не были найдены или библиотека недоступна
+        // Фолбэк: если маркеры не найдены или библиотека недоступна
         if (!warpSuccess) {
             cv.resize(src, warped, new cv.Size(CARD_W, CARD_H));
         }
