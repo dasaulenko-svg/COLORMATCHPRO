@@ -78,10 +78,11 @@ function getRegionColorLAB(labMat, cx, cy, radius = 18, useMedian = false) {
     }
 }
 
-// Детекция ArUco маркеров, трансформации перспективы и считывание плашек
+// Распознавание карточки, выравнивание контура и считывание плашек
 function processImageWithCard(canvasSource, canvasTargetId) {
-    let src = null, warped = null, warpedBgr = null, warpedLab = null;
-    let srcMat = null, dstMat = null, M = null;
+    let src = null, gray = null, blurred = null, thresh = null;
+    let contours = null, hierarchy = null;
+    let warped = null, warpedBgr = null, warpedLab = null, srcMat = null, dstMat = null, M = null;
 
     let extractedData = {
         mainMean: { l: 0, a: 128, b: 128 },
@@ -101,103 +102,72 @@ function processImageWithCard(canvasSource, canvasTargetId) {
         }
     };
 
-    const scaleFactor = 1.5;
-    const CARD_W = Math.round(856 * scaleFactor);
-    const CARD_H = Math.round(540 * scaleFactor);
-
     try {
         src = cv.imread(canvasSource);
-        warped = new cv.Mat();
+        gray = new cv.Mat();
+        blurred = new cv.Mat();
+        thresh = new cv.Mat();
+        contours = new cv.MatVector();
+        hierarchy = new cv.Mat();
 
-        let warpSuccess = false;
+        const imgWidth = src.cols;
+        const imgHeight = src.rows;
+        const totalArea = imgWidth * imgHeight;
 
-        // Безопасная детекция ArUco
-        if (typeof AR !== 'undefined' && AR.Detector) {
-            try {
-                const ctx = canvasSource.getContext('2d');
-                if (ctx) {
-                    const imageData = ctx.getImageData(0, 0, canvasSource.width, canvasSource.height);
-                    
-                    // Прямой запуск стандартного детектора ArUco
-                    const detector = new AR.Detector();
-                    let markers = detector.detect(imageData) || [];
+        cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
+        cv.GaussianBlur(gray, blurred, new cv.Size(7, 7), 0);
+        cv.adaptiveThreshold(blurred, thresh, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY_INV, 15, 3);
+        cv.findContours(thresh, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
 
-                    if (markers.length > 0) {
-                        console.log(`[ArUco] Успешно найдено маркеров: ${markers.length}`);
-                    }
+        let bestQuad = null;
+        let maxArea = 0;
 
-                    // Извлекаем центры найденных маркеров
-                    let points = markers.map(m => {
-                        let cx = (m.corners[0].x + m.corners[1].x + m.corners[2].x + m.corners[3].x) / 4;
-                        let cy = (m.corners[0].y + m.corners[1].y + m.corners[2].y + m.corners[3].y) / 4;
-                        return { x: cx, y: cy };
-                    });
+        for (let i = 0; i < contours.size(); ++i) {
+            let cnt = contours.get(i);
+            let area = cv.contourArea(cnt);
 
-                    // Если найдено больше 4 маркеров, оставляем первые 4
-                    if (points.length >= 4) {
-                        points = points.slice(0, 4);
-                    } 
-                    // Если найдено ровно 3 маркера, восстанавливаем 4-й угол математически
-                    else if (points.length === 3) {
-                        console.warn("[ArUco] Найдено 3 маркера из 4. Восстанавливаем 4-й угол...");
-                        const p = points;
-                        const getCosAngle = (m, p1, p2) => {
-                            const v1 = { x: p1.x - m.x, y: p1.y - m.y };
-                            const v2 = { x: p2.x - m.x, y: p2.y - m.y };
-                            const len1 = Math.hypot(v1.x, v1.y);
-                            const len2 = Math.hypot(v2.x, v2.y);
-                            if (len1 === 0 || len2 === 0) return 1;
-                            return Math.abs((v1.x * v2.x + v1.y * v2.y) / (len1 * len2));
-                        };
+            if (area > totalArea * 0.20) {
+                let peri = cv.arcLength(cnt, true);
+                let approx = new cv.Mat();
+                cv.approxPolyDP(cnt, approx, 0.03 * peri, true);
 
-                        const cos0 = getCosAngle(p[0], p[1], p[2]);
-                        const cos1 = getCosAngle(p[1], p[0], p[2]);
-                        const cos2 = getCosAngle(p[2], p[0], p[1]);
-
-                        let mIdx = 0;
-                        if (cos1 < cos0 && cos1 < cos2) mIdx = 1;
-                        else if (cos2 < cos0 && cos2 < cos1) mIdx = 2;
-
-                        const M_pt = p[mIdx];
-                        const others = p.filter((_, idx) => idx !== mIdx);
-                        const P1 = others[0];
-                        const P2 = others[1];
-
-                        const P4 = { x: P1.x + P2.x - M_pt.x, y: P1.y + P2.y - M_pt.y };
-                        points.push(P4);
-                    }
-
-                    if (points.length === 4) {
-                        let add = points.map(p => p.x + p.y);
-                        let diff = points.map(p => p.y - p.x);
-
-                        let tl = points[add.indexOf(Math.min(...add))];
-                        let br = points[add.indexOf(Math.max(...add))];
-                        let tr = points[diff.indexOf(Math.min(...diff))];
-                        let bl = points[diff.indexOf(Math.max(...diff))];
-
-                        srcMat = cv.matFromArray(4, 1, cv.CV_32FC2, [tl.x, tl.y, tr.x, tr.y, br.x, br.y, bl.x, bl.y]);
-                        dstMat = cv.matFromArray(4, 1, cv.CV_32FC2, [
-                            CARD_W * 0.095, CARD_H * 0.140, // TL
-                            CARD_W * 0.905, CARD_H * 0.140, // TR
-                            CARD_W * 0.905, CARD_H * 0.860, // BR
-                            CARD_W * 0.095, CARD_H * 0.860  // BL
-                        ]);
-
-                        M = cv.getPerspectiveTransform(srcMat, dstMat);
-                        cv.warpPerspective(src, warped, M, new cv.Size(CARD_W, CARD_H));
-                        warpSuccess = true;
-                    } else {
-                        console.warn(`[ArUco] Недостаточно маркеров для выпрямления. Найдено: ${markers.length}`);
+                if (approx.rows === 4 && cv.isContourConvex(approx)) {
+                    if (area > maxArea) {
+                        maxArea = area;
+                        bestQuad = [];
+                        for (let j = 0; j < 4; j++) {
+                            bestQuad.push({
+                                x: approx.data32S[j * 2],
+                                y: approx.data32S[j * 2 + 1]
+                            });
+                        }
                     }
                 }
-            } catch (arucoErr) {
-                console.warn("Ошибка при работе ArUco детектора, переходим на ресайз:", arucoErr);
+                approx.delete();
             }
+            cnt.delete();
         }
 
-        // Фолбэк: если маркеры не найдены или библиотека недоступна
-        if (!warpSuccess) {
+        warped = new cv.Mat();
+        const scaleFactor = 1.5;
+        const CARD_W = Math.round(856 * scaleFactor);
+        const CARD_H = Math.round(540 * scaleFactor);
+
+        if (bestQuad) {
+            let add = bestQuad.map(p => p.x + p.y);
+            let diff = bestQuad.map(p => p.y - p.x);
+
+            let tl = bestQuad[add.indexOf(Math.min(...add))];
+            let br = bestQuad[add.indexOf(Math.max(...add))];
+            let tr = bestQuad[diff.indexOf(Math.min(...diff))];
+            let bl = bestQuad[diff.indexOf(Math.max(...diff))];
+
+            srcMat = cv.matFromArray(4, 1, cv.CV_32FC2, [tl.x, tl.y, tr.x, tr.y, br.x, br.y, bl.x, bl.y]);
+            dstMat = cv.matFromArray(4, 1, cv.CV_32FC2, [0, 0, CARD_W, 0, CARD_W, CARD_H, 0, CARD_H]);
+
+            M = cv.getPerspectiveTransform(srcMat, dstMat);
+            cv.warpPerspective(src, warped, M, new cv.Size(CARD_W, CARD_H));
+        } else {
             cv.resize(src, warped, new cv.Size(CARD_W, CARD_H));
         }
 
@@ -207,18 +177,17 @@ function processImageWithCard(canvasSource, canvasTargetId) {
         warpedLab = new cv.Mat();
         cv.cvtColor(warpedBgr, warpedLab, cv.COLOR_BGR2Lab);
 
-        // Точные физические координаты центрального отверстия и цветных контрольных плашек
         const holeCenterX = Math.round(CARD_W * 0.508); 
-        const holeCenterY = Math.round(CARD_H * 0.470);
+        const holeCenterY = Math.round(CARD_H * 0.468);
         const holeRadius = Math.round(35 * scaleFactor);
 
         const colorPatches = [
-            { key: 'white',  x: Math.round(CARD_W * 0.228), y: Math.round(CARD_H * 0.295) },
-            { key: 'gray',   x: Math.round(CARD_W * 0.228), y: Math.round(CARD_H * 0.515) },
-            { key: 'black',  x: Math.round(CARD_W * 0.228), y: Math.round(CARD_H * 0.735) },
-            { key: 'right1', x: Math.round(CARD_W * 0.812), y: Math.round(CARD_H * 0.295) }, // Cyan
-            { key: 'right2', x: Math.round(CARD_W * 0.812), y: Math.round(CARD_H * 0.515) }, // Magenta
-            { key: 'right3', x: Math.round(CARD_W * 0.812), y: Math.round(CARD_H * 0.735) }  // Yellow
+            { key: 'white',  x: Math.round(CARD_W * 0.155), y: Math.round(CARD_H * 0.310) - Math.round(20 * scaleFactor) },
+            { key: 'gray',   x: Math.round(CARD_W * 0.155), y: Math.round(CARD_H * 0.525) - Math.round(5 * scaleFactor) },
+            { key: 'black',  x: Math.round(CARD_W * 0.155), y: Math.round(CARD_H * 0.740) },
+            { key: 'right1', x: Math.round(CARD_W * 0.845), y: Math.round(CARD_H * 0.310) - Math.round(20 * scaleFactor) },
+            { key: 'right2', x: Math.round(CARD_W * 0.845), y: Math.round(CARD_H * 0.525) - Math.round(5 * scaleFactor) },
+            { key: 'right3', x: Math.round(CARD_W * 0.845), y: Math.round(CARD_H * 0.740) }
         ];
 
         extractedData.mainMean = getRegionColorLAB(warpedLab, holeCenterX, holeCenterY, Math.round(holeRadius * 0.6), false);
@@ -232,20 +201,21 @@ function processImageWithCard(canvasSource, canvasTargetId) {
         extractedData.main = extractedData.mainMean;
         extractedData.patches = extractedData.patchesMean;
 
-        // Отрисовка зеленых прицелов для визуального контроля
         const greenColor = new cv.Scalar(0, 230, 118, 255);
         drawTargetCrosshair(warped, holeCenterX, holeCenterY, greenColor, holeRadius);
         colorPatches.forEach(p => {
             drawTargetCrosshair(warped, p.x, p.y, greenColor, Math.round(12 * scaleFactor));
         });
 
-        // Запись готового превью на элемент canvas
         cv.imshow(canvasTargetId, warped);
 
-    } catch (err) {
-        console.error("Ошибка в processImageWithCard:", err);
     } finally {
         if (src) src.delete();
+        if (gray) gray.delete();
+        if (blurred) blurred.delete();
+        if (thresh) thresh.delete();
+        if (contours) contours.delete();
+        if (hierarchy) hierarchy.delete();
         if (warped) warped.delete();
         if (warpedBgr) warpedBgr.delete();
         if (warpedLab) warpedLab.delete();
@@ -396,47 +366,45 @@ function updateZoomTransform() {
 
 const zoomViewport = document.getElementById('zoomViewport');
 
-if (zoomViewport) {
-    zoomViewport.addEventListener('touchstart', (e) => {
-        if (e.touches.length === 2) {
-            isDragging = false;
-            initialDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
-            initialScale = zoomScale;
-        } else if (e.touches.length === 1) {
-            isDragging = true;
-            startX = e.touches[0].clientX - zoomPosX;
-            startY = e.touches[0].clientY - zoomPosY;
-        }
-    });
+zoomViewport.addEventListener('touchstart', (e) => {
+    if (e.touches.length === 2) {
+        isDragging = false;
+        initialDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+        initialScale = zoomScale;
+    } else if (e.touches.length === 1) {
+        isDragging = true;
+        startX = e.touches[0].clientX - zoomPosX;
+        startY = e.touches[0].clientY - zoomPosY;
+    }
+});
 
-    zoomViewport.addEventListener('touchmove', (e) => {
-        if (e.touches.length === 2) {
-            e.preventDefault();
-            const currentDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
-            if (initialDist > 0) {
-                zoomScale = Math.min(Math.max(1, initialScale * (currentDist / initialDist)), 5);
-                updateZoomTransform();
-            }
-        } else if (e.touches.length === 1 && isDragging) {
-            e.preventDefault();
-            if (zoomScale > 1) {
-                zoomPosX = e.touches[0].clientX - startX;
-                zoomPosY = e.touches[0].clientY - startY;
-                updateZoomTransform();
-            }
-        }
-    }, { passive: false });
-
-    zoomViewport.addEventListener('touchend', (e) => {
-        if (e.touches.length < 2) initialDist = 0;
-        if (e.touches.length === 0) isDragging = false;
-    });
-
-    zoomViewport.addEventListener('wheel', (e) => {
+zoomViewport.addEventListener('touchmove', (e) => {
+    if (e.touches.length === 2) {
         e.preventDefault();
-        const delta = e.deltaY < 0 ? 0.2 : -0.2;
-        zoomScale = Math.min(Math.max(1, zoomScale + delta), 5);
-        if (zoomScale === 1) { zoomPosX = 0; zoomPosY = 0; }
-        updateZoomTransform();
-    }, { passive: false });
-}
+        const currentDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+        if (initialDist > 0) {
+            zoomScale = Math.min(Math.max(1, initialScale * (currentDist / initialDist)), 5);
+            updateZoomTransform();
+        }
+    } else if (e.touches.length === 1 && isDragging) {
+        e.preventDefault();
+        if (zoomScale > 1) {
+            zoomPosX = e.touches[0].clientX - startX;
+            zoomPosY = e.touches[0].clientY - startY;
+            updateZoomTransform();
+        }
+    }
+}, { passive: false });
+
+zoomViewport.addEventListener('touchend', (e) => {
+    if (e.touches.length < 2) initialDist = 0;
+    if (e.touches.length === 0) isDragging = false;
+});
+
+zoomViewport.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    const delta = e.deltaY < 0 ? 0.2 : -0.2;
+    zoomScale = Math.min(Math.max(1, zoomScale + delta), 5);
+    if (zoomScale === 1) { zoomPosX = 0; zoomPosY = 0; }
+    updateZoomTransform();
+}, { passive: false });
