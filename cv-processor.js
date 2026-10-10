@@ -8,31 +8,22 @@ function labToRgb(l, a, b) {
     return { r, g, b: b_val };
 }
 
-// Маршрутизация полученного кадра с защитой от блокировки кнопки
+// Маршрутизация полученного кадра
 function handleImageSource(canvasSource, mode) {
     const canvasTargetId = mode === 'standard' ? 'canvasStandard' : 'canvasSample';
-    
-    try {
-        const colorData = processImageWithCard(canvasSource, canvasTargetId);
+    const colorData = processImageWithCard(canvasSource, canvasTargetId);
 
-        if (mode === 'standard') {
-            standardColorData = colorData;
-            renderPatchesList('infoStandard', standardColorData);
-            localStorage.setItem('cm_card_standard_data', JSON.stringify(standardColorData));
+    if (mode === 'standard') {
+        standardColorData = colorData;
+        renderPatchesList('infoStandard', standardColorData);
+        localStorage.setItem('cm_card_standard_data', JSON.stringify(standardColorData));
 
-            btnSample.disabled = false;
-            if (sampleColorData) compareColors();
-        } else {
-            sampleColorData = colorData;
-            renderPatchesList('infoSample', sampleColorData);
-            compareColors();
-        }
-    } catch (err) {
-        console.error("Ошибка при обработке кадра:", err);
-        // Гарантированно разблокируем кнопку эталона при сбое, чтобы интерфейс не зависал
-        if (mode === 'standard') {
-            btnSample.disabled = false;
-        }
+        btnSample.disabled = false;
+        if (sampleColorData) compareColors();
+    } else {
+        sampleColorData = colorData;
+        renderPatchesList('infoSample', sampleColorData);
+        compareColors();
     }
 }
 
@@ -402,4 +393,18 @@ zoomViewport.addEventListener('touchmove', (e) => {
             zoomPosY = e.touches[0].clientY - startY;
             updateZoomTransform();
         }
-    
+    }
+}, { passive: false });
+
+zoomViewport.addEventListener('touchend', (e) => {
+    if (e.touches.length < 2) initialDist = 0;
+    if (e.touches.length === 0) isDragging = false;
+});
+
+zoomViewport.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    const delta = e.deltaY < 0 ? 0.2 : -0.2;
+    zoomScale = Math.min(Math.max(1, zoomScale + delta), 5);
+    if (zoomScale === 1) { zoomPosX = 0; zoomPosY = 0; }
+    updateZoomTransform();
+}, { passive: false });
