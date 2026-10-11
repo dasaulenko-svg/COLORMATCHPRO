@@ -1,22 +1,64 @@
-// Захват кадра напрямую из видеопотока с ожиданием готовности размеров
-async function takeSnapshot() {
-    const video = document.getElementById('webcam');
-    if (!video) return;
-
-    // Небольшая пауза и проверка готовности размеров видеопотока
-    await new Promise(resolve => setTimeout(resolve, 150));
-
-    if (!video.videoWidth || !video.videoHeight) {
-        alert('Камера еще инициализируется, нажмите повторно через секунду.');
-        return;
+// Запуск камеры: стандартный видеопоток
+async function openCamera(mode) {
+    activeMode = mode;
+    
+    const titleEl = document.getElementById('cameraTitle');
+    if (titleEl) {
+        titleEl.innerText = mode === 'standard' ? 'Съемка Эталона' : 'Съемка Образца';
+    }
+    
+    if (typeof cameraModal !== 'undefined' && cameraModal) {
+        cameraModal.classList.add('active');
     }
 
-    const viewportRect = video.getBoundingClientRect();
+    try {
+        mediaStream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: { exact: "environment" } }
+        });
+    } catch (err) {
+        try {
+            mediaStream = await navigator.mediaDevices.getUserMedia({ video: true });
+        } catch (fallbackErr) {
+            alert('Ошибка доступа к камере: ' + fallbackErr.message);
+            closeCamera();
+            return;
+        }
+    }
+
+    const targetVideo = (typeof video !== 'undefined' && video) ? video : document.getElementById('webcam');
+    if (targetVideo) {
+        targetVideo.srcObject = mediaStream;
+    }
+}
+
+// Закрытие камеры и остановка потока
+function closeCamera() {
+    if (mediaStream) {
+        mediaStream.getTracks().forEach(track => track.stop());
+        mediaStream = null;
+    }
+    
+    const targetVideo = (typeof video !== 'undefined' && video) ? video : document.getElementById('webcam');
+    if (targetVideo) {
+        targetVideo.srcObject = null;
+    }
+    
+    const targetModal = (typeof cameraModal !== 'undefined' && cameraModal) ? cameraModal : document.getElementById('cameraModal');
+    if (targetModal) {
+        targetModal.classList.remove('active');
+    }
+}
+
+// Захват кадра напрямую из видеопотока и кроп по рамке
+function takeSnapshot() {
+    const targetVideo = (typeof video !== 'undefined' && video) ? video : document.getElementById('webcam');
+    if (!targetVideo || !targetVideo.videoWidth || !targetVideo.videoHeight) return;
+
+    const viewportRect = targetVideo.getBoundingClientRect();
     if (!viewportRect.width || !viewportRect.height) return;
 
-    const sourceElement = video;
-    const imgW = video.videoWidth;
-    const imgH = video.videoHeight;
+    const imgW = targetVideo.videoWidth;
+    const imgH = targetVideo.videoHeight;
 
     // Параметры рамки оверлея (400x320)
     const strokeOffset = 2;
@@ -74,7 +116,7 @@ async function takeSnapshot() {
     croppedCanvas.height = finalH;
 
     const ctx = croppedCanvas.getContext('2d');
-    ctx.drawImage(sourceElement, cropX, cropY, cropW, cropH, 0, 0, finalW, finalH);
+    ctx.drawImage(targetVideo, cropX, cropY, cropW, cropH, 0, 0, finalW, finalH);
 
     closeCamera();
     
