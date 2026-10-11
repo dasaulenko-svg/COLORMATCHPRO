@@ -5,14 +5,14 @@ let activeMode = null;
 const cameraModal = document.getElementById('cameraModal');
 const video = document.getElementById('webcam');
 
-// Запуск камеры: простой запрос базового видеопотока без жестких требований к разрешению
+// Запуск камеры: простой базовый видеопоток без принудительных настроек
 async function openCamera(mode) {
     activeMode = mode;
     document.getElementById('cameraTitle').innerText = mode === 'standard' ? 'Съемка Эталона' : 'Съемка Образца';
     cameraModal.classList.add('active');
 
     try {
-        // Запрашиваем стандартный видеопоток с тыловой камеры (какой даст система, такой и используем)
+        // Запрашиваем стандартный видеопоток с тыловой камеры
         mediaStream = await navigator.mediaDevices.getUserMedia({
             video: { facingMode: "environment" }
         });
@@ -40,8 +40,8 @@ function closeCamera() {
     cameraModal.classList.remove('active');
 }
 
-// Захват текущего кадра прямо из видеопотока, кроп по рамке и ресайз для OpenCV
-async function takeSnapshot() {
+// Захват кадра напрямую из видеопотока, кроп по рамке и ресайз до 1280px для OpenCV
+function takeSnapshot() {
     if (!video.videoWidth || !video.videoHeight) return;
 
     const viewportRect = video.getBoundingClientRect();
@@ -108,7 +108,7 @@ async function takeSnapshot() {
     croppedCanvas.height = finalH;
 
     const ctx = croppedCanvas.getContext('2d');
-    // Мгновенно вырезаем нужную область из видеопотока и масштабируем
+    // Масштабируем с сохранением пропорций
     ctx.drawImage(sourceElement, cropX, cropY, cropW, cropH, 0, 0, finalW, finalH);
 
     closeCamera();
