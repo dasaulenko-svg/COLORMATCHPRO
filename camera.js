@@ -1,16 +1,17 @@
 let mediaStream = null;
 let activeMode = null;
 
-const cameraModal = document.getElementById('cameraModal');
-const video = document.getElementById('webcam');
-
-// Запуск камеры: стандартный видеопоток с тыловой камеры (с фоллбэком на любую доступную)
+// Запуск камеры: чистый базовый видеопоток
 async function openCamera(mode) {
     activeMode = mode;
+    
+    // Получаем элементы динамически при вызове, а не при загрузке файла
     const titleEl = document.getElementById('cameraTitle');
     if (titleEl) {
         titleEl.innerText = mode === 'standard' ? 'Съемка Эталона' : 'Съемка Образца';
     }
+    
+    const cameraModal = document.getElementById('cameraModal');
     if (cameraModal) {
         cameraModal.classList.add('active');
     }
@@ -29,32 +30,43 @@ async function openCamera(mode) {
         }
     }
 
+    const video = document.getElementById('webcam');
     if (video) {
         video.srcObject = mediaStream;
     }
 }
 
-// Закрытие камеры и остановка всех треков потока
+// Закрытие камеры и остановка потока
 function closeCamera() {
     if (mediaStream) {
         mediaStream.getTracks().forEach(track => track.stop());
         mediaStream = null;
     }
+    
+    const video = document.getElementById('webcam');
     if (video) {
         video.srcObject = null;
     }
+    
+    const cameraModal = document.getElementById('cameraModal');
     if (cameraModal) {
         cameraModal.classList.remove('active');
     }
 }
 
-// Захват кадра напрямую из видеопотока по рамке видоискателя (как в старой версии)
+// Захват кадра напрямую из видеопотока, кроп по рамке и передача в OpenCV
 function takeSnapshot() {
-    if (!video.videoWidth || !video.videoHeight) return;
+    const video = document.getElementById('webcam');
+    if (!video || !video.videoWidth || !video.videoHeight) return;
 
     const viewportRect = video.getBoundingClientRect();
     if (!viewportRect.width || !viewportRect.height) return;
 
+    const sourceElement = video;
+    const imgW = video.videoWidth;
+    const imgH = video.videoHeight;
+
+    // Параметры рамки оверлея (400x320)
     const strokeOffset = 2;
     const overlayFrame = {
         x: 50 + strokeOffset,
@@ -65,25 +77,25 @@ function takeSnapshot() {
     const overlayW = 400;
     const overlayH = 320;
 
-    const videoRatio = video.videoWidth / video.videoHeight;
+    const imgRatio = imgW / imgH;
     const containerRatio = viewportRect.width / viewportRect.height;
 
     let renderW, renderH, offsetX, offsetY;
 
-    if (containerRatio > videoRatio) {
+    if (containerRatio > imgRatio) {
         renderW = viewportRect.width;
-        renderH = viewportRect.width / videoRatio;
+        renderH = viewportRect.width / imgRatio;
         offsetX = 0;
         offsetY = (renderH - viewportRect.height) / 2;
     } else {
         renderH = viewportRect.height;
-        renderW = viewportRect.height * videoRatio;
+        renderW = viewportRect.height * imgRatio;
         offsetX = (renderW - viewportRect.width) / 2;
         offsetY = 0;
     }
 
-    const scaleX = video.videoWidth / renderW;
-    const scaleY = video.videoHeight / renderH;
+    const scaleX = imgW / renderW;
+    const scaleY = imgH / renderH;
 
     const rectViewportX = (overlayFrame.x / overlayW) * viewportRect.width;
     const rectViewportY = (overlayFrame.y / overlayH) * viewportRect.height;
@@ -92,15 +104,25 @@ function takeSnapshot() {
 
     const cropX = Math.max(0, Math.round((rectViewportX + offsetX) * scaleX));
     const cropY = Math.max(0, Math.round((rectViewportY + offsetY) * scaleY));
-    const cropW = Math.min(video.videoWidth - cropX, Math.round(rectViewportW * scaleX));
-    const cropH = Math.min(video.videoHeight - cropY, Math.round(rectViewportH * scaleY));
+    const cropW = Math.min(imgW - cropX, Math.round(rectViewportW * scaleX));
+    const cropH = Math.min(imgH - cropY, Math.round(rectViewportH * scaleY));
+
+    // Рабочая ширина для OpenCV
+    const TARGET_WIDTH = 1280;
+    let finalW = cropW;
+    let finalH = cropH;
+
+    if (cropW > TARGET_WIDTH) {
+        finalW = TARGET_WIDTH;
+        finalH = Math.round((cropH * TARGET_WIDTH) / cropW);
+    }
 
     const croppedCanvas = document.createElement('canvas');
-    croppedCanvas.width = cropW;
-    croppedCanvas.height = cropH;
+    croppedCanvas.width = finalW;
+    croppedCanvas.height = finalH;
 
     const ctx = croppedCanvas.getContext('2d');
-    ctx.drawImage(video, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
+    ctx.drawImage(sourceElement, cropX, cropY, cropW, cropH, 0, 0, finalW, finalH);
 
     closeCamera();
     
