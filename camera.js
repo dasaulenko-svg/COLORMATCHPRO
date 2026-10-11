@@ -4,7 +4,7 @@ let activeMode = null;
 const cameraModal = document.getElementById('cameraModal');
 const video = document.getElementById('webcam');
 
-// Запуск камеры: простой базовый видеопоток без принудительных настроек
+// Запуск камеры: стандартный видеопоток с тыловой камеры (с фоллбэком на любую доступную)
 async function openCamera(mode) {
     activeMode = mode;
     const titleEl = document.getElementById('cameraTitle');
@@ -17,7 +17,7 @@ async function openCamera(mode) {
 
     try {
         mediaStream = await navigator.mediaDevices.getUserMedia({
-            video: { facingMode: "environment" }
+            video: { facingMode: { exact: "environment" } }
         });
     } catch (err) {
         try {
@@ -31,15 +31,10 @@ async function openCamera(mode) {
 
     if (video) {
         video.srcObject = mediaStream;
-        try {
-            await video.play();
-        } catch (e) {
-            console.warn('Ошибка автозапуска видеопотока:', e);
-        }
     }
 }
 
-// Закрытие камеры и остановка потока
+// Закрытие камеры и остановка всех треков потока
 function closeCamera() {
     if (mediaStream) {
         mediaStream.getTracks().forEach(track => track.stop());
@@ -53,26 +48,13 @@ function closeCamera() {
     }
 }
 
-// Захват кадра напрямую из видеопотока с задержкой 150мс на стабилизацию, кропом и ресайзом до 1280px для OpenCV
-async function takeSnapshot() {
-    if (!video) return;
-
-    // Небольшая задержка для стабильности и подгрузки размеров видеопотока
-    await new Promise(resolve => setTimeout(resolve, 150));
-
-    if (!video.videoWidth || !video.videoHeight) {
-        alert('Камера еще инициализируется, подождите секунду и нажмите снова.');
-        return;
-    }
+// Захват кадра напрямую из видеопотока по рамке видоискателя (как в старой версии)
+function takeSnapshot() {
+    if (!video.videoWidth || !video.videoHeight) return;
 
     const viewportRect = video.getBoundingClientRect();
     if (!viewportRect.width || !viewportRect.height) return;
 
-    const sourceElement = video;
-    const imgW = video.videoWidth;
-    const imgH = video.videoHeight;
-
-    // Параметры рамки оверлея (400x320)
     const strokeOffset = 2;
     const overlayFrame = {
         x: 50 + strokeOffset,
@@ -83,25 +65,25 @@ async function takeSnapshot() {
     const overlayW = 400;
     const overlayH = 320;
 
-    const imgRatio = imgW / imgH;
+    const videoRatio = video.videoWidth / video.videoHeight;
     const containerRatio = viewportRect.width / viewportRect.height;
 
     let renderW, renderH, offsetX, offsetY;
 
-    if (containerRatio > imgRatio) {
+    if (containerRatio > videoRatio) {
         renderW = viewportRect.width;
-        renderH = viewportRect.width / imgRatio;
+        renderH = viewportRect.width / videoRatio;
         offsetX = 0;
         offsetY = (renderH - viewportRect.height) / 2;
     } else {
         renderH = viewportRect.height;
-        renderW = viewportRect.height * imgRatio;
+        renderW = viewportRect.height * videoRatio;
         offsetX = (renderW - viewportRect.width) / 2;
         offsetY = 0;
     }
 
-    const scaleX = imgW / renderW;
-    const scaleY = imgH / renderH;
+    const scaleX = video.videoWidth / renderW;
+    const scaleY = video.videoHeight / renderH;
 
     const rectViewportX = (overlayFrame.x / overlayW) * viewportRect.width;
     const rectViewportY = (overlayFrame.y / overlayH) * viewportRect.height;
@@ -110,28 +92,18 @@ async function takeSnapshot() {
 
     const cropX = Math.max(0, Math.round((rectViewportX + offsetX) * scaleX));
     const cropY = Math.max(0, Math.round((rectViewportY + offsetY) * scaleY));
-    const cropW = Math.min(imgW - cropX, Math.round(rectViewportW * scaleX));
-    const cropH = Math.min(imgH - cropY, Math.round(rectViewportH * scaleY));
-
-    // Приводим кропнутый кадр к рабочей ширине 1280px для OpenCV
-    const TARGET_WIDTH = 1280;
-    let finalW = cropW;
-    let finalH = cropH;
-
-    if (cropW > TARGET_WIDTH) {
-        finalW = TARGET_WIDTH;
-        finalH = Math.round((cropH * TARGET_WIDTH) / cropW);
-    }
+    const cropW = Math.min(video.videoWidth - cropX, Math.round(rectViewportW * scaleX));
+    const cropH = Math.min(video.videoHeight - cropY, Math.round(rectViewportH * scaleY));
 
     const croppedCanvas = document.createElement('canvas');
-    croppedCanvas.width = finalW;
-    croppedCanvas.height = finalH;
+    croppedCanvas.width = cropW;
+    croppedCanvas.height = cropH;
 
     const ctx = croppedCanvas.getContext('2d');
-    ctx.drawImage(sourceElement, cropX, cropY, cropW, cropH, 0, 0, finalW, finalH);
+    ctx.drawImage(video, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
 
     closeCamera();
-
+    
     if (typeof handleImageSource === 'function') {
         handleImageSource(croppedCanvas, activeMode);
     } else {
