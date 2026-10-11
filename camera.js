@@ -1,63 +1,15 @@
-let mediaStream = null;
-let activeMode = null;
-
-// Запуск камеры: чистый базовый видеопоток
-async function openCamera(mode) {
-    activeMode = mode;
-    
-    // Получаем элементы динамически при вызове, а не при загрузке файла
-    const titleEl = document.getElementById('cameraTitle');
-    if (titleEl) {
-        titleEl.innerText = mode === 'standard' ? 'Съемка Эталона' : 'Съемка Образца';
-    }
-    
-    const cameraModal = document.getElementById('cameraModal');
-    if (cameraModal) {
-        cameraModal.classList.add('active');
-    }
-
-    try {
-        mediaStream = await navigator.mediaDevices.getUserMedia({
-            video: { facingMode: { exact: "environment" } }
-        });
-    } catch (err) {
-        try {
-            mediaStream = await navigator.mediaDevices.getUserMedia({ video: true });
-        } catch (fallbackErr) {
-            alert('Ошибка доступа к камере: ' + fallbackErr.message);
-            closeCamera();
-            return;
-        }
-    }
-
+// Захват кадра напрямую из видеопотока с ожиданием готовности размеров
+async function takeSnapshot() {
     const video = document.getElementById('webcam');
-    if (video) {
-        video.srcObject = mediaStream;
-    }
-}
+    if (!video) return;
 
-// Закрытие камеры и остановка потока
-function closeCamera() {
-    if (mediaStream) {
-        mediaStream.getTracks().forEach(track => track.stop());
-        mediaStream = null;
-    }
-    
-    const video = document.getElementById('webcam');
-    if (video) {
-        video.srcObject = null;
-    }
-    
-    const cameraModal = document.getElementById('cameraModal');
-    if (cameraModal) {
-        cameraModal.classList.remove('active');
-    }
-}
+    // Небольшая пауза и проверка готовности размеров видеопотока
+    await new Promise(resolve => setTimeout(resolve, 150));
 
-// Захват кадра напрямую из видеопотока, кроп по рамке и передача в OpenCV
-function takeSnapshot() {
-    const video = document.getElementById('webcam');
-    if (!video || !video.videoWidth || !video.videoHeight) return;
+    if (!video.videoWidth || !video.videoHeight) {
+        alert('Камера еще инициализируется, нажмите повторно через секунду.');
+        return;
+    }
 
     const viewportRect = video.getBoundingClientRect();
     if (!viewportRect.width || !viewportRect.height) return;
