@@ -1,24 +1,26 @@
 let mediaStream = null;
 let activeMode = null;
 
-// Элементы интерфейса (предполагается, что они существуют в DOM)
 const cameraModal = document.getElementById('cameraModal');
 const video = document.getElementById('webcam');
 
 // Запуск камеры: простой базовый видеопоток без принудительных настроек
 async function openCamera(mode) {
     activeMode = mode;
-    document.getElementById('cameraTitle').innerText = mode === 'standard' ? 'Съемка Эталона' : 'Съемка Образца';
-    cameraModal.classList.add('active');
+    const titleEl = document.getElementById('cameraTitle');
+    if (titleEl) {
+        titleEl.innerText = mode === 'standard' ? 'Съемка Эталона' : 'Съемка Образца';
+    }
+    if (cameraModal) {
+        cameraModal.classList.add('active');
+    }
 
     try {
-        // Запрашиваем стандартный видеопоток с тыловой камеры
         mediaStream = await navigator.mediaDevices.getUserMedia({
             video: { facingMode: "environment" }
         });
     } catch (err) {
         try {
-            // Фоллбэк на любую доступную камеру
             mediaStream = await navigator.mediaDevices.getUserMedia({ video: true });
         } catch (fallbackErr) {
             alert('Ошибка доступа к камере: ' + fallbackErr.message);
@@ -27,7 +29,14 @@ async function openCamera(mode) {
         }
     }
 
-    video.srcObject = mediaStream;
+    if (video) {
+        video.srcObject = mediaStream;
+        try {
+            await video.play();
+        } catch (e) {
+            console.warn('Ошибка автозапуска видеопотока:', e);
+        }
+    }
 }
 
 // Закрытие камеры и остановка потока
@@ -36,18 +45,29 @@ function closeCamera() {
         mediaStream.getTracks().forEach(track => track.stop());
         mediaStream = null;
     }
-    video.srcObject = null;
-    cameraModal.classList.remove('active');
+    if (video) {
+        video.srcObject = null;
+    }
+    if (cameraModal) {
+        cameraModal.classList.remove('active');
+    }
 }
 
-// Захват кадра напрямую из видеопотока, кроп по рамке и ресайз до 1280px для OpenCV
-function takeSnapshot() {
-    if (!video.videoWidth || !video.videoHeight) return;
+// Захват кадра напрямую из видеопотока с задержкой 150мс на стабилизацию, кропом и ресайзом до 1280px для OpenCV
+async function takeSnapshot() {
+    if (!video) return;
+
+    // Небольшая задержка для стабильности и подгрузки размеров видеопотока
+    await new Promise(resolve => setTimeout(resolve, 150));
+
+    if (!video.videoWidth || !video.videoHeight) {
+        alert('Камера еще инициализируется, подождите секунду и нажмите снова.');
+        return;
+    }
 
     const viewportRect = video.getBoundingClientRect();
     if (!viewportRect.width || !viewportRect.height) return;
 
-    // Источник — текущий кадр из видеопотока
     const sourceElement = video;
     const imgW = video.videoWidth;
     const imgH = video.videoHeight;
@@ -108,9 +128,13 @@ function takeSnapshot() {
     croppedCanvas.height = finalH;
 
     const ctx = croppedCanvas.getContext('2d');
-    // Масштабируем с сохранением пропорций
     ctx.drawImage(sourceElement, cropX, cropY, cropW, cropH, 0, 0, finalW, finalH);
 
     closeCamera();
-    handleImageSource(croppedCanvas, activeMode);
+
+    if (typeof handleImageSource === 'function') {
+        handleImageSource(croppedCanvas, activeMode);
+    } else {
+        console.error('Функция handleImageSource не найдена!');
+    }
 }
