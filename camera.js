@@ -1,25 +1,25 @@
-// Запуск камеры и получение потока высокого разрешения (чистая автоэкспозиция)
+let mediaStream = null;
+let activeMode = null;
+
+// Элементы интерфейса (предполагается, что они существуют в DOM)
+const cameraModal = document.getElementById('cameraModal');
+const video = document.getElementById('webcam');
+
+// Запуск камеры: простой запрос базового видеопотока без жестких требований к разрешению
 async function openCamera(mode) {
     activeMode = mode;
     document.getElementById('cameraTitle').innerText = mode === 'standard' ? 'Съемка Эталона' : 'Съемка Образца';
     cameraModal.classList.add('active');
 
     try {
+        // Запрашиваем стандартный видеопоток с тыловой камеры (какой даст система, такой и используем)
         mediaStream = await navigator.mediaDevices.getUserMedia({
-            video: { 
-                facingMode: { exact: "environment" },
-                width: { ideal: 3840 },
-                height: { ideal: 2160 }
-            }
+            video: { facingMode: "environment" }
         });
     } catch (err) {
         try {
-            mediaStream = await navigator.mediaDevices.getUserMedia({ 
-                video: { 
-                    width: { ideal: 3840 },
-                    height: { ideal: 2160 }
-                } 
-            });
+            // Фоллбэк на любую доступную камеру
+            mediaStream = await navigator.mediaDevices.getUserMedia({ video: true });
         } catch (fallbackErr) {
             alert('Ошибка доступа к камере: ' + fallbackErr.message);
             closeCamera();
@@ -40,35 +40,17 @@ function closeCamera() {
     cameraModal.classList.remove('active');
 }
 
-// Захват кадра с паузой на стабилизацию и ресайзом до 1280px для OpenCV
+// Захват текущего кадра прямо из видеопотока, кроп по рамке и ресайз для OpenCV
 async function takeSnapshot() {
     if (!video.videoWidth || !video.videoHeight) return;
 
     const viewportRect = video.getBoundingClientRect();
     if (!viewportRect.width || !viewportRect.height) return;
 
-    let sourceElement = video;
-    let imgW = video.videoWidth;
-    let imgH = video.videoHeight;
-
-    const track = mediaStream ? mediaStream.getVideoTracks()[0] : null;
-
-    // Попытка получить снимок высокого разрешения через ImageCapture
-    if ('ImageCapture' in window && track) {
-        try {
-            // Задержка 150 мс для переключения режима камеры и фиксации фокуса
-            await new Promise(resolve => setTimeout(resolve, 150));
-
-            const imageCapture = new ImageCapture(track);
-            const blob = await imageCapture.takePhoto();
-            const bitmap = await createImageBitmap(blob);
-            sourceElement = bitmap;
-            imgW = bitmap.width;
-            imgH = bitmap.height;
-        } catch (err) {
-            console.warn('ImageCapture не сработал, фоллбэк на кадр из видео:', err);
-        }
-    }
+    // Источник — текущий кадр из видеопотока
+    const sourceElement = video;
+    const imgW = video.videoWidth;
+    const imgH = video.videoHeight;
 
     // Параметры рамки оверлея (400x320)
     const strokeOffset = 2;
@@ -126,7 +108,7 @@ async function takeSnapshot() {
     croppedCanvas.height = finalH;
 
     const ctx = croppedCanvas.getContext('2d');
-    // Масштабируем с сохранением пропорций
+    // Мгновенно вырезаем нужную область из видеопотока и масштабируем
     ctx.drawImage(sourceElement, cropX, cropY, cropW, cropH, 0, 0, finalW, finalH);
 
     closeCamera();
