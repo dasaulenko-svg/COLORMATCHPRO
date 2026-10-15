@@ -1,5 +1,5 @@
 :root {
-    --bg-color: #0B0E14;
+    --bg-color: #080C14;
     --card-bg: rgba(22, 28, 45, 0.75);
     --card-border: rgba(255, 255, 255, 0.08);
     --accent-cyan: #00E5FF;
@@ -18,10 +18,15 @@
 body { 
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; 
     background: var(--bg-color); 
-    background-image: radial-gradient(circle at 50% 0%, #1A2035 0%, #0B0E14 80%);
+    /* Инженерная сетка и радиальный градиент подложки на чистом CSS */
+    background-image: 
+        radial-gradient(circle at 50% 0%, rgba(26, 32, 53, 0.8) 0%, rgba(8, 12, 20, 0.95) 80%),
+        linear-gradient(rgba(0, 229, 255, 0.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 229, 255, 0.025) 1px, transparent 1px);
+    background-size: 100% 100%, 32px 32px, 32px 32px;
     color: var(--text-main); 
     margin: 0; 
-    padding: 16px 12px; 
+    padding: 16px 12px 84px 12px; /* Дополнительный отступ снизу под нижнее меню */
     min-height: 100vh;
     display: flex;
     flex-direction: column;
@@ -47,22 +52,21 @@ body {
 }
 
 .logo-badge {
-    width: 36px;
-    height: 36px;
-    background: linear-gradient(135deg, var(--accent-purple), var(--accent-cyan));
+    width: 38px;
+    height: 38px;
+    background: rgba(18, 24, 38, 0.9);
+    border: 1px solid var(--card-border);
     border-radius: 10px;
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 0 16px var(--accent-purple-glow);
+    box-shadow: 0 0 16px rgba(0, 229, 255, 0.15);
     transition: transform 0.1s ease;
 }
 
 .brand:active .logo-badge {
     transform: scale(0.92);
 }
-
-.logo-badge svg { width: 20px; height: 20px; fill: #fff; }
 
 .title-group {
     display: flex;
@@ -95,55 +99,59 @@ h1 {
     animation: fadeIn 0.3s ease;
 }
 
-.menu-container { position: relative; }
-
-.menu-btn {
-    background: var(--card-bg);
-    border: 1px solid var(--card-border);
-    color: var(--text-main);
-    padding: 8px 12px;
-    border-radius: 12px;
-    font-size: 13px;
-    font-weight: 600;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    backdrop-filter: blur(10px);
-}
-
-.menu-dropdown {
-    position: absolute;
-    right: 0;
-    top: 46px;
-    background: rgba(18, 24, 38, 0.95);
-    border: 1px solid var(--card-border);
-    border-radius: 14px;
-    padding: 6px;
-    width: 220px;
-    box-shadow: 0 12px 32px rgba(0,0,0,0.5);
+/* НИЖНЯЯ ПАНЕЛЬ НАВИГАЦИИ ПОД БОЛЬШОЙ ПАЛЕЦ */
+.bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100%;
+    max-width: 480px;
+    background: rgba(11, 14, 20, 0.92);
     backdrop-filter: blur(16px);
-    display: none;
-    z-index: 100;
-}
-
-.menu-dropdown.active { display: block; }
-
-.menu-item {
-    padding: 10px 12px;
-    font-size: 12px;
-    font-weight: 600;
-    color: var(--text-muted);
-    border-radius: 8px;
-    cursor: pointer;
+    border-top: 1px solid var(--card-border);
     display: flex;
-    align-items: center;
-    gap: 8px;
+    justify-content: space-around;
+    padding: 8px 6px 12px 6px;
+    z-index: 1000;
+    box-shadow: 0 -10px 30px rgba(0,0,0,0.5);
 }
 
-.menu-item:hover, .menu-item.active {
-    background: rgba(255, 255, 255, 0.08);
-    color: #fff;
+.nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 10px;
+    font-weight: 600;
+    padding: 6px 4px;
+    border-radius: 10px;
+    transition: all 0.2s ease;
+    flex: 1;
+    user-select: none;
+}
+
+.nav-item svg {
+    width: 20px;
+    height: 20px;
+    stroke: currentColor;
+    fill: none;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.nav-item:hover {
+    color: var(--text-main);
+}
+
+.nav-item.active {
+    color: var(--accent-cyan);
+    background: rgba(0, 229, 255, 0.08);
 }
 
 .status-pill { 

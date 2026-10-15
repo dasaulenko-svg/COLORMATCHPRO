@@ -6,7 +6,7 @@
     <title>SPECTRIX</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     
     <!-- Внешние стили -->
     <link rel="stylesheet" href="styles.css">
@@ -24,36 +24,15 @@
         <div class="header">
             <div class="brand" id="brandTrigger">
                 <div class="logo-badge">
-                    <svg viewBox="0 0 24 24">
-                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z"/>
+                    <!-- Логотип: Буква S с зеленой точкой (без использования внешних файлов картинок) -->
+                    <svg viewBox="0 0 36 36" width="22" height="22">
+                        <text x="12" y="27" font-family="'Inter', sans-serif" font-weight="900" font-size="26" fill="#FFFFFF" text-anchor="middle">S</text>
+                        <circle cx="28" cy="27" r="4" fill="#00E676"/>
                     </svg>
                 </div>
                 <div class="title-group">
                     <h1>SPECTRIX</h1>
                     <div class="pro-badge">PRO</div>
-                </div>
-            </div>
-
-            <div class="menu-container">
-                <button class="menu-btn" onclick="toggleMenu()">
-                    <span id="activeMenuLabel">🎯 Сравнение</span> ▾
-                </button>
-                <div class="menu-dropdown" id="menuDropdown">
-                    <div class="menu-item active" onclick="switchMode('compare', '🎯 Сравнение')">
-                        🎯 Сравнение цвета
-                    </div>
-                    <div class="menu-item" onclick="switchMode('calibrate', '🖥️ Калибровка')">
-                        🖥️ Калибровка экрана
-                    </div>
-                    <div class="menu-item" onclick="switchMode('camCalibrate', '📷 Калибровка камеры')">
-                        📷 Калибровка камеры
-                    </div>
-                    <div class="menu-item" onclick="switchMode('correct', '🎨 Цветокоррекция')">
-                        🎨 Цветокоррекция снимка
-                    </div>
-                    <div class="menu-item" onclick="switchMode('catalog', '🎨 Цвет из каталога')">
-                        🎨 Цвет из каталога
-                    </div>
                 </div>
             </div>
         </div>
@@ -73,7 +52,7 @@
                         <canvas id="canvasStandard"></canvas>
                     </div>
                     <button class="btn-action" id="btnStandard" onclick="openCamera('standard')" disabled>
-                        📷 Снять Эталон
+                        Снять Эталон
                     </button>
                     <div class="info-container" id="infoStandard"></div>
                 </div>
@@ -87,7 +66,7 @@
                         <canvas id="canvasSample"></canvas>
                     </div>
                     <button class="btn-action secondary" id="btnSample" onclick="openCamera('sample')" disabled>
-                        📸 Снять Образец
+                        Снять Образец
                     </button>
                     <div class="info-container" id="infoSample"></div>
                 </div>
@@ -95,7 +74,7 @@
 
             <div class="card" id="infoCard" style="display:none;">
                 <div id="result"></div>
-                <button class="reset-btn" id="resetBtn">🔄 Начать новый тест</button>
+                <button class="reset-btn" id="resetBtn">Начать новый тест</button>
             </div>
         </div>
 
@@ -128,6 +107,30 @@
         </div>
     </div>
 
+    <!-- НИЖНЯЯ ПАНЕЛЬ НАВИГАЦИИ ПОД БОЛЬШОЙ ПАЛЕЦ -->
+    <nav class="bottom-nav">
+        <button class="nav-item active" id="navCompare" onclick="switchMode('compare', this)">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/></svg>
+            <span>Сравнение</span>
+        </button>
+        <button class="nav-item" id="navCalibrate" onclick="switchMode('calibrate', this)">
+            <svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+            <span>Экран</span>
+        </button>
+        <button class="nav-item" id="navCamCalibrate" onclick="switchMode('camCalibrate', this)">
+            <svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+            <span>Камера</span>
+        </button>
+        <button class="nav-item" id="navCorrect" onclick="switchMode('correct', this)">
+            <svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+            <span>Коррекция</span>
+        </button>
+        <button class="nav-item" id="navCatalog" onclick="switchMode('catalog', this)">
+            <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+            <span>Каталог</span>
+        </button>
+    </nav>
+
     <!-- МОДАЛЬНОЕ ОКНО КАМЕРЫ -->
     <div class="camera-modal" id="cameraModal">
         <div class="camera-card">
@@ -159,7 +162,7 @@
             </div>
 
             <button class="btn-action" onclick="takeSnapshot()">
-                📸 Сделать снимок
+                Сделать снимок
             </button>
         </div>
     </div>
@@ -173,7 +176,7 @@
         <div class="zoom-viewport" id="zoomViewport">
             <canvas id="zoomCanvas"></canvas>
         </div>
-        <div class="zoom-hint">🤏 Используйте Pinch-to-zoom для детального просмотра</div>
+        <div class="zoom-hint">Используйте Pinch-to-zoom для детального просмотра</div>
     </div>
 
     <!-- ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ И ОБРАБОТЧИКИ UI -->
@@ -215,16 +218,9 @@
             }
         });
 
-        function toggleMenu() {
-            document.getElementById('menuDropdown').classList.toggle('active');
-        }
-
-        function switchMode(modeKey, labelText) {
-            document.getElementById('activeMenuLabel').innerText = labelText;
-            document.getElementById('menuDropdown').classList.remove('active');
-
-            document.querySelectorAll('.menu-item').forEach(el => el.classList.remove('active'));
-            event.target.classList.add('active');
+        function switchMode(modeKey, btnElement) {
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            btnElement.classList.add('active');
 
             document.querySelectorAll('.view-pane').forEach(el => el.classList.remove('active'));
             if (modeKey === 'compare') document.getElementById('paneCompare').classList.add('active');
@@ -234,17 +230,11 @@
             if (modeKey === 'catalog') document.getElementById('paneCatalog').classList.add('active');
         }
 
-        window.addEventListener('click', (e) => {
-            if (!e.target.closest('.menu-container')) {
-                document.getElementById('menuDropdown').classList.remove('active');
-            }
-        });
-
         function onOpenCvReady() {
             isOpenCvReady = true;
             cvStatus.innerHTML = '<span class="status-dot"></span> Готов к работе';
             btnStandard.disabled = false;
-            restoreState();
+            if (typeof restoreState === 'function') restoreState();
         }
 
         resetBtn.addEventListener('click', () => {
