@@ -6,7 +6,7 @@
     <title>SPECTRIX</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     
     <!-- Внешние стили -->
     <link rel="stylesheet" href="styles.css">
@@ -24,11 +24,7 @@
         <div class="header">
             <div class="brand" id="brandTrigger">
                 <div class="logo-badge">
-                    <!-- Логотип: Черная буква S с зеленой точкой на белом фоне -->
-                    <svg viewBox="0 0 36 36" width="22" height="22">
-                        <text x="12" y="27" font-family="'Inter', sans-serif" font-weight="900" font-size="26" fill="#000000" text-anchor="middle">S</text>
-                        <circle cx="28" cy="27" r="4" fill="#00E676"/>
-                    </svg>
+                    S<span style="color: var(--accent-green);">.</span>
                 </div>
                 <div class="title-group">
                     <h1>SPECTRIX</h1>
@@ -52,7 +48,7 @@
                         <canvas id="canvasStandard"></canvas>
                     </div>
                     <button class="btn-action" id="btnStandard" onclick="openCamera('standard')" disabled>
-                        Снять Эталон
+                        📷 Снять Эталон
                     </button>
                     <div class="info-container" id="infoStandard"></div>
                 </div>
@@ -66,7 +62,7 @@
                         <canvas id="canvasSample"></canvas>
                     </div>
                     <button class="btn-action secondary" id="btnSample" onclick="openCamera('sample')" disabled>
-                        Снять Образец
+                        📸 Снять Образец
                     </button>
                     <div class="info-container" id="infoSample"></div>
                 </div>
@@ -74,7 +70,7 @@
 
             <div class="card" id="infoCard" style="display:none;">
                 <div id="result"></div>
-                <button class="reset-btn" id="resetBtn">Начать новый тест</button>
+                <button class="reset-btn" id="resetBtn">🔄 Начать новый тест</button>
             </div>
         </div>
 
@@ -107,26 +103,26 @@
         </div>
     </div>
 
-    <!-- НИЖНЯЯ ПАНЕЛЬ НАВИГАЦИИ ПОД БОЛЬШОЙ ПАЛЕЦ -->
+    <!-- НИЖНЯЯ ПАНЕЛЬ НАВИГАЦИИ -->
     <nav class="bottom-nav">
-        <button class="nav-item active" id="navCompare" onclick="switchMode('compare', this)">
-            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/></svg>
+        <button class="bottom-nav-item active" data-mode="compare" onclick="switchMode('compare', this)">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z"/></svg>
             <span>Сравнение</span>
         </button>
-        <button class="nav-item" id="navCalibrate" onclick="switchMode('calibrate', this)">
-            <svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+        <button class="bottom-nav-item" data-mode="calibrate" onclick="switchMode('calibrate', this)">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M21 2H3c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h7v2H8v2h8v-2h-2v-2h7c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H3V4h18v12z"/></svg>
             <span>Экран</span>
         </button>
-        <button class="nav-item" id="navCamCalibrate" onclick="switchMode('camCalibrate', this)">
-            <svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+        <button class="bottom-nav-item" data-mode="camCalibrate" onclick="switchMode('camCalibrate', this)">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M12 15c1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3 1.34 3 3 3zm9-9h-3.17L15 3H9L7.17 6H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm0 14H4V8h4.05l1.83-3h6.24l1.83 3H20v12z"/></svg>
             <span>Камера</span>
         </button>
-        <button class="nav-item" id="navCorrect" onclick="switchMode('correct', this)">
-            <svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+        <button class="bottom-nav-item" data-mode="correct" onclick="switchMode('correct', this)">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
             <span>Коррекция</span>
         </button>
-        <button class="nav-item" id="navCatalog" onclick="switchMode('catalog', this)">
-            <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        <button class="bottom-nav-item" data-mode="catalog" onclick="switchMode('catalog', this)">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M4 8h4V4H4v4zm6 12h4v-4h-4v4zm-6 0h4v-4H4v4zm0-6h4v-4H4v4zm6 0h4v-4h-4v4zm6-10v4h4V4h-4zm-6 4h4V4h-4v4zm6 6h4v-4h-4v4zm0 6h4v-4h-4v4z"/></svg>
             <span>Каталог</span>
         </button>
     </nav>
@@ -162,7 +158,7 @@
             </div>
 
             <button class="btn-action" onclick="takeSnapshot()">
-                Сделать снимок
+                📸 Сделать снимок
             </button>
         </div>
     </div>
@@ -176,7 +172,7 @@
         <div class="zoom-viewport" id="zoomViewport">
             <canvas id="zoomCanvas"></canvas>
         </div>
-        <div class="zoom-hint">Используйте Pinch-to-zoom для детального просмотра</div>
+        <div class="zoom-hint">🤏 Используйте Pinch-to-zoom для детального просмотра</div>
     </div>
 
     <!-- ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ И ОБРАБОТЧИКИ UI -->
@@ -218,9 +214,11 @@
             }
         });
 
-        function switchMode(modeKey, btnElement) {
-            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
-            btnElement.classList.add('active');
+        function switchMode(modeKey, element) {
+            document.querySelectorAll('.bottom-nav-item').forEach(el => el.classList.remove('active'));
+            if (element) {
+                element.classList.add('active');
+            }
 
             document.querySelectorAll('.view-pane').forEach(el => el.classList.remove('active'));
             if (modeKey === 'compare') document.getElementById('paneCompare').classList.add('active');
@@ -234,7 +232,7 @@
             isOpenCvReady = true;
             cvStatus.innerHTML = '<span class="status-dot"></span> Готов к работе';
             btnStandard.disabled = false;
-            if (typeof restoreState === 'function') restoreState();
+            restoreState();
         }
 
         resetBtn.addEventListener('click', () => {
