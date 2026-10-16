@@ -1,43 +1,41 @@
 /**
- * Spectrix Pro - Field Luxometer Module (lux.js)
- * Поддерживает живой замер и 5-секундный пространственный скан помещения.
+ * Spectrix Pro - Optical Luxometer Module (lux.js)
+ * Замер освещенности по видеопотоку камеры (работает и в темноте, и на ярком солнце).
  */
 
 (function () {
     const paneLux = document.getElementById('paneLux');
     if (!paneLux) return;
 
-    // Рендерим расширенный интерфейс люксометра
+    // Рендерим интерфейс оптического люксометра
     paneLux.innerHTML = `
         <div class="card" style="margin-top: 0; text-align: center;">
-            <h3 style="margin-bottom: 8px; color: var(--text-main);">☀️ Полевой люксометр</h3>
+            <h3 style="margin-bottom: 8px; color: var(--text-main);">☀️ Оптический люксометр</h3>
             <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 20px;">
-                Живой контроль света или 5-секундный скан помещения для усреднения зон.
+                Анализ освещенности по кадру камеры (корректно на солнце и в помещении).
             </p>
 
-            <div class="lux-display-box" style="padding: 24px; background: rgba(0, 229, 255, 0.04); border: 1px solid var(--border-color); border-radius: 12px; margin-bottom: 16px;">
+            <div class="lux-display-box" style="padding: 24px; background: rgba(0, 229, 255, 0.04); border: 1px solid var(--border-color); border-radius: 12px; margin-bottom: 16px; position: relative; overflow: hidden;">
                 <div id="luxValueDisplay" style="font-size: 48px; font-weight: 800; color: var(--accent-cyan); line-height: 1;">--</div>
-                <div id="luxModeLabel" style="font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); margin-top: 6px;">Реальное время (люкс)</div>
+                <div id="luxModeLabel" style="font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); margin-top: 6px;">Готов к сканированию</div>
+                <!-- Скрытый элемент видео для анализа кадров в реальном времени -->
+                <video id="luxOpticalVideo" autoplay playsinline muted style="display: none;"></video>
             </div>
 
             <div id="luxStatusBadge" style="padding: 10px 14px; border-radius: 8px; font-size: 13px; font-weight: 500; margin-bottom: 16px; background: rgba(255,255,255,0.05); color: var(--text-main);">
-                ⏳ Инициализация датчика света...
+                ℹ️ Нажмите кнопку и плавно покрутите телефон в пространстве.
             </div>
 
-            <!-- Кнопка запуска 5-секундного скана помещения -->
+            <!-- Кнопка запуска 5-секундного оптического скана -->
             <button id="scanRoomBtn" class="btn-action" style="margin-bottom: 16px; width: 100%;">
-                ⏱️ Скан помещения (5 сек)
+                ⏱️ Оптический скан (5 сек)
             </button>
 
             <!-- Блок Pro-аналитики (уверенность замера) -->
             <div class="pro-analytics-box" style="text-align: left; padding: 12px; background: rgba(0,0,0,0.2); border-radius: 8px; font-size: 12px; border-left: 3px solid var(--accent-green);">
                 <div style="font-weight: 600; margin-bottom: 4px; color: var(--text-main);">Параметр уверенности (Confidence):</div>
-                <div id="luxConfidenceText" style="color: var(--text-muted);">Ожидание данных сенсора...</div>
+                <div id="luxConfidenceText" style="color: var(--text-muted);">Ожидание сканирования...</div>
             </div>
-
-            <button id="luxManualBtn" class="btn-action secondary" style="margin-top: 16px; display: none;">
-                🔄 Переключить в режим эмуляции
-            </button>
         </div>
     `;
 
@@ -46,12 +44,9 @@
     const statusEl = document.getElementById('luxStatusBadge');
     const confidenceEl = document.getElementById('luxConfidenceText');
     const scanBtn = document.getElementById('scanRoomBtn');
-    const manualBtn = document.getElementById('luxManualBtn');
+    const videoEl = document.getElementById('luxOpticalVideo');
 
-    let currentRawLux = 0;
     let isScanning = false;
-    let sensorAvailable = false;
-    let fallbackMode = false;
 
     function evaluateLux(lux) {
         const val = Math.round(lux);
@@ -65,115 +60,133 @@
             statusEl.style.background = 'rgba(255, 193, 7, 0.12)';
             statusEl.style.color = '#FFC107';
             statusEl.innerHTML = '💡 <b>Рабочий полумрак</b>. Допустимо для замеров.';
-            confidenceEl.innerHTML = '🟡 Уверенность цвета: <b>80-85%</b> (карта компенсирует свет).';
+            confidenceEl.innerHTML = '🟡 Уверенность цвета: <b>80-85%</b>.';
             confidenceEl.parentElement.style.borderLeftColor = '#FFC107';
-        } else if (val >= 150 && val <= 1000) {
+        } else if (val >= 150 && val <= 5000) {
             statusEl.style.background = 'rgba(0, 230, 118, 0.12)';
             statusEl.style.color = '#00E676';
             statusEl.innerHTML = '✨ <b>Отличное освещение</b>. Идеально для подбора.';
-            confidenceEl.innerHTML = '🟢 Уверенность цвета: <b>95-100%</b> (оптимальные условия).';
+            confidenceEl.innerHTML = '🟢 Уверенность цвета: <b>95-100%</b>.';
             confidenceEl.parentElement.style.borderLeftColor = '#00E676';
         } else {
             statusEl.style.background = 'rgba(0, 229, 255, 0.12)';
             statusEl.style.color = 'var(--accent-cyan)';
-            statusEl.innerHTML = '☀️ <b>Яркий свет</b>. Следите за бликами на стене!';
-            confidenceEl.innerHTML = '🟡 Уверенность цвета: <b>85-90%</b> (возможны блики).';
-            confidenceEl.parentElement.style.borderLeftColor = 'var(--accent-cyan>';
+            statusEl.innerHTML = '☀️ <b>Яркое солнце / улица</b> (> 5000 лк).';
+            confidenceEl.innerHTML = '🟡 Уверенность цвета: <b>85-90%</b> (уличный свет).';
+            confidenceEl.parentElement.style.borderLeftColor = 'var(--accent-cyan)';
         }
     }
 
-    // Логика 5-секундного сканирования помещения
-    scanBtn.onclick = () => {
+    // Логика 5-секундного оптического сканирования
+    scanBtn.onclick = async () => {
         if (isScanning) return;
         isScanning = true;
         scanBtn.disabled = true;
 
-        let samples = [];
-        let timeLeft = 5;
+        try {
+            // Запускаем тыловую камеру для сбора оптических данных
+            const stream = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: 'environment', width: { ideal: 640 }, height: { ideal: 480 } }
+            });
+            videoEl.srcObject = stream;
+            await videoEl.play();
 
-        modeLabelEl.textContent = 'Идет сканирование помещения...';
-        statusEl.style.background = 'rgba(0, 229, 255, 0.12)';
-        statusEl.style.color = 'var(--accent-cyan)';
-        statusEl.innerHTML = `🔄 <b>Крутите телефон в руках!</b> Осталось: ${timeLeft} сек.`;
+            let timeLeft = 5;
+            let samples = [];
 
-        // Сбор данных каждые 100 мс (10 раз в секунду)
-        const sampleInterval = setInterval(() => {
-            let activeVal = fallbackMode ? (Math.floor(Math.random() * 200) + 100) : currentRawLux;
-            samples.push(activeVal);
-        }, 100);
+            modeLabelEl.textContent = 'Идет оптический скан...';
+            statusEl.style.background = 'rgba(0, 229, 255, 0.12)';
+            statusEl.style.color = 'var(--accent-cyan)';
+            statusEl.innerHTML = `🔄 <b>Вращайте телефон!</b> Осталось: ${timeLeft} сек.`;
 
-        // Таймер обратного отсчета каждую секунду
-        const timerInterval = setInterval(() => {
-            timeLeft--;
-            if (timeLeft > 0) {
-                statusEl.innerHTML = `🔄 <b>Крутите телефон в руках!</b> Осталось: ${timeLeft} сек.`;
-            } else {
-                clearInterval(timerInterval);
-                clearInterval(sampleInterval);
+            // Создаем скрытый холст для покадрового анализа
+            const canvas = document.createElement('canvas');
+            canvas.width = 160;
+            canvas.height = 120;
+            const ctx = canvas.getContext('2d', { willReadFrequently: true });
 
-                // Считаем среднее арифметическое
-                if (samples.length > 0) {
-                    const sum = samples.reduce((a, b) => a + b, 0);
-                    const avgLux = Math.round(sum / samples.length);
+            // Сбор данных 10 раз в секунду
+            const sampleInterval = setInterval(() => {
+                if (videoEl.readyState >= videoEl.HAVE_CURRENT_DATA) {
+                    ctx.drawImage(videoEl, 0, 0, canvas.width, canvas.height);
+                    const frame = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                    const data = frame.data;
 
-                    valEl.textContent = avgLux;
-                    modeLabelEl.textContent = 'Среднее по помещению (5 сек скан)';
-                    evaluateLux(avgLux);
+                    let totalLuminance = 0;
+                    let clippedPixels = 0;
+                    const pixelCount = data.length / 4;
 
-                    if (navigator.vibrate) navigator.vibrate([50, 50, 50]);
-                } else {
-                    statusEl.innerHTML = '⚠️ Не удалось собрать данные датчика';
-                }
+                    for (let i = 0; i < data.length; i += 4) {
+                        const r = data[i];
+                        const g = data[i+1];
+                        const b = data[i+2];
+                        // Классическая формула пересчета в яркость (Luminance)
+                        const l = 0.299 * r + 0.587 * g + 0.114 * b;
+                        totalLuminance += l;
 
-                isScanning = false;
-                scanBtn.disabled = false;
-            }
-        }, 1000);
-    };
-
-    // Инициализация датчика освещенности
-    function initSensor() {
-        if ('AmbientLightSensor' in window) {
-            try {
-                const sensor = new AmbientLightSensor({ frequency: 10 }); // 10 раз в секунду
-                sensor.addEventListener('reading', () => {
-                    sensorAvailable = true;
-                    currentRawLux = sensor.illuminance;
-                    if (!isScanning) {
-                        valEl.textContent = Math.round(currentRawLux);
-                        evaluateLux(currentRawLux);
+                        // Детекция уличного пересвета (солнца)
+                        if (r > 245 && g > 245 && b > 245) {
+                            clippedPixels++;
+                        }
                     }
-                });
-                sensor.addEventListener('error', (event) => {
-                    console.warn('ALS Error:', event.error.name);
-                    enableFallback('Ошибка датчика: ' + event.error.message);
-                });
-                sensor.start();
-                statusEl.innerHTML = '✅ Датчик активен. Нажмите скан для усреднения.';
-            } catch (err) {
-                enableFallback('Доступ к датчику ограничен политикой браузера');
-            }
-        } else {
-            enableFallback('Датчик освещенности не поддерживается браузером');
+
+                    const avgBrightness = totalLuminance / pixelCount;
+                    const clipRatio = clippedPixels / pixelCount;
+
+                    // Вычисляем люксы: учитываем и общую яркость, и процент засветки на солнце
+                    let estimatedLux = 0;
+                    if (clipRatio > 0.25) {
+                        // Яркий солнечный свет (матрица перенасыщена)
+                        estimatedLux = 10000 + (clipRatio * 50000);
+                    } else {
+                        // Обычные комнатные условия или тень
+                        estimatedLux = Math.pow(avgBrightness / 255, 2.2) * 5000;
+                        if (estimatedLux < 5) estimatedLux = 5;
+                    }
+
+                    samples.push(estimatedLux);
+                }
+            }, 100);
+
+            // Обратный отсчет таймера
+            const timerInterval = setInterval(() => {
+                timeLeft--;
+                if (timeLeft > 0) {
+                    statusEl.innerHTML = `🔄 <b>Вращайте телефон!</b> Осталось: ${timeLeft} сек.`;
+                } else {
+                    clearInterval(timerInterval);
+                    clearInterval(sampleInterval);
+
+                    // Останавливаем камеру и освобождаем ресурсы
+                    stream.getTracks().forEach(track => track.stop());
+                    videoEl.srcObject = null;
+
+                    // Считаем среднее значение по всем собранным кадрам за 5 секунд
+                    if (samples.length > 0) {
+                        const sum = samples.reduce((a, b) => a + b, 0);
+                        const finalLux = Math.round(sum / samples.length);
+
+                        valEl.textContent = finalLux;
+                        modeLabelEl.textContent = 'Среднее (оптический скан)';
+                        evaluateLux(finalLux);
+
+                        if (navigator.vibrate) navigator.vibrate([50, 50, 50]);
+                    } else {
+                        statusEl.innerHTML = '⚠️ Не удалось получить кадры с камеры';
+                    }
+
+                    isScanning = false;
+                    scanBtn.disabled = false;
+                }
+            }, 1000);
+
+        } catch (err) {
+            console.warn('Camera access error:', err);
+            statusEl.style.background = 'rgba(255, 82, 82, 0.15)';
+            statusEl.style.color = '#FF5252';
+            statusEl.innerHTML = '⚠️ Ошибка доступа к камере. Разрешите её в браузере.';
+            isScanning = false;
+            scanBtn.disabled = false;
         }
-    }
-
-    function enableFallback(reason) {
-        fallbackMode = true;
-        statusEl.style.background = 'rgba(255, 255, 255, 0.05)';
-        statusEl.style.color = 'var(--text-muted)';
-        statusEl.innerHTML = `ℹ️ ${reason}. Включен режим эмуляции.`;
-        valEl.textContent = '220';
-        evaluateLux(220);
-
-        manualBtn.style.display = 'block';
-        manualBtn.onclick = () => {
-            const mock = Math.floor(Math.random() * 300) + 80;
-            valEl.textContent = mock;
-            evaluateLux(mock);
-            if (navigator.vibrate) navigator.vibrate(20);
-        };
-    }
-
-    setTimeout(initSensor, 300);
+    };
 })();
