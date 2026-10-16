@@ -1,6 +1,6 @@
 /**
- * Spectrix Pro - Optical Luxometer Module (lux.js)
- * Безопасная версия с защитой от зависаний и падений DOM.
+ * Spectrix Pro - Card-Based Luxometer Module (lux.js)
+ * Точный замер освещенности по калибровочной карточке COLORMATCHPRO.
  */
 
 (function () {
@@ -8,221 +8,97 @@
         const paneLux = document.getElementById('paneLux');
         if (!paneLux) return;
 
-        // Рендерим интерфейс оптического люксометра
+        // Рендерим интерфейс люксометра с одним окном (как в эталоне)
         paneLux.innerHTML = `
             <div class="card" style="margin-top: 0; text-align: center;">
-                <h3 style="margin-bottom: 8px; color: var(--text-main);">☀️ Оптический люксометр</h3>
-                <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 20px;">
-                    Анализ освещенности по кадру камеры с компенсацией автоэкспозиции.
+                <h3 style="margin-bottom: 8px; color: var(--text-main);">📷 Люксометр по карточке</h3>
+                <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 16px;">
+                    Поместите карту COLORMATCHPRO в рамку и нажмите кнопку замера.
                 </p>
 
-                <div class="lux-display-box" style="padding: 24px; background: rgba(0, 229, 255, 0.04); border: 1px solid var(--border-color); border-radius: 12px; margin-bottom: 16px; position: relative; overflow: hidden;">
-                    <div id="luxValueDisplay" style="font-size: 48px; font-weight: 800; color: var(--accent-cyan); line-height: 1;">--</div>
-                    <div id="luxModeLabel" style="font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); margin-top: 6px;">Готов к сканированию</div>
-                    <video id="luxOpticalVideo" autoplay playsinline muted style="display: none;"></video>
+                <!-- Видоискатель камеры с рамкой-подсказкой -->
+                <div style="position: relative; width: 100%; max-width: 360px; margin: 0 auto 16px auto; border-radius: 12px; overflow: hidden; background: #000; border: 1px solid var(--border-color);">
+                    <video id="cardLuxVideo" autoplay playsinline muted style="width: 100%; display: block;"></video>
+                    <canvas id="cardLuxCanvas" style="display: none;"></canvas>
+                    
+                    <div style="position: absolute; top: 15%; left: 10%; right: 10%; bottom: 15%; border: 2px dashed rgba(0, 229, 255, 0.7); border-radius: 8px; pointer-events: none; display: flex; align-items: flex-start; justify-content: center; padding-top: 6px;">
+                        <span style="background: rgba(0,0,0,0.6); color: #fff; font-size: 11px; padding: 2px 6px; border-radius: 4px;">Карта должна быть здесь</span>
+                    </div>
                 </div>
 
-                <div id="luxStatusBadge" style="padding: 10px 14px; border-radius: 8px; font-size: 13px; font-weight: 500; margin-bottom: 16px; background: rgba(255,255,255,0.05); color: var(--text-main);">
-                    ℹ️ Нажмите кнопку и плавно покрутите телефон в пространстве.
+                <!-- Дисплей результата -->
+                <div class="lux-display-box" style="padding: 20px; background: rgba(0, 229, 255, 0.04); border: 1px solid var(--border-color); border-radius: 12px; margin-bottom: 16px;">
+                    <div id="cardLuxValue" style="font-size: 42px; font-weight: 800; color: var(--accent-cyan); line-height: 1;">--</div>
+                    <div id="cardLuxMode" style="font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); margin-top: 6px;">Ожидание снимка карточки</div>
                 </div>
 
-                <button id="scanRoomBtn" class="btn-action" style="margin-bottom: 16px; width: 100%;">
-                    ⏱️ Оптический скан (5 сек)
+                <div id="cardLuxStatus" style="padding: 10px 14px; border-radius: 8px; font-size: 13px; font-weight: 500; margin-bottom: 16px; background: rgba(255,255,255,0.05); color: var(--text-main);">
+                    ℹ️ Держите карту ровно под исследуемым светом.
+                </div>
+
+                <button id="captureCardBtn" class="btn-action" style="margin-bottom: 12px; width: 100%;">
+                    📸 Замерить по карточке
                 </button>
-
-                <div class="pro-analytics-box" style="text-align: left; padding: 12px; background: rgba(0,0,0,0.2); border-radius: 8px; font-size: 12px; border-left: 3px solid var(--accent-green);">
-                    <div style="font-weight: 600; margin-bottom: 4px; color: var(--text-main);">Параметр уверенности (Confidence):</div>
-                    <div id="luxConfidenceText" style="color: var(--text-muted);">Ожидание сканирования...</div>
-                </div>
             </div>
         `;
 
-        const valEl = document.getElementById('luxValueDisplay');
-        const modeLabelEl = document.getElementById('luxModeLabel');
-        const statusEl = document.getElementById('luxStatusBadge');
-        const confidenceEl = document.getElementById('luxConfidenceText');
-        const scanBtn = document.getElementById('scanRoomBtn');
-        const videoEl = document.getElementById('luxOpticalVideo');
+        const videoEl = document.getElementById('cardLuxVideo');
+        const canvasEl = document.getElementById('cardLuxCanvas');
+        const valEl = document.getElementById('cardLuxValue');
+        const modeEl = document.getElementById('cardLuxMode');
+        const statusEl = document.getElementById('cardLuxStatus');
+        const captureBtn = document.getElementById('captureCardBtn');
 
-        if (!scanBtn || !videoEl) return;
+        if (!videoEl || !captureBtn) return;
 
-        let isScanning = false;
-
-        function evaluateLux(luxResult) {
-            if (typeof luxResult === 'string') {
-                statusEl.style.background = 'rgba(0, 229, 255, 0.12)';
-                statusEl.style.color = 'var(--accent-cyan)';
-                statusEl.innerHTML = '☀️ <b>Экстремальный свет / Прямое солнце</b> (> 10 000 лк).';
-                confidenceEl.innerHTML = '🟡 Уверенность цвета: <b>85%</b> (предел матрицы).';
-                confidenceEl.parentElement.style.borderLeftColor = 'var(--accent-cyan)';
-                return;
-            }
-
-            const val = Math.round(luxResult);
-            if (val < 50) {
-                statusEl.style.background = 'rgba(255, 82, 82, 0.15)';
-                statusEl.style.color = '#FF5252';
-                statusEl.innerHTML = '⚠️ <b>Слишком темно</b> (< 50 лк). Риск шума матрицы!';
-                confidenceEl.innerHTML = '🔴 Уверенность цвета: <b>Низкая</b>. Включите подсветку.';
-                confidenceEl.parentElement.style.borderLeftColor = '#FF5252';
-            } else if (val >= 50 && val < 150) {
-                statusEl.style.background = 'rgba(255, 193, 7, 0.12)';
-                statusEl.style.color = '#FFC107';
-                statusEl.innerHTML = '💡 <b>Рабочий полумрак</b>. Допустимо для замеров.';
-                confidenceEl.innerHTML = '🟡 Уверенность цвета: <b>80-85%</b>.';
-                confidenceEl.parentElement.style.borderLeftColor = '#FFC107';
-            } else if (val >= 150 && val <= 3000) {
-                statusEl.style.background = 'rgba(0, 230, 118, 0.12)';
-                statusEl.style.color = '#00E676';
-                statusEl.innerHTML = '✨ <b>Отличное освещение</b>. Идеально для подбора.';
-                confidenceEl.innerHTML = '🟢 Уверенность цвета: <b>95-100%</b>.';
-                confidenceEl.parentElement.style.borderLeftColor = '#00E676';
-            } else {
-                statusEl.style.background = 'rgba(0, 229, 255, 0.12)';
-                statusEl.style.color = 'var(--accent-cyan)';
-                statusEl.innerHTML = '🌤️ <b>Яркое дневное освещение / Навес</b>.';
-                confidenceEl.innerHTML = '🟢 Уверенность цвета: <b>90-95%</b>.';
-                confidenceEl.parentElement.style.borderLeftColor = 'var(--accent-cyan)';
-            }
-        }
-
-        function analyzeRoomScan(stats) {
-            if (!stats || stats.length === 0) return { lux: 150, mode: "Интерьер / Базовый" };
-
-            const globalMin = Math.min(...stats.map(s => s.min));
-            const globalMax = Math.max(...stats.map(s => s.max));
-            const maxClip = Math.max(...stats.map(s => s.clipRatio));
-            
-            const sortedAvgs = stats.map(s => s.avg).sort((a, b) => a - b);
-            const lowerQuartileAvg = sortedAvgs[Math.floor(sortedAvgs.length * 0.25)] || sortedAvgs[0];
-
-            if (maxClip > 0.25 || (globalMax >= 250 && globalMin > 140)) {
-                return { lux: "> 10000", mode: "Прямое солнце / Экстрим" };
-            }
-
-            if (globalMin > 75) {
-                let outdoorLux = Math.round(3000 + ((lowerQuartileAvg - 130) / 60) * 5000);
-                return { lux: Math.max(1500, Math.min(9900, outdoorLux)), mode: "Открытая терраса / Улица" };
-            }
-
-            if (globalMin > 45 && globalMin <= 75) {
-                let shadeLux = Math.round(800 + ((lowerQuartileAvg - 100) / 40) * 1500);
-                return { lux: Math.max(400, Math.min(2500, shadeLux)), mode: "Уличная тень / Навес" };
-            }
-
-            let indoorLux = Math.round(Math.pow(lowerQuartileAvg / 255, 2.2) * 800);
-            indoorLux = Math.max(40, Math.min(600, indoorLux));
-
-            return { lux: indoorLux, mode: "Интерьер / Помещение" };
-        }
-
-        scanBtn.onclick = async () => {
-            if (isScanning) return;
-            isScanning = true;
-            scanBtn.disabled = true;
-
-            let stream = null;
+        // Запуск камеры
+        async function startCamera() {
             try {
-                stream = await navigator.mediaDevices.getUserMedia({
-                    video: { facingMode: 'environment', width: { ideal: 640 }, height: { ideal: 480 } }
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }
                 });
                 videoEl.srcObject = stream;
                 await videoEl.play();
-
-                let timeLeft = 5;
-                let frameStats = [];
-
-                modeLabelEl.textContent = 'Идет оптический скан...';
-                statusEl.style.background = 'rgba(0, 229, 255, 0.12)';
-                statusEl.style.color = 'var(--accent-cyan)';
-                statusEl.innerHTML = `🔄 <b>Вращайте телефон!</b> Осталось: ${timeLeft} сек.`;
-
-                const canvas = document.createElement('canvas');
-                canvas.width = 160;
-                canvas.height = 120;
-                const ctx = canvas.getContext('2d', { willReadFrequently: true });
-
-                const sampleInterval = setInterval(() => {
-                    if (videoEl.readyState >= videoEl.HAVE_CURRENT_DATA) {
-                        ctx.drawImage(videoEl, 0, 0, canvas.width, canvas.height);
-                        const frame = ctx.getImageData(0, 0, canvas.width, canvas.height);
-                        const data = frame.data;
-
-                        let totalLuminance = 0;
-                        let minL = 255;
-                        let maxL = 0;
-                        let clippedPixels = 0;
-                        const pixelCount = data.length / 4;
-
-                        for (let i = 0; i < data.length; i += 4) {
-                            const r = data[i];
-                            const g = data[i+1];
-                            const b = data[i+2];
-                            
-                            const l = 0.299 * r + 0.587 * g + 0.114 * b;
-                            totalLuminance += l;
-                            
-                            if (l < minL) minL = l;
-                            if (l > maxL) maxL = l;
-
-                            if (r > 245 && g > 245 && b > 245) {
-                                clippedPixels++;
-                            }
-                        }
-
-                        frameStats.push({
-                            avg: totalLuminance / pixelCount,
-                            min: minL,
-                            max: maxL,
-                            clipRatio: clippedPixels / pixelCount
-                        });
-                    }
-                }, 100);
-
-                const timerInterval = setInterval(() => {
-                    timeLeft--;
-                    if (timeLeft > 0) {
-                        statusEl.innerHTML = `🔄 <b>Вращайте телефон!</b> Осталось: ${timeLeft} сек.`;
-                    } else {
-                        clearInterval(timerInterval);
-                        clearInterval(sampleInterval);
-
-                        if (stream) {
-                            stream.getTracks().forEach(track => track.stop());
-                        }
-                        videoEl.srcObject = null;
-
-                        const scanResult = analyzeRoomScan(frameStats);
-
-                        valEl.textContent = scanResult.lux;
-                        modeLabelEl.textContent = scanResult.mode;
-                        evaluateLux(scanResult.lux);
-
-                        if (navigator.vibrate) navigator.vibrate([50, 50, 50]);
-
-                        isScanning = false;
-                        scanBtn.disabled = false;
-                    }
-                }, 1000);
-
             } catch (err) {
-                console.warn('Camera access error:', err);
-                if (stream) {
-                    stream.getTracks().forEach(track => track.stop());
-                }
-                statusEl.style.background = 'rgba(255, 82, 82, 0.15)';
+                console.warn('Camera error:', err);
+                statusEl.innerHTML = '⚠️ Ошибка доступа к камере.';
                 statusEl.style.color = '#FF5252';
-                statusEl.innerHTML = '⚠️ Ошибка доступа к камере. Разрешите её в браузере.';
-                isScanning = false;
-                scanBtn.disabled = false;
             }
-        };
-    }
+        }
+        startCamera();
 
-    // Запускаем инициализацию, когда DOM готов
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', initLuxometer);
-    } else {
-        initLuxometer();
-    }
-})();
+        // Расчёт люксов по физическим патчам карточки
+        function estimateLuxFromCard(white, grey, black) {
+            // 1. Прямое солнце / Клиппинг
+            if (white >= 254 && grey > 230) {
+                return { lux: "> 10000", mode: "Прямое солнце / Пересвет" };
+            }
+
+            // 2. Детектор помещения по уровню чёрного патча (< 52)
+            const isIndoor = black < 52;
+
+            if (isIndoor) {
+                let indoorLux;
+                if (grey < 150) {
+                    indoorLux = Math.max(30, Math.round(grey * 1.2));
+                } else {
+                    indoorLux = Math.round(150 + ((grey - 150) / (175 - 150)) * 150);
+                }
+                return { lux: indoorLux, mode: "Интерьер / Искусственный свет" };
+            } else {
+                // 3. Улица / Тень / Терраса
+                if (grey < 180) {
+                    let outdoorLux = Math.round(1000 + ((grey - 160) / 20) * 2000);
+                    return { lux: Math.max(1000, outdoorLux), mode: "Уличная тень / Навес" };
+                } else {
+                    let openLux = Math.round(3000 + ((grey - 180) / 25) * 7000);
+                    return { lux: Math.min(9900, Math.max(3000, openLux)), mode: "Открытая терраса / Рассеянный свет" };
+                }
+            }
+        }
+
+        // Клик по кнопке замера
+        captureBtn.onclick = () => {
+            if (!videoEl.videoWidth) {
+                statusEl.innerHTML = '⚠️ Камера ещё не инициализирована.';
+                return;
