@@ -1,17 +1,14 @@
 /**
  * Spectrix Pro - Card-Based Luxometer Module (lux.js)
- * Точный замер освещенности по калибровочной карточке в стиле вкладки "Сравнение".
+ * Интегрированный люксометр, использующий стандартный camera.js и cv-processor.js
  */
 
 (function () {
-    let luxCanvasId = 'canvasLuxCard';
-    let isLuxCameraOpen = false;
-
     function initLuxometer() {
         const paneLux = document.getElementById('paneLux');
         if (!paneLux) return;
 
-        // Рендерим точно такой же блок, как "Эталон" во вкладке Сравнение
+        // Рендерим блок люксометра в едином стиле интерфейса Spectrix Pro
         paneLux.innerHTML = `
             <div class="grid" style="grid-template-columns: 1fr; max-width: 400px; margin: 0 auto;">
                 <div class="col">
@@ -19,14 +16,14 @@
                         <h3>☀️ Люксометр по карте</h3>
                         <span class="step-tag">LUX</span>
                     </div>
-                    <div class="preview-box" id="luxPreviewBox">
-                        <canvas id="${luxCanvasId}"></canvas>
+                    <div class="preview-box" id="luxPreviewBox" onclick="openLuxCamera()">
+                        <canvas id="canvasLuxCard"></canvas>
                     </div>
-                    <button class="btn-action" id="btnLuxCapture" style="margin-top: 12px;">
+                    <button class="btn-action" id="btnLuxCapture" onclick="openLuxCamera()" style="margin-top: 12px;">
                         📸 Снять карту для замера
                     </button>
                     
-                    <!-- Блок вывода результатов по нашей логике -->
+                    <!-- Блок вывода результатов -->
                     <div class="card" id="infoLuxCard" style="margin-top: 16px; display: none; text-align: center;">
                         <div id="luxResultValue" style="font-size: 36px; font-weight: 800; color: var(--accent-cyan); line-height: 1.1;">--</div>
                         <div id="luxResultMode" style="font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); margin-top: 6px;">Режим освещения</div>
@@ -35,157 +32,77 @@
                 </div>
             </div>
         `;
-
-        const btnCapture = document.getElementById('btnLuxCapture');
-        if (btnCapture) {
-            btnCapture.onclick = () => {
-                // Используем глобальную функцию открытия камеры из camera.js, но подменяем режим
-                if (typeof openCamera === 'function') {
-                    // Переиспользуем модалку камеры, перехватив сохранение для люксометра
-                    openCustomLuxCamera();
-                }
-            };
-        }
     }
 
-    function openCustomLuxCamera() {
-        const modal = document.getElementById('cameraModal');
-        const video = document.getElementById('webcam');
-        const title = document.getElementById('cameraTitle');
-        if (!modal || !video) return;
-
-        title.textContent = 'Замер света по карте';
-        modal.classList.add('active');
-        isLuxCameraOpen = true;
-
-        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-            navigator.mediaDevices.getUserMedia({
-                video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }
-            }).then(stream => {
-                window.luxStream = stream;
-                video.srcObject = stream;
-                video.play();
-            }).catch(err => {
-                console.warn('Camera error:', err);
-                alert('Не удалось получить доступ к камере');
-            });
-        }
-    }
-
-    // Перехватываем кнопку снимка в модалке, если открыт люксометр
-    document.addEventListener('click', (e) => {
-        if (!isLuxCameraOpen) return;
-        
-        // Если кликнули на кнопку сброса/модалки камеры "Сделать снимок"
-        const cameraModal = document.getElementById('cameraModal');
-        if (e.target && e.target.matches('.camera-modal .btn-action')) {
-            // Предотвращаем стандартное поведение сравнения
-            e.stopImmediatePropagation();
+    // Глобальная функция запуска камеры именно для люксометра
+    window.openLuxCamera = function() {
+        if (typeof openCamera === 'function') {
+            // Переключаем активный режим на 'luxCard', чтобы camera.js знал, куда сохранять снимок
+            window.activeLuxMode = true;
+            openCamera('standard'); // Открываем стандартное модальное окно камеры
             
-            const video = document.getElementById('webcam');
-            const canvas = document.getElementById(luxCanvasId);
-            if (!video || !canvas) return;
-
-            // Рисуем кадр в наш холст люксометра
-            canvas.width = video.videoWidth || 640;
-            canvas.height = video.videoHeight || 480;
-            const ctx = canvas.getContext('2d', { willReadFrequently: true });
-            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-            // Закрываем камеру
-            if (window.luxStream) {
-                window.luxStream.getTracks().forEach(t => t.stop());
-                window.luxStream = null;
-            }
-            if (cameraModal) cameraModal.classList.remove('active');
-            isLuxCameraOpen = false;
-
-            // Обрабатываем снимок по нашей логике патчей
-            processLuxCard(canvas);
+            // Меняем заголовок в модалке на нужный нам
+            const title = document.getElementById('cameraTitle');
+            if (title) title.textContent = 'Замер света по калибровочной карте';
         }
-    }, true);
+    };
 
-    function processLuxCard(canvas) {
-        const ctx = canvas.getContext('2d', { willReadFrequently: true });
-        const w = canvas.width;
-        const h = canvas.height;
-
-        // Берём центральную область под карту
-        const cx = Math.floor(w * 0.25);
-        const cy = Math.floor(h * 0.25);
-        const cw = Math.floor(w * 0.5);
-        const ch = Math.floor(h * 0.5);
-
-        const imgData = ctx.getImageData(cx, cy, cw, ch);
-        const data = imgData.data;
-
-        let rSum = 0, gSum = 0, bSum = 0, count = 0;
-        let minL = 255;
-        let maxL = 0;
-
-        for (let i = 0; i < data.length; i += 4) {
-            const r = data[i];
-            const g = data[i+1];
-            const b = data[i+2];
-            const l = 0.299 * r + 0.587 * g + 0.114 * b;
-            rSum += r; gSum += g; bSum += b;
-            if (l < minL) minL = l;
-            if (l > maxL) maxL = l;
-            count++;
-        }
-
-        const avgL = 0.299 * (rSum / count) + 0.587 * (gSum / count) + 0.114 * (bSum / count);
-
-        // Симулируем патчи на основе анализа карточки
-        const simulatedWhite = Math.min(255, Math.round(maxL * 0.95));
-        const simulatedGrey  = Math.round(avgL);
-        const simulatedBlack = Math.max(10, Math.round(minL * 1.1));
-
-        // Вычисляем люксы по нашей детальной логике
-        const result = estimateLuxFromCard(simulatedWhite, simulatedGrey, simulatedBlack);
-
-        // Выводим результат в карточку
+    // Функция расчёта освещенности по реальным патчам карточки
+    window.processLuxFromPatches = function(colorData) {
         const infoCard = document.getElementById('infoLuxCard');
         const valEl = document.getElementById('luxResultValue');
         const modeEl = document.getElementById('luxResultMode');
         const detailsEl = document.getElementById('luxResultDetails');
 
-        if (infoCard && valEl && modeEl) {
-            infoCard.style.display = 'block';
-            valEl.textContent = typeof result.lux === 'number' ? result.lux + ' лк' : result.lux;
-            modeEl.textContent = result.mode;
-            detailsEl.innerHTML = `Серый: <b>${simulatedGrey}</b> | Чёрный: <b>${simulatedBlack}</b> | Белый: <b>${simulatedWhite}</b>`;
+        if (!colorData || !colorData.white || !colorData.grey || !colorData.black) {
+            if (infoCard) {
+                infoCard.style.display = 'block';
+                valEl.textContent = 'Ошибка';
+                modeEl.textContent = 'Карта не распознана';
+                detailsEl.innerHTML = 'Убедитесь, что карта полностью в кадре и хорошо освещена.';
+            }
+            return;
         }
 
-        if (navigator.vibrate) navigator.vibrate(50);
-    }
+        // Извлекаем яркости (L канала или среднего RGB) патчей
+        const white = colorData.white.l || ((colorData.white.r + colorData.white.g + colorData.white.b) / 3);
+        const grey  = colorData.grey.l  || ((colorData.grey.r + colorData.grey.g + colorData.grey.b) / 3);
+        const black = colorData.black.l || ((colorData.black.r + colorData.black.g + colorData.black.b) / 3);
 
-    // Математика расчёта по патчам, которую мы нарабатывали
-    function estimateLuxFromCard(white, grey, black) {
+        // Наша проверенная физическая математика люксов
+        let result;
         if (white >= 254 && grey > 230) {
-            return { lux: "> 10000", mode: "Прямое солнце / Пересвет" };
-        }
-
-        const isIndoor = black < 52;
-
-        if (isIndoor) {
+            result = { lux: "> 10000", mode: "Прямое солнце / Пересвет" };
+        } else if (black < 52) {
+            // Помещение / Интерьер
             let indoorLux;
             if (grey < 150) {
                 indoorLux = Math.max(30, Math.round(grey * 1.2));
             } else {
                 indoorLux = Math.round(150 + ((grey - 150) / (175 - 150)) * 150);
             }
-            return { lux: indoorLux, mode: "Интерьер / Искусственный свет" };
+            result = { lux: indoorLux, mode: "Интерьер / Искусственный свет" };
         } else {
+            // Улица / Терраса
             if (grey < 180) {
                 let outdoorLux = Math.round(1000 + ((grey - 160) / 20) * 2000);
-                return { lux: Math.max(1000, outdoorLux), mode: "Уличная тень / Навес" };
+                result = { lux: Math.max(1000, outdoorLux), mode: "Уличная тень / Навес" };
             } else {
                 let openLux = Math.round(3000 + ((grey - 180) / 25) * 7000);
-                return { lux: Math.min(9900, Math.max(3000, openLux)), mode: "Открытая терраса / Рассеянный свет" };
+                result = { lux: Math.min(9900, Math.max(3000, openLux)), mode: "Открытая терраса / Рассеянный свет" };
             }
         }
-    }
+
+        // Выводим результат
+        if (infoCard && valEl && modeEl) {
+            infoCard.style.display = 'block';
+            valEl.textContent = typeof result.lux === 'number' ? result.lux + ' лк' : result.lux;
+            modeEl.textContent = result.mode;
+            detailsEl.innerHTML = `Белый: <b>${Math.round(white)}</b> | Серый: <b>${Math.round(grey)}</b> | Чёрный: <b>${Math.round(black)}</b>`;
+        }
+
+        if (navigator.vibrate) navigator.vibrate(50);
+    };
 
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', initLuxometer);
