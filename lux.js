@@ -1,6 +1,6 @@
 /**
  * Spectrix Pro - Card-Based Luxometer Module (lux.js)
- * Сепаратный модуль люксометра: захват через camera.js -> поиск плашек -> расчет освещенности в lux.js
+ * Полная аналогия вкладки «Сравнение»: камера -> CV-процессор (поиск плашек) -> расчет освещенности.
  */
 
 (function () {
@@ -38,7 +38,7 @@
         `;
     }
 
-    // Шаг 1: Запуск камеры через camera.js
+    // Шаг 1: Запуск камеры через camera.js с режимом 'lux'
     window.openLuxCamera = function() {
         if (typeof openCamera === 'function') {
             openCamera('lux');
@@ -49,88 +49,52 @@
         }
     };
 
-    // Шаг 2: Перехват кадра от camera.js и отправка в cv-процессор / пайплайн поиска плашек
+    // Шаг 2: Перехватываем стандартный вызов handleImageSource из camera.js для режима 'lux'
     const nativeHandleImageSource = window.handleImageSource;
-    window.handleImageSource = function(canvas, mode) {
+    window.handleImageSource = function(canvasSource, mode) {
         if (mode === 'lux') {
-            processLuxCapture(canvas);
+            processLuxCardFrame(canvasSource);
             return;
         }
         if (typeof nativeHandleImageSource === 'function') {
-            nativeHandleImageSource(canvas, mode);
+            nativeHandleImageSource(canvasSource, mode);
         }
     };
 
-    // Пайплайн обработки кадра
-    function processLuxCapture(canvas) {
+    // Шаг 3: Прогоняем кадр через штатный cv-процессор (processImageWithCard), 
+    // чтобы карточка выровнялась по перспективе точно так же, как на вкладке «Сравнение»
+    function processLuxCardFrame(canvasSource) {
         const infoLux = document.getElementById('infoLux');
         if (infoLux) {
-            infoLux.innerHTML = '<div style="color: var(--accent-cyan); font-size: 12px;">⏳ Обработка плашек калибровочной карты...</div>';
+            infoLux.innerHTML = '<div style="color: var(--accent-cyan); font-size: 12px;">⏳ Обработка плашек через CV-процессор...</div>';
         }
 
-        // Отображаем превью снятой карты в интерфейсе люксометра
-        const canvasThumb = document.getElementById('canvasLuxCard');
-        if (canvasThumb) {
-            canvasThumb.width = canvas.width;
-            canvasThumb.height = canvas.height;
-            const ctx = canvasThumb.getContext('2d');
-            ctx.drawImage(canvas, 0, 0);
-        }
+        try {
+            // Вызываем родную функцию поиска карты и плашек из cv-processor.js, 
+            // передавая ей целевой холст превью люксометра ('canvasLuxCard')
+            const patchData = processImageWithCard(canvasSource, 'canvasLuxCard');
 
-        // Шаг 3: Передаем данные в cv-processor / извлекаем показатели с плашек
-        extractPatchData(canvas);
-    }
+            if (infoLux) infoLux.innerHTML = '';
 
-    // Шаг 4: Получение данных непосредственно с плашек калибровочной карты
-    function extractPatchData(canvas) {
-        const ctx = canvas.getContext('2d');
-        const w = canvas.width;
-        const h = canvas.height;
+            // Шаг 4: Передаем полученные данные плашек в наш алгоритм расчета освещенности
+            calculateAndDisplayLux(patchData);
 
-        // Функция точечного сэмплирования зон плашек на карте
-        const getPatchBrightness = (rx, ry, rw, rh) => {
-            try {
-                const imgData = ctx.getImageData(Math.floor(rx - rw/2), Math.floor(ry - rh/2), Math.max(1, Math.floor(rw)), Math.max(1, Math.floor(rh)));
-                const data = imgData.data;
-                let r = 0, g = 0, b = 0, count = data.length / 4;
-                if (count === 0) return 128;
-                for (let i = 0; i < data.length; i += 4) {
-                    r += data[i];
-                    g += data[i+1];
-                    b += data[i+2];
-                }
-                let avgR = r / count;
-                let avgG = g / count;
-                let avgB = b / count;
-                // Перевод в шкалу яркости (L)
-                return 0.299 * avgR + 0.587 * avgG + 0.114 * avgB;
-            } catch (e) {
-                return 128;
+        } catch (err) {
+            console.error('Ошибка обработки люксометра:', err);
+            if (infoLux) {
+                infoLux.innerHTML = '<div style="color: var(--accent-red); font-size: 12px;">❌ Ошибка распознавания карты</div>';
             }
-        };
-
-        // Собираем показатели с плашек (Белый, Серый, Черный)
-        const patchData = {
-            white: { l: getPatchBrightness(w * 0.3, h * 0.5, w * 0.1, h * 0.1) },
-            grey:  { l: getPatchBrightness(w * 0.5, h * 0.5, w * 0.1, h * 0.1) },
-            black: { l: getPatchBrightness(w * 0.7, h * 0.5, w * 0.1, h * 0.1) }
-        };
-
-        // Шаг 5: Передаем данные в собственный алгоритм люксометра
-        calculateAndDisplayLux(patchData);
+        }
     }
 
-    // Шаг 6: Собственный алгоритм расчета освещенности, зашитый в lux.js
+    // Шаг 5: Алгоритм расчета освещенности на основе данных плашек (Белый, Серый, Черный)
     function calculateAndDisplayLux(patchData) {
-        const infoLux = document.getElementById('infoLux');
         const infoCard = document.getElementById('infoLuxCard');
         const valEl = document.getElementById('luxResultValue');
         const modeEl = document.getElementById('luxResultMode');
         const detailsEl = document.getElementById('luxResultDetails');
 
-        if (infoLux) infoLux.innerHTML = '';
-
-        if (!patchData || !patchData.white || !patchData.grey || !patchData.black) {
+        if (!patchData || !patchData.patches || !patchData.patches.white || !patchData.patches.gray || !patchData.patches.black) {
             if (infoCard) {
                 infoCard.style.display = 'block';
                 valEl.textContent = 'Ошибка';
@@ -140,11 +104,12 @@
             return;
         }
 
-        const white = patchData.white.l;
-        const grey  = patchData.grey.l;
-        const black = patchData.black.l;
+        // Берем компоненту яркости (L) из LAB-пространства плашек, посчитанных CV-процессором
+        const white = patchData.patches.white.l;
+        const grey  = patchData.patches.gray.l;
+        const black = patchData.patches.black.l;
 
-        // Логика расчета люксов на основе показателей плашек
+        // Физическая логика расчета люксов
         let result;
         if (white >= 254 && grey > 230) {
             result = { lux: "> 10000", mode: "Прямое солнце / Пересвет" };
