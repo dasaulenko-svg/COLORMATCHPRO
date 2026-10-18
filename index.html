@@ -10,6 +10,14 @@
     
     <!-- Внешние стили -->
     <link rel="stylesheet" href="styles.css">
+
+    <!-- Стелс-режим: скрытие элементов до активации PRO -->
+    <style>
+        /* По умолчанию скрываем нижнюю панель навигации */
+        body:not(.pro-mode-active) .bottom-nav {
+            display: none !important;
+        }
+    </style>
     
     <!-- 1. Детектор ArUco маркеров с поддержкой словарей 4x4 (15 КБ) -->
     <script src="https://cdn.jsdelivr.net/npm/js-aruco2@1.0.0/dist/aruco.min.js"></script>
@@ -196,6 +204,16 @@
         const cameraModal = document.getElementById('cameraModal');
         const video = document.getElementById('webcam');
 
+        // Проверка прав на запуск камеры
+        function openCamera(mode) {
+            if (!document.body.classList.contains('pro-mode-active')) {
+                return; // В обычном режиме запуск камеры заблокирован
+            }
+            if (typeof window.openCameraCore === 'function') {
+                window.openCameraCore(mode);
+            }
+        }
+
         // Активация PRO режима по 3 тапам
         let brandTapCount = 0;
         let brandTapTimer = null;
@@ -206,11 +224,19 @@
             clearTimeout(brandTapTimer);
 
             if (brandTapCount === 3) {
-                document.body.classList.toggle('pro-mode-active');
+                const isProNow = document.body.classList.toggle('pro-mode-active');
+                localStorage.setItem('spectrix_pro_active', isProNow ? 'true' : 'false');
                 if (navigator.vibrate) navigator.vibrate([30, 50, 30]);
                 brandTapCount = 0;
             } else {
                 brandTapTimer = setTimeout(() => { brandTapCount = 0; }, 400);
+            }
+        });
+
+        // Восстановление состояния стелс-режима из памяти при загрузке
+        document.addEventListener('DOMContentLoaded', () => {
+            if (localStorage.getItem('spectrix_pro_active') === 'true') {
+                document.body.classList.add('pro-mode-active');
             }
         });
 
@@ -232,7 +258,7 @@
             isOpenCvReady = true;
             cvStatus.innerHTML = '<span class="status-dot"></span> Готов к работе';
             btnStandard.disabled = false;
-            restoreState();
+            if (typeof restoreState === 'function') restoreState();
         }
 
         resetBtn.addEventListener('click', () => {
