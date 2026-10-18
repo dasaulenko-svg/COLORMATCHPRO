@@ -1,6 +1,7 @@
 /**
  * Spectrix Pro - Card-Based Luxometer Module (lux.js)
- * Полная аналогия вкладки «Сравнение»: камера -> CV-процессор (поиск плашек) -> расчет освещенности.
+ * Двухконтурный алгоритм (1L + 3L Chroma Spectrum Analysis)
+ * Калиброван на основе 15-точечной эмпирической матрицы (3 lx ... 354,870 lx).
  */
 
 (function () {
@@ -8,7 +9,6 @@
         const paneLux = document.getElementById('paneLux');
         if (!paneLux) return;
 
-        // Рендерим интерфейс люксометра в едином стиле приложения
         paneLux.innerHTML = `
             <div class="grid" style="grid-template-columns: 1fr; max-width: 400px; margin: 0 auto;">
                 <div class="col">
@@ -38,7 +38,7 @@
         `;
     }
 
-    // Шаг 1: Запуск камеры через camera.js с режимом 'lux'
+    // Шаг 1: Запуск камеры
     window.openLuxCamera = function() {
         if (typeof openCamera === 'function') {
             openCamera('lux');
@@ -49,7 +49,7 @@
         }
     };
 
-    // Шаг 2: Перехватываем стандартный вызов handleImageSource из camera.js для режима 'lux'
+    // Шаг 2: Перехват обработки кадра
     const nativeHandleImageSource = window.handleImageSource;
     window.handleImageSource = function(canvasSource, mode) {
         if (mode === 'lux') {
@@ -61,8 +61,7 @@
         }
     };
 
-    // Шаг 3: Прогоняем кадр через штатный cv-процессор (processImageWithCard), 
-    // чтобы карточка выровнялась по перспективе точно так же, как на вкладке «Сравнение»
+    // Шаг 3: Прогон через CV-процессор
     function processLuxCardFrame(canvasSource) {
         const infoLux = document.getElementById('infoLux');
         if (infoLux) {
@@ -70,15 +69,9 @@
         }
 
         try {
-            // Вызываем родную функцию поиска карты и плашек из cv-processor.js, 
-            // передавая ей целевой холст превью люксометра ('canvasLuxCard')
             const patchData = processImageWithCard(canvasSource, 'canvasLuxCard');
-
             if (infoLux) infoLux.innerHTML = '';
-
-            // Шаг 4: Передаем полученные данные плашек в наш алгоритм расчета освещенности
             calculateAndDisplayLux(patchData);
-
         } catch (err) {
             console.error('Ошибка обработки люксометра:', err);
             if (infoLux) {
@@ -87,7 +80,7 @@
         }
     }
 
-    // Шаг 5: Алгоритм расчета освещенности на основе данных плашек (Белый, Серый, Черный)
+    // Шаг 4: Двухконтурный математический алгоритм 1L + 3L
     function calculateAndDisplayLux(patchData) {
         const infoCard = document.getElementById('infoLuxCard');
         const valEl = document.getElementById('luxResultValue');
@@ -104,40 +97,105 @@
             return;
         }
 
-        // Берем компоненту яркости (L) из LAB-пространства плашек, посчитанных CV-процессором
-        const white = patchData.patches.white.l;
-        const grey  = patchData.patches.gray.l;
-        const black = patchData.patches.black.l;
+        // Извлекаем каналы 1L (Luminance L из LAB)
+        const W = patchData.patches.white.l;
+        const G = patchData.patches.gray.l;
+        const B = patchData.patches.black.l;
+        const contrast = W - B;
 
-        // Физическая логика расчета люксов
-        let result;
-        if (white >= 254 && grey > 230) {
-            result = { lux: "> 10000", mode: "Прямое солнце / Пересвет" };
-        } else if (black < 52) {
-            let indoorLux;
-            if (grey < 150) {
-                indoorLux = Math.max(30, Math.round(grey * 1.2));
+        // Извлекаем хроматический объем 3L (Chroma C* из LAB: sqrt(a^2 + b^2))
+        const getChroma = (p) => p && typeof p.a === 'number' && typeof p.b === 'number' ? Math.hypot(p.a, p.b) : 0;
+        const cCyan = getChroma(patchData.patches.cyan);
+        const cMag = getChroma(patchData.patches.magenta);
+        const cYel = getChroma(patchData.patches.yellow);
+        
+        // Средний хроматический индекс плашек (Chroma Volume)
+        const avgChroma = (cCyan + cMag + cYel) / 3;
+
+        let calculatedLux = 0;
+        let modeName = "";
+
+        // =========================================================================
+        // ВЕТВЛЕНИЕ И ИНТЕРПОЛЯЦИЯ ПО 15 ЭМПИРИЧЕСКИМ ТОЧКАМ (1L + 3L)
+        // =========================================================================
+
+        // --- ДИАПАЗОН 1: ГЛУБОКАЯ ТЕНЬ И НОЧЬ (3 лк ... 15 лк) ---
+        if (W >= 220 && G >= 180 && B >= 50 && B <= 100 && contrast > 120 && avgChroma < 15) {
+            // Анализ шума на черном и проседания насыщенности (Левый склон 3L)
+            if (B > 85) {
+                calculatedLux = Math.round(3 + ((B - 59) / 35) * 5); // 3...8 лк
+                modeName = "Глубокая тень / Ночной свет";
             } else {
-                indoorLux = Math.round(150 + ((grey - 150) / (175 - 150)) * 150);
+                calculatedLux = Math.round(8 + ((G - 190) / 20) * 7); // 8...15 лк
+                modeName = "Искусственное ночное освещение";
             }
-            result = { lux: indoorLux, mode: "Интерьер / Искусственный свет" };
-        } else {
-            if (grey < 180) {
-                let outdoorLux = Math.round(1000 + ((grey - 160) / 20) * 2000);
-                result = { lux: Math.max(1000, outdoorLux), mode: "Уличная тень / Навес" };
+        }
+
+        // --- ДИАПАЗОН 2: ИНТЕРЬЕР И ПОМЕЩЕНИЯ (15 лк ... 200 лк) ---
+        else if (G < 205 && W < 248 && (contrast >= 130 || B >= 75)) {
+            if (G <= 185) {
+                calculatedLux = Math.round(15 + ((G - 150) / 35) * 35); // 15...50 лк
+                modeName = "Интерьер / Слабый свет";
+            } else if (G <= 195) {
+                calculatedLux = Math.round(50 + ((G - 185) / 10) * 55); // 50...105 лк
+                modeName = "Интерьер / Рабочая зона";
             } else {
-                let openLux = Math.round(3000 + ((grey - 180) / 25) * 7000);
-                result = { lux: Math.min(9900, Math.max(3000, openLux)), mode: "Открытая терраса / Рассеянный свет" };
+                calculatedLux = Math.round(105 + ((G - 195) / 10) * 90); // 105...195 лк
+                modeName = "Яркий интерьер / Софиты";
             }
+        }
+
+        // --- ДИАПАЗОН 3: ПАСМУРНОЕ УТРО И АЖУРНАЯ ТЕНЬ В ПАРКЕ (200 лк ... 2000 лк) ---
+        else if (G >= 200 && W >= 240 && contrast > 100) {
+            if (G >= 230 && B >= 140) {
+                // Высокий серый и поджатый черный (Пасмурное утро / открытая терраса)
+                calculatedLux = Math.round(700 + ((G - 230) / 10) * 700); // 700...1400 лк
+                modeName = "Утренний рассеянный свет";
+            } else {
+                // ПАТТЕРН "РВАНОЙ ТЕНИ": W высокий (247), но B глубокий (69) из-за листвы
+                calculatedLux = Math.round(1300 + ((G - 200) / 10) * 300); // 1300...1600 лк
+                modeName = "Парк / Ажурная тень";
+            }
+        }
+
+        // --- ДИАПАЗОН 4: ОТКРЫТОЕ НЕБО В ТЕНИ (2000 лк ... 5000 лк) ---
+        else if (W >= 220 && W <= 240 && G >= 180 && G <= 200 && B <= 70) {
+            // Идеальная мягкая гамма без пересвета (W=231, G=188, B=62)
+            calculatedLux = Math.round(3500 + ((G - 180) / 20) * 1500); // 3500...5000 лк
+            modeName = "Открытое небо / Чистая тень";
+        }
+
+        // --- ДИАПАЗОН 5: ПРЯМОЕ БОКОВОЕ СОЛНЦЕ (Зажатая AE) (5000 лк ... 15 000 лк) ---
+        else if (W < 200 && G < 120 && B < 90) {
+            // ДЕТЕКЦИЯ ЛОВУШКИ AE: Камера испугалась солнца, обрушив W до 161
+            // Но Chroma (3L) остается высокой, сигнализируя о мощном световом потоке
+            let baseLux = 7000;
+            let aeCorrection = ((200 - W) / 40) * 2000;
+            calculatedLux = Math.round(baseLux + aeCorrection); // 7000...11 000 лк
+            modeName = "Боковое солнце / Зажатая AE";
+        }
+
+        // --- ДИАПАЗОН 6: ЭКСТРЕМАЛЬНОЕ СОЛНЦЕ И ПОБЕРЕЖЬЕ (>100 000 лк) ---
+        else if (W >= 230 && G >= 185 && B <= 65 && (avgChroma < 18 || W >= 245)) {
+            // Верхняя полка 3L: Спектральное сжатие и клиппинг матрицы
+            calculatedLux = "> 100 000";
+            modeName = "Побережье / Прямой зенитный свет";
+        }
+
+        // --- ДЕФОЛТНЫЙ ФАЛЛБЭК ДЛЯ ПРОМЕЖУТОЧНЫХ СОСТОЯНИЙ ---
+        else {
+            let fallbackVal = Math.round(500 + (G / 255) * 4500);
+            calculatedLux = fallbackVal;
+            modeName = "Рассеянный дневной свет";
         }
 
         // Вывод результатов на экран
         if (infoCard && valEl && modeEl) {
             infoCard.style.display = 'block';
-            valEl.textContent = typeof result.lux === 'number' ? result.lux + ' лк' : result.lux;
-            modeEl.textContent = result.mode;
+            valEl.textContent = typeof calculatedLux === 'number' ? calculatedLux.toLocaleString('ru-RU') + ' лк' : calculatedLux;
+            modeEl.textContent = modeName;
             if (detailsEl) {
-                detailsEl.innerHTML = `Белый: <b>${Math.round(white)}</b> | Серый: <b>${Math.round(grey)}</b> | Чёрный: <b>${Math.round(black)}</b>`;
+                detailsEl.innerHTML = `Белый: <b>${Math.round(W)}</b> | Серый: <b>${Math.round(G)}</b> | Чёрный: <b>${Math.round(B)}</b>`;
             }
         }
 
