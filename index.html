@@ -355,9 +355,14 @@
                                 // 2. Извлекаем скорректированные данные "Цель (LAB)" из текста результата
                                 const labMatch = infoCatalog.innerText.match(/Цель\s*\(LAB\):\s*([-\d.]+),\s*([-\d.]+),\s*([-\d.]+)/i);
                                 if (labMatch) {
-                                    const l = parseFloat(labMatch[1]);
-                                    const a = parseFloat(labMatch[2]);
-                                    const b = parseFloat(labMatch[3]);
+                                    const lCv = parseFloat(labMatch[1]);
+                                    const aCv = parseFloat(labMatch[2]);
+                                    const bCv = parseFloat(labMatch[3]);
+
+                                    // Нормализация из OpenCV Lab в стандартный CIELAB
+                                    const l = lCv * (100.0 / 255.0);
+                                    const a = aCv - 128;
+                                    const b = bCv - 128;
 
                                     const targetRgb = labToRgb(l, a, b);
                                     let match = findClosestRAL(targetRgb);
