@@ -46,9 +46,29 @@
         </div>
 
         <div class="view-pane active" id="paneCatalog">
-            <div class="stub-box">
-                🎨 <b>Каталоги</b><br><br>
-                Подбор артикула и кода цвета по палитрам (NCS, RAL, Caparol, Pantone).
+            <div class="col" style="max-width: 100%; margin: 0 auto;">
+                <div class="col-header">
+                    <h3>Определение цвета</h3>
+                    <span class="step-tag">RAL</span>
+                </div>
+                <div class="preview-box" onclick="openZoomModal('canvasCatalog')">
+                    <canvas id="canvasCatalog"></canvas>
+                </div>
+                <button class="btn-action" id="btnCatalog" onclick="openCamera('catalog')" disabled>
+                    📷 Снять цвет
+                </button>
+                <!-- Две вспомогательные кнопки под захватом (дизайн без функционала) -->
+                <div style="display: flex; gap: 8px; margin-top: 8px;">
+                    <button class="btn-action secondary" style="flex: 1; font-size: 12px; padding: 10px 2px; display: flex; align-items: center; justify-content: center; gap: 4px; opacity: 0.7;" disabled>
+                        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+                        <span style="font-size: 11px; opacity: 0.8;">/</span>
+                        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                    </button>
+                    <button class="btn-action secondary" style="flex: 1; font-size: 12px; padding: 10px 2px; display: flex; align-items: center; justify-content: center; gap: 4px; opacity: 0.7;" disabled>
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
+                    </button>
+                </div>
+                <div class="info-container" id="infoCatalog"></div>
             </div>
         </div>
 
@@ -205,9 +225,11 @@
         const cvStatus = document.getElementById('cvStatus');
         const btnStandard = document.getElementById('btnStandard');
         const btnSample = document.getElementById('btnSample');
+        const btnCatalog = document.getElementById('btnCatalog');
 
         const infoStandard = document.getElementById('infoStandard');
         const infoSample = document.getElementById('infoSample');
+        const infoCatalog = document.getElementById('infoCatalog');
         const infoCard = document.getElementById('infoCard');
         const resultDiv = document.getElementById('result');
         const resetBtn = document.getElementById('resetBtn');
@@ -269,6 +291,7 @@
             isOpenCvReady = true;
             cvStatus.innerHTML = '<span class="status-dot"></span> Готов к работе';
             btnStandard.disabled = false;
+            if (btnCatalog) btnCatalog.disabled = false;
             if (typeof restoreState === 'function') restoreState();
         }
 
@@ -279,6 +302,7 @@
 
             infoStandard.innerHTML = '';
             infoSample.innerHTML = '';
+            infoCatalog.innerHTML = '';
             infoCard.style.display = 'none';
             resultDiv.innerText = '';
 
@@ -286,8 +310,10 @@
 
             const canvasStd = document.getElementById('canvasStandard');
             const canvasSmp = document.getElementById('canvasSample');
+            const canvasCat = document.getElementById('canvasCatalog');
             canvasStd.getContext('2d').clearRect(0, 0, canvasStd.width, canvasStd.height);
             canvasSmp.getContext('2d').clearRect(0, 0, canvasSmp.width, canvasSmp.height);
+            if (canvasCat) canvasCat.getContext('2d').clearRect(0, 0, canvasCat.width, canvasCat.height);
         });
     </script>
 
