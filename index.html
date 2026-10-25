@@ -220,6 +220,7 @@
         let standardColorData = null;
         let sampleColorData = null;
         let catalogColorData = null; // Сепаратная переменная для данных каталога
+        let ralCatalog = []; // Загруженный каталог RAL из ral.json
         let activeMode = 'standard';
         let mediaStream = null;
 
@@ -237,6 +238,45 @@
 
         const cameraModal = document.getElementById('cameraModal');
         const video = document.getElementById('webcam');
+
+        // Загрузка каталога RAL при старте
+        async function loadRalCatalog() {
+            try {
+                const response = await fetch('ral.json');
+                const data = await response.json();
+                ralCatalog = Object.values(data);
+                console.log('RAL каталог успешно загружен, элементов:', ralCatalog.length);
+            } catch (e) {
+                console.error('Ошибка загрузки ral.json:', e);
+            }
+        }
+
+        // Вспомогательная функция поиска ближайшего RAL по RGB
+        function findClosestRAL(rgb) {
+            if (!ralCatalog || ralCatalog.length === 0 || !rgb) return null;
+            let closest = null;
+            let minDist = Infinity;
+
+            for (let item of ralCatalog) {
+                if (!item.rgb_hex) continue;
+                let hex = item.rgb_hex.replace('#', '');
+                let r = parseInt(hex.substring(0, 2), 16);
+                let g = parseInt(hex.substring(2, 4), 16);
+                let b = parseInt(hex.substring(4, 6), 16);
+
+                let dist = Math.sqrt(
+                    Math.pow(rgb.r - r, 2) +
+                    Math.pow(rgb.g - g, 2) +
+                    Math.pow(rgb.b - b, 2)
+                );
+
+                if (dist < minDist) {
+                    minDist = dist;
+                    closest = item;
+                }
+            }
+            return closest;
+        }
 
         // Проверка прав на запуск камеры
         function openCamera(mode) {
@@ -257,6 +297,9 @@
                 document.body.classList.add('pro-mode-active');
             }
 
+            // Инициализация загрузки RAL
+            loadRalCatalog();
+
             setTimeout(() => {
                 if (typeof window.takeSnapshot === 'function') {
                     originalTakeSnapshot = window.takeSnapshot;
@@ -275,7 +318,25 @@
                             }
 
                             if (infoSample && infoCatalog) {
+                                // 1. Копируем базовый вывод признаков цвета
                                 infoCatalog.innerHTML = infoSample.innerHTML;
+
+                                // 2. Находим и добавляем сепаратный блок RAL внизу
+                                if (sampleColorData && sampleColorData.rgbTarget) {
+                                    let match = findClosestRAL(sampleColorData.rgbTarget);
+                                    if (match) {
+                                        infoCatalog.innerHTML += `
+                                            <div style="margin-top: 12px; padding: 10px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; display: flex; align-items: center; gap: 12px;">
+                                                <div style="width: 36px; height: 36px; border-radius: 6px; background-color: ${match.rgb_hex}; border: 1px solid #fff; flex-shrink: 0;"></div>
+                                                <div>
+                                                    <div style="font-size: 13px; font-weight: 700; color: #00E5FF;">RAL ${match.code}</div>
+                                                    <div style="font-size: 12px; color: #FFF; font-weight: 500;">${match.name}</div>
+                                                    <div style="font-size: 10px; color: #888;">HEX: ${match.rgb_hex}</div>
+                                                </div>
+                                            </div>
+                                        `;
+                                    }
+                                }
                             }
 
                             catalogColorData = sampleColorData;
