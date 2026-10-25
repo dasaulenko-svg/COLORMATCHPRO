@@ -263,51 +263,77 @@
             }
         }
 
-        // Автономный независимый обработчик для вкладки «Каталог» через серверный RGB-процессор
+        // Полноценный независимый обработчик для вкладки «Каталог» с распознаванием карточки через OpenCV
         async function processCatalogWithRgbServer() {
             const canvasCatalog = document.getElementById('canvasCatalog');
             const videoElement = document.getElementById('webcam');
             if (!canvasCatalog || !videoElement) return;
 
-            // Копируем текущий кадр из видеопотока в холст каталога
+            // 1. Копируем текущий кадр из видеопотока в холст каталога
             canvasCatalog.width = videoElement.videoWidth || 640;
             canvasCatalog.height = videoElement.videoHeight || 480;
             const ctx = canvasCatalog.getContext('2d');
             ctx.drawImage(videoElement, 0, 0, canvasCatalog.width, canvasCatalog.height);
 
-            // Выбираем центральную область (мишень) для замера RGB
-            const sampleW = Math.min(80, Math.floor(canvasCatalog.width * 0.2));
-            const sampleH = Math.min(80, Math.floor(canvasCatalog.height * 0.2));
-            const startX = Math.floor((canvasCatalog.width - sampleW) / 2);
-            const startY = Math.floor((canvasCatalog.height - sampleH) / 2);
-
-            const imgData = ctx.getImageData(startX, startY, sampleW, sampleH);
-            const data = imgData.data;
-
-            let rSum = 0, gSum = 0, bSum = 0, count = 0;
-            for (let i = 0; i < data.length; i += 4) {
-                rSum += data[i];
-                gSum += data[i + 1];
-                bSum += data[i + 2];
-                count++;
+            // Закрываем окно камеры
+            if (typeof window.closeCamera === 'function') {
+                window.closeCamera();
             }
 
-            const targetRgb = {
-                r: Math.round(rSum / count),
-                g: Math.round(gSum / count),
-                b: Math.round(bSum / count)
-            };
+            if (infoCatalog) {
+                infoCatalog.innerHTML = `<div style="color: #aaa; font-size: 13px;">Распознавание карточки и плашек...</div>`;
+            }
+
+            let extractedData = null;
+            // 2. Распознаём карту, перспективы и плашки средствами OpenCV
+            if (typeof window.processImageWithCard === 'function') {
+                extractedData = window.processImageWithCard('canvasCatalog', 'canvasCatalog');
+            }
+
+            let targetRgb = null;
+            let measuredPatches = null;
+
+            if (extractedData) {
+                // Если сработало извлечение медианных/средних данных плашек и цели
+                targetRgb = extractedData.main || (extractedData.median ? extractedData.median.main : null);
+                measuredPatches = extractedData.patches || (extractedData.median ? extractedData.median.patches : null);
+            }
+
+            // Запасной забор цвета из центра кадра (фоллбэк)
+            if (!targetRgb) {
+                const sampleW = Math.min(80, Math.floor(canvasCatalog.width * 0.2));
+                const sampleH = Math.min(80, Math.floor(canvasCatalog.height * 0.2));
+                const startX = Math.floor((canvasCatalog.width - sampleW) / 2);
+                const startY = Math.floor((canvasCatalog.height - sampleH) / 2);
+
+                const imgData = ctx.getImageData(startX, startY, sampleW, sampleH);
+                const data = imgData.data;
+
+                let rSum = 0, gSum = 0, bSum = 0, count = 0;
+                for (let i = 0; i < data.length; i += 4) {
+                    rSum += data[i];
+                    gSum += data[i + 1];
+                    bSum += data[i + 2];
+                    count++;
+                }
+
+                targetRgb = {
+                    r: Math.round(rSum / count),
+                    g: Math.round(gSum / count),
+                    b: Math.round(bSum / count)
+                };
+            }
 
             if (infoCatalog) {
                 infoCatalog.innerHTML = `<div style="color: #aaa; font-size: 13px;">Обработка на сервере RGB-процессора...</div>`;
             }
 
             try {
-                // Вызов нашего серверного модуля rgb-cv-processor
+                // 3. Передаем структуры плашек и мишени на серверный rgb-cv-processor
                 const response = await fetch('/api/rgb-cv-processor', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ targetRgb })
+                    body: JSON.stringify({ targetRgb, measuredPatches })
                 });
 
                 const result = await response.json();
@@ -336,14 +362,9 @@
                 console.error('Ошибка запроса к rgb-cv-processor:', e);
                 if (infoCatalog) infoCatalog.innerHTML = `<div style="color: #ff5252; font-size: 13px;">Ошибка связи с сервером</div>`;
             }
-
-            // Закрываем модальное окно камеры штатным образом
-            if (typeof window.closeCamera === 'function') {
-                window.closeCamera();
-            }
         }
 
-        // Перехват takeSnapshot с полной изоляцией каталога и вызовом серверного RGB-процессора
+        // Перехват takeSnapshot с полной изоляцией каталога и вызовом OpenCV + RGB-процессора
         let originalTakeSnapshot = null;
         window.addEventListener('DOMContentLoaded', () => {
             if (localStorage.getItem('spectrix_pro_active') === 'true') {
