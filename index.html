@@ -321,7 +321,7 @@
             }
         }
 
-        // Перехват takeSnapshot для сепаратной обработки вкладки каталогов
+        // Перехват takeSnapshot для сепаратной обработки вкладки каталогов (с изоляцией данных)
         let originalTakeSnapshot = null;
         window.addEventListener('DOMContentLoaded', () => {
             if (localStorage.getItem('spectrix_pro_active') === 'true') {
@@ -336,7 +336,13 @@
                     originalTakeSnapshot = window.takeSnapshot;
                     window.takeSnapshot = function() {
                         if (activeMode === 'catalog') {
+                            // Временно обнуляем standardColorData, чтобы процессор образца не вызвал compareColors() и не затронул сравнение
+                            const tempStandard = standardColorData;
+                            standardColorData = null;
+
                             originalTakeSnapshot();
+
+                            standardColorData = tempStandard; // Восстанавливаем эталон
 
                             const canvasSample = document.getElementById('canvasSample');
                             const canvasCatalog = document.getElementById('canvasCatalog');
