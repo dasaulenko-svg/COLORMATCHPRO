@@ -219,6 +219,7 @@
         let isOpenCvReady = false;
         let standardColorData = null;
         let sampleColorData = null;
+        let catalogColorData = null; // Сепаратная переменная для данных каталога
         let activeMode = 'standard';
         let mediaStream = null;
 
@@ -242,10 +243,58 @@
             if (!document.body.classList.contains('pro-mode-active')) {
                 return; // В обычном режиме запуск камеры заблокирован
             }
+            activeMode = mode;
+            let coreMode = (mode === 'catalog') ? 'sample' : mode;
             if (typeof window.openCameraCore === 'function') {
-                window.openCameraCore(mode);
+                window.openCameraCore(coreMode);
             }
         }
+
+        // Перехват takeSnapshot для сепаратной обработки вкладки каталогов
+        let originalTakeSnapshot = null;
+        window.addEventListener('DOMContentLoaded', () => {
+            if (localStorage.getItem('spectrix_pro_active') === 'true') {
+                document.body.classList.add('pro-mode-active');
+            }
+
+            setTimeout(() => {
+                if (typeof window.takeSnapshot === 'function') {
+                    originalTakeSnapshot = window.takeSnapshot;
+                    window.takeSnapshot = function() {
+                        if (activeMode === 'catalog') {
+                            originalTakeSnapshot();
+
+                            const canvasSample = document.getElementById('canvasSample');
+                            const canvasCatalog = document.getElementById('canvasCatalog');
+                            
+                            if (canvasSample && canvasCatalog) {
+                                canvasCatalog.width = canvasSample.width;
+                                canvasCatalog.height = canvasSample.height;
+                                const ctxCatalog = canvasCatalog.getContext('2d');
+                                ctxCatalog.drawImage(canvasSample, 0, 0);
+                            }
+
+                            if (infoSample && infoCatalog) {
+                                infoCatalog.innerHTML = infoSample.innerHTML;
+                            }
+
+                            catalogColorData = sampleColorData;
+                            
+                            // Очищаем образец, чтобы данные не утекали на вкладку сравнения
+                            sampleColorData = null;
+                            if (canvasSample) {
+                                canvasSample.getContext('2d').clearRect(0, 0, canvasSample.width, canvasSample.height);
+                            }
+                            if (infoSample) {
+                                infoSample.innerHTML = '';
+                            }
+                        } else {
+                            originalTakeSnapshot();
+                        }
+                    };
+                }
+            }, 500);
+        });
 
         // Активация PRO режима по 3 тапам
         let brandTapCount = 0;
@@ -263,13 +312,6 @@
                 brandTapCount = 0;
             } else {
                 brandTapTimer = setTimeout(() => { brandTapCount = 0; }, 400);
-            }
-        });
-
-        // Восстановление состояния стелс-режима из памяти при загрузке
-        document.addEventListener('DOMContentLoaded', () => {
-            if (localStorage.getItem('spectrix_pro_active') === 'true') {
-                document.body.classList.add('pro-mode-active');
             }
         });
 
@@ -299,6 +341,7 @@
             localStorage.removeItem('cm_card_standard_data');
             standardColorData = null;
             sampleColorData = null;
+            catalogColorData = null;
 
             infoStandard.innerHTML = '';
             infoSample.innerHTML = '';
@@ -311,8 +354,8 @@
             const canvasStd = document.getElementById('canvasStandard');
             const canvasSmp = document.getElementById('canvasSample');
             const canvasCat = document.getElementById('canvasCatalog');
-            canvasStd.getContext('2d').clearRect(0, 0, canvasStd.width, canvasStd.height);
-            canvasSmp.getContext('2d').clearRect(0, 0, canvasSmp.width, canvasSmp.height);
+            if (canvasStd) canvasStd.getContext('2d').clearRect(0, 0, canvasStd.width, canvasStd.height);
+            if (canvasSmp) canvasSmp.getContext('2d').clearRect(0, 0, canvasSmp.width, canvasSmp.height);
             if (canvasCat) canvasCat.getContext('2d').clearRect(0, 0, canvasCat.width, canvasCat.height);
         });
     </script>
