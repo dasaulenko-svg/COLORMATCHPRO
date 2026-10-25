@@ -251,6 +251,37 @@
             }
         }
 
+        // Конвертация LAB в RGB для точного сопоставления с базой RAL
+        function labToRgb(l, a, b) {
+            let y = (l + 16) / 116;
+            let x = a / 500 + y;
+            let z = y - b / 200;
+
+            let x3 = Math.pow(x, 3);
+            let y3 = Math.pow(y, 3);
+            let z3 = Math.pow(z, 3);
+
+            x = (x3 > 0.008856 ? x3 : (x - 16 / 116) / 7.787) * 95.047;
+            y = (y3 > 0.008856 ? y3 : (y - 16 / 116) / 7.787) * 100.000;
+            z = (z3 > 0.008856 ? z3 : (z - 16 / 116) / 7.787) * 108.883;
+
+            x = x / 100; y = y / 100; z = z / 100;
+
+            let r = x * 3.2406 + y * -1.5372 + z * -0.4986;
+            let g = x * -0.9689 + y * 1.8758 + z * 0.0415;
+            let b_val = x * 0.0557 + y * -0.2040 + z * 1.0570;
+
+            r = r > 0.0031308 ? (1.055 * Math.pow(r, 1/2.4) - 0.055) : 12.92 * r;
+            g = g > 0.0031308 ? (1.055 * Math.pow(g, 1/2.4) - 0.055) : 12.92 * g;
+            b_val = b_val > 0.0031308 ? (1.055 * Math.pow(b_val, 1/2.4) - 0.055) : 12.92 * b_val;
+
+            return {
+                r: Math.min(255, Math.max(0, Math.round(r * 255))),
+                g: Math.min(255, Math.max(0, Math.round(g * 255))),
+                b: Math.min(255, Math.max(0, Math.round(b_val * 255)))
+            };
+        }
+
         // Вспомогательная функция поиска ближайшего RAL по RGB
         function findClosestRAL(rgb) {
             if (!ralCatalog || ralCatalog.length === 0 || !rgb) return null;
@@ -321,17 +352,24 @@
                                 // 1. Копируем базовый вывод признаков цвета
                                 infoCatalog.innerHTML = infoSample.innerHTML;
 
-                                // 2. Находим и добавляем сепаратный блок RAL внизу
-                                if (sampleColorData && sampleColorData.rgbTarget) {
-                                    let match = findClosestRAL(sampleColorData.rgbTarget);
+                                // 2. Извлекаем скорректированные данные "Цель (LAB)" из текста результата
+                                const labMatch = infoCatalog.innerText.match(/Цель\s*\(LAB\):\s*([-\d.]+),\s*([-\d.]+),\s*([-\d.]+)/i);
+                                if (labMatch) {
+                                    const l = parseFloat(labMatch[1]);
+                                    const a = parseFloat(labMatch[2]);
+                                    const b = parseFloat(labMatch[3]);
+
+                                    const targetRgb = labToRgb(l, a, b);
+                                    let match = findClosestRAL(targetRgb);
+
                                     if (match) {
                                         infoCatalog.innerHTML += `
-                                            <div style="margin-top: 12px; padding: 10px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; display: flex; align-items: center; gap: 12px;">
-                                                <div style="width: 36px; height: 36px; border-radius: 6px; background-color: ${match.rgb_hex}; border: 1px solid #fff; flex-shrink: 0;"></div>
+                                            <div style="margin-top: 12px; padding: 12px; background: rgba(0, 229, 255, 0.08); border: 1px solid rgba(0, 229, 255, 0.3); border-radius: 8px; display: flex; align-items: center; gap: 12px;">
+                                                <div style="width: 40px; height: 40px; border-radius: 6px; background-color: ${match.rgb_hex}; border: 2px solid #fff; flex-shrink: 0; box-shadow: 0 2px 6px rgba(0,0,0,0.4);"></div>
                                                 <div>
-                                                    <div style="font-size: 13px; font-weight: 700; color: #00E5FF;">RAL ${match.code}</div>
-                                                    <div style="font-size: 12px; color: #FFF; font-weight: 500;">${match.name}</div>
-                                                    <div style="font-size: 10px; color: #888;">HEX: ${match.rgb_hex}</div>
+                                                    <div style="font-size: 14px; font-weight: 800; color: #00E5FF; letter-spacing: 0.5px;">RAL ${match.code}</div>
+                                                    <div style="font-size: 13px; color: #FFF; font-weight: 600;">${match.name}</div>
+                                                    <div style="font-size: 11px; color: #aaa; margin-top: 2px;">HEX: ${match.rgb_hex}</div>
                                                 </div>
                                             </div>
                                         `;
