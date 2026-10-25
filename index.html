@@ -263,7 +263,7 @@
             }
         }
 
-        // Полноценный независимый обработчик для вкладки «Каталог» с распознаванием карточки через OpenCV
+        // Обработчик для вкладки «Каталог» с клиентским OpenCV-распознаванием карты и вызовом RGB-процессора на сервере
         async function processCatalogWithRgbServer() {
             const canvasCatalog = document.getElementById('canvasCatalog');
             const videoElement = document.getElementById('webcam');
@@ -285,21 +285,24 @@
             }
 
             let extractedData = null;
-            // 2. Распознаём карту, перспективы и плашки средствами OpenCV
+            // 2. Вызываем OpenCV-распознавание карты и плашек из cv-processor.js
             if (typeof window.processImageWithCard === 'function') {
-                extractedData = window.processImageWithCard('canvasCatalog', 'canvasCatalog');
+                try {
+                    extractedData = window.processImageWithCard('canvasCatalog', 'canvasCatalog');
+                } catch (e) {
+                    console.error('Ошибка OpenCV обработки карточки:', e);
+                }
             }
 
             let targetRgb = null;
             let measuredPatches = null;
 
             if (extractedData) {
-                // Если сработало извлечение медианных/средних данных плашек и цели
-                targetRgb = extractedData.main || (extractedData.median ? extractedData.median.main : null);
-                measuredPatches = extractedData.patches || (extractedData.median ? extractedData.median.patches : null);
+                targetRgb = extractedData.main || extractedData.mainMean || (extractedData.mean ? extractedData.mean.main : null);
+                measuredPatches = extractedData.patches || extractedData.patchesMean || (extractedData.mean ? extractedData.mean.patches : null);
             }
 
-            // Запасной забор цвета из центра кадра (фоллбэк)
+            // Фоллбэк, если OpenCV не вернул данные напрямую
             if (!targetRgb) {
                 const sampleW = Math.min(80, Math.floor(canvasCatalog.width * 0.2));
                 const sampleH = Math.min(80, Math.floor(canvasCatalog.height * 0.2));
@@ -329,7 +332,7 @@
             }
 
             try {
-                // 3. Передаем структуры плашек и мишени на серверный rgb-cv-processor
+                // 3. Отправляем структурированные данные на серверный rgb-cv-processor
                 const response = await fetch('/api/rgb-cv-processor', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -364,7 +367,7 @@
             }
         }
 
-        // Перехват takeSnapshot с полной изоляцией каталога и вызовом OpenCV + RGB-процессора
+        // Перехват takeSnapshot с изоляцией каталога и вызовом OpenCV + RGB-процессора
         let originalTakeSnapshot = null;
         window.addEventListener('DOMContentLoaded', () => {
             if (localStorage.getItem('spectrix_pro_active') === 'true') {
