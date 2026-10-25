@@ -218,8 +218,24 @@
     <script>
         let isOpenCvReady = false;
         let standardColorData = null;
-        let sampleColorData = null;
-        let catalogColorData = null; // Сепаратная переменная для данных каталога
+        let _sampleColorData = null; // Внутренний контейнер для образца сравнения
+        let catalogColorData = null; // Сепаратная независимая переменная для данных каталога
+
+        // Изолируем глобальный sampleColorData через геттер/сеттер, чтобы каталог и сравнение не дрались за переменные
+        Object.defineProperty(window, 'sampleColorData', {
+            get: function() {
+                return (typeof activeMode !== 'undefined' && activeMode === 'catalog') ? catalogColorData : _sampleColorData;
+            },
+            set: function(val) {
+                if (typeof activeMode !== 'undefined' && activeMode === 'catalog') {
+                    catalogColorData = val;
+                } else {
+                    _sampleColorData = val;
+                }
+            },
+            configurable: true
+        });
+
         let ralCatalog = []; // Загруженный каталог RAL из ral.json
         let activeMode = 'standard';
         let mediaStream = null;
@@ -321,7 +337,7 @@
             }
         }
 
-        // Перехват takeSnapshot с изоляцией DOM-элементов каталога
+        // Перехват takeSnapshot с полной изоляцией каталога и сравнения
         let originalTakeSnapshot = null;
         window.addEventListener('DOMContentLoaded', () => {
             if (localStorage.getItem('spectrix_pro_active') === 'true') {
@@ -336,8 +352,8 @@
                     originalTakeSnapshot = window.takeSnapshot;
                     window.takeSnapshot = function() {
                         if (activeMode === 'catalog') {
-                            // Напрямую перенаправляем DOM-запросы на элементы каталога,
-                            // чтобы вкладка сравнения (canvasSample / infoSample) оставалась нетронутой
+                            // Перенаправляем DOM-запросы на элементы каталога, 
+                            // чтобы вкладка сравнения (canvasSample / infoSample) оставалась полностью нетронутой
                             const originalGetElementById = document.getElementById;
                             document.getElementById = function(id) {
                                 if (id === 'canvasSample') return originalGetElementById.call(document, 'canvasCatalog');
@@ -380,8 +396,6 @@
                                     }
                                 }
                             }
-
-                            catalogColorData = sampleColorData;
                         } else {
                             originalTakeSnapshot();
                         }
@@ -434,7 +448,7 @@
         resetBtn.addEventListener('click', () => {
             localStorage.removeItem('cm_card_standard_data');
             standardColorData = null;
-            sampleColorData = null;
+            _sampleColorData = null;
             catalogColorData = null;
 
             infoStandard.innerHTML = '';
