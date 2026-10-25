@@ -337,7 +337,7 @@
             }
         }
 
-        // Перехват takeSnapshot с полной изоляцией каталога и сравнения
+        // Перехват takeSnapshot с полной изоляцией от запуска сравнения
         let originalTakeSnapshot = null;
         window.addEventListener('DOMContentLoaded', () => {
             if (localStorage.getItem('spectrix_pro_active') === 'true') {
@@ -352,8 +352,7 @@
                     originalTakeSnapshot = window.takeSnapshot;
                     window.takeSnapshot = function() {
                         if (activeMode === 'catalog') {
-                            // Перенаправляем DOM-запросы на элементы каталога, 
-                            // чтобы вкладка сравнения (canvasSample / infoSample) оставалась полностью нетронутой
+                            // Перенаправляем DOM-запросы на элементы каталога
                             const originalGetElementById = document.getElementById;
                             document.getElementById = function(id) {
                                 if (id === 'canvasSample') return originalGetElementById.call(document, 'canvasCatalog');
@@ -361,10 +360,16 @@
                                 return originalGetElementById.call(document, id);
                             };
 
+                            // Временно обнуляем standardColorData на время снимка в каталоге, 
+                            // чтобы движок сравнения гарантированно не пересчитывал ничего на фоне
+                            const tempStd = standardColorData;
+                            standardColorData = null;
+
                             try {
                                 originalTakeSnapshot();
                             } finally {
                                 document.getElementById = originalGetElementById;
+                                standardColorData = tempStd; // Восстанавливаем эталон назад
                             }
 
                             // Дополняем результаты каталога подбором RAL
@@ -445,15 +450,14 @@
             if (typeof restoreState === 'function') restoreState();
         }
 
+        // Сброс теста теперь очищает ТОЛЬКО вкладку сравнения, не затрагивая каталог
         resetBtn.addEventListener('click', () => {
             localStorage.removeItem('cm_card_standard_data');
             standardColorData = null;
             _sampleColorData = null;
-            catalogColorData = null;
 
             infoStandard.innerHTML = '';
             infoSample.innerHTML = '';
-            infoCatalog.innerHTML = '';
             infoCard.style.display = 'none';
             resultDiv.innerText = '';
 
@@ -461,10 +465,8 @@
 
             const canvasStd = document.getElementById('canvasStandard');
             const canvasSmp = document.getElementById('canvasSample');
-            const canvasCat = document.getElementById('canvasCatalog');
             if (canvasStd) canvasStd.getContext('2d').clearRect(0, 0, canvasStd.width, canvasStd.height);
             if (canvasSmp) canvasSmp.getContext('2d').clearRect(0, 0, canvasSmp.width, canvasSmp.height);
-            if (canvasCat) canvasCat.getContext('2d').clearRect(0, 0, canvasCat.width, canvasCat.height);
         });
     </script>
 
