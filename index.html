@@ -321,7 +321,7 @@
             }
         }
 
-        // Перехват takeSnapshot для сепаратной обработки вкладки каталогов (с изоляцией данных)
+        // Перехват takeSnapshot с изоляцией DOM-элементов каталога
         let originalTakeSnapshot = null;
         window.addEventListener('DOMContentLoaded', () => {
             if (localStorage.getItem('spectrix_pro_active') === 'true') {
@@ -336,36 +336,29 @@
                     originalTakeSnapshot = window.takeSnapshot;
                     window.takeSnapshot = function() {
                         if (activeMode === 'catalog') {
-                            // Временно обнуляем standardColorData, чтобы процессор образца не вызвал compareColors() и не затронул сравнение
-                            const tempStandard = standardColorData;
-                            standardColorData = null;
+                            // Напрямую перенаправляем DOM-запросы на элементы каталога,
+                            // чтобы вкладка сравнения (canvasSample / infoSample) оставалась нетронутой
+                            const originalGetElementById = document.getElementById;
+                            document.getElementById = function(id) {
+                                if (id === 'canvasSample') return originalGetElementById.call(document, 'canvasCatalog');
+                                if (id === 'infoSample') return originalGetElementById.call(document, 'infoCatalog');
+                                return originalGetElementById.call(document, id);
+                            };
 
-                            originalTakeSnapshot();
-
-                            standardColorData = tempStandard; // Восстанавливаем эталон
-
-                            const canvasSample = document.getElementById('canvasSample');
-                            const canvasCatalog = document.getElementById('canvasCatalog');
-                            
-                            if (canvasSample && canvasCatalog) {
-                                canvasCatalog.width = canvasSample.width;
-                                canvasCatalog.height = canvasSample.height;
-                                const ctxCatalog = canvasCatalog.getContext('2d');
-                                ctxCatalog.drawImage(canvasSample, 0, 0);
+                            try {
+                                originalTakeSnapshot();
+                            } finally {
+                                document.getElementById = originalGetElementById;
                             }
 
-                            if (infoSample && infoCatalog) {
-                                // 1. Копируем базовый вывод признаков цвета
-                                infoCatalog.innerHTML = infoSample.innerHTML;
-
-                                // 2. Извлекаем скорректированные данные "Цель (LAB)" из текста результата
+                            // Дополняем результаты каталога подбором RAL
+                            if (infoCatalog) {
                                 const labMatch = infoCatalog.innerText.match(/Цель\s*\(LAB\):\s*([-\d.]+),\s*([-\d.]+),\s*([-\d.]+)/i);
-                                if (labMatch) {
+                                if (labMatch && !infoCatalog.querySelector('.ral-result-box')) {
                                     const lCv = parseFloat(labMatch[1]);
                                     const aCv = parseFloat(labMatch[2]);
                                     const bCv = parseFloat(labMatch[3]);
 
-                                    // Нормализация из OpenCV Lab в стандартный CIELAB
                                     const l = lCv * (100.0 / 255.0);
                                     const a = aCv - 128;
                                     const b = bCv - 128;
@@ -375,7 +368,7 @@
 
                                     if (match) {
                                         infoCatalog.innerHTML += `
-                                            <div style="margin-top: 12px; padding: 12px; background: rgba(0, 229, 255, 0.08); border: 1px solid rgba(0, 229, 255, 0.3); border-radius: 8px; display: flex; align-items: center; gap: 12px;">
+                                            <div class="ral-result-box" style="margin-top: 12px; padding: 12px; background: rgba(0, 229, 255, 0.08); border: 1px solid rgba(0, 229, 255, 0.3); border-radius: 8px; display: flex; align-items: center; gap: 12px;">
                                                 <div style="width: 40px; height: 40px; border-radius: 6px; background-color: ${match.rgb_hex}; border: 2px solid #fff; flex-shrink: 0; box-shadow: 0 2px 6px rgba(0,0,0,0.4);"></div>
                                                 <div>
                                                     <div style="font-size: 14px; font-weight: 800; color: #00E5FF; letter-spacing: 0.5px;">RAL ${match.code}</div>
@@ -389,15 +382,6 @@
                             }
 
                             catalogColorData = sampleColorData;
-                            
-                            // Очищаем образец, чтобы данные не утекали на вкладку сравнения
-                            sampleColorData = null;
-                            if (canvasSample) {
-                                canvasSample.getContext('2d').clearRect(0, 0, canvasSample.width, canvasSample.height);
-                            }
-                            if (infoSample) {
-                                infoSample.innerHTML = '';
-                            }
                         } else {
                             originalTakeSnapshot();
                         }
