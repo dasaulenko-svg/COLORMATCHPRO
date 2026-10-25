@@ -251,33 +251,6 @@
             }
         }
 
-        // Вспомогательная функция поиска ближайшего RAL по RGB
-        function findClosestRAL(rgb) {
-            if (!ralCatalog || ralCatalog.length === 0 || !rgb) return null;
-            let closest = null;
-            let minDist = Infinity;
-
-            for (let item of ralCatalog) {
-                if (!item.rgb_hex) continue;
-                let hex = item.rgb_hex.replace('#', '');
-                let r = parseInt(hex.substring(0, 2), 16);
-                let g = parseInt(hex.substring(2, 4), 16);
-                let b = parseInt(hex.substring(4, 6), 16);
-
-                let dist = Math.sqrt(
-                    Math.pow(rgb.r - r, 2) +
-                    Math.pow(rgb.g - g, 2) +
-                    Math.pow(rgb.b - b, 2)
-                );
-
-                if (dist < minDist) {
-                    minDist = dist;
-                    closest = item;
-                }
-            }
-            return closest;
-        }
-
         // Проверка прав на запуск камеры
         function openCamera(mode) {
             if (!document.body.classList.contains('pro-mode-active')) {
@@ -290,8 +263,8 @@
             }
         }
 
-        // Автономный независимый обработчик для вкладки «Каталог» (без задева сравнения)
-        function processCatalogStandalone() {
+        // Автономный независимый обработчик для вкладки «Каталог» через серверный RGB-процессор
+        async function processCatalogWithRgbServer() {
             const canvasCatalog = document.getElementById('canvasCatalog');
             const videoElement = document.getElementById('webcam');
             if (!canvasCatalog || !videoElement) return;
@@ -302,7 +275,7 @@
             const ctx = canvasCatalog.getContext('2d');
             ctx.drawImage(videoElement, 0, 0, canvasCatalog.width, canvasCatalog.height);
 
-            // Выбираем центральную область для замера цвета (образцовая мишень)
+            // Выбираем центральную область (мишень) для замера RGB
             const sampleW = Math.min(80, Math.floor(canvasCatalog.width * 0.2));
             const sampleH = Math.min(80, Math.floor(canvasCatalog.height * 0.2));
             const startX = Math.floor((canvasCatalog.width - sampleW) / 2);
@@ -319,33 +292,35 @@
                 count++;
             }
 
-            // Получаем базовый RGB с учетом локальной цветокоррекции под свет
-            let rawR = Math.round(rSum / count);
-            let rawG = Math.round(gSum / count);
-            let rawB = Math.round(bSum / count);
-
-            // Коррекция белого баланса / освещения (авто-усиление)
-            const maxChannel = Math.max(rawR, rawG, rawB, 1);
-            const gain = 255.0 / maxChannel;
-            const correctedR = Math.min(255, Math.round(rawR * gain));
-            const correctedG = Math.min(255, Math.round(rawG * gain));
-            const correctedB = Math.min(255, Math.round(rawB * gain));
-
-            const correctedRgb = { r: correctedR, g: correctedG, b: correctedB };
-            catalogColorData = correctedRgb;
-
-            // Ищем ближайший RAL в базе
-            const match = findClosestRAL(correctedRgb);
+            const targetRgb = {
+                r: Math.round(rSum / count),
+                g: Math.round(gSum / count),
+                b: Math.round(bSum / count)
+            };
 
             if (infoCatalog) {
-                let html = `
-                    <div style="font-size: 13px; font-weight: 600; color: #fff; margin-bottom: 8px;">
-                        Замеренный RGB: <span style="color: #00E5FF;">(${correctedR}, ${correctedG}, ${correctedB})</span>
-                    </div>
-                `;
-                if (match) {
-                    html += `
-                        <div style="margin-top: 8px; padding: 12px; background: rgba(0, 229, 255, 0.08); border: 1px solid rgba(0, 229, 255, 0.3); border-radius: 8px; display: flex; align-items: center; gap: 12px;">
+                infoCatalog.innerHTML = `<div style="color: #aaa; font-size: 13px;">Обработка на сервере RGB-процессора...</div>`;
+            }
+
+            try {
+                // Вызов нашего серверного модуля rgb-cv-processor
+                const response = await fetch('/api/rgb-cv-processor', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ targetRgb })
+                });
+
+                const result = await response.json();
+
+                if (result.success && result.match) {
+                    catalogColorData = result.correctedRgb;
+                    const match = result.match;
+
+                    infoCatalog.innerHTML = `
+                        <div style="font-size: 13px; font-weight: 600; color: #fff; margin-bottom: 8px;">
+                            RGB: <span style="color: #00E5FF;">(${result.correctedRgb.r}, ${result.correctedRgb.g}, ${result.correctedRgb.b})</span>
+                        </div>
+                        <div style="padding: 12px; background: rgba(0, 229, 255, 0.08); border: 1px solid rgba(0, 229, 255, 0.3); border-radius: 8px; display: flex; align-items: center; gap: 12px;">
                             <div style="width: 40px; height: 40px; border-radius: 6px; background-color: ${match.rgb_hex}; border: 2px solid #fff; flex-shrink: 0; box-shadow: 0 2px 6px rgba(0,0,0,0.4);"></div>
                             <div>
                                 <div style="font-size: 14px; font-weight: 800; color: #00E5FF; letter-spacing: 0.5px;">RAL ${match.code}</div>
@@ -355,9 +330,11 @@
                         </div>
                     `;
                 } else {
-                    html += `<div style="color: #aaa; font-size: 12px;">Ближайший цвет RAL не найден</div>`;
+                    if (infoCatalog) infoCatalog.innerHTML = `<div style="color: #ff5252; font-size: 13px;">Ошибка обработки данных на сервере</div>`;
                 }
-                infoCatalog.innerHTML = html;
+            } catch (e) {
+                console.error('Ошибка запроса к rgb-cv-processor:', e);
+                if (infoCatalog) infoCatalog.innerHTML = `<div style="color: #ff5252; font-size: 13px;">Ошибка связи с сервером</div>`;
             }
 
             // Закрываем модальное окно камеры штатным образом
@@ -366,7 +343,7 @@
             }
         }
 
-        // Перехват takeSnapshot с полной изоляцией каталога от сравнения
+        // Перехват takeSnapshot с полной изоляцией каталога и вызовом серверного RGB-процессора
         let originalTakeSnapshot = null;
         window.addEventListener('DOMContentLoaded', () => {
             if (localStorage.getItem('spectrix_pro_active') === 'true') {
@@ -381,8 +358,7 @@
                     originalTakeSnapshot = window.takeSnapshot;
                     window.takeSnapshot = function() {
                         if (activeMode === 'catalog') {
-                            // Вызываем наш собственный изолированный метод для каталога
-                            processCatalogStandalone();
+                            processCatalogWithRgbServer();
                         } else {
                             originalTakeSnapshot();
                         }
