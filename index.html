@@ -45,20 +45,11 @@
             <span class="status-dot loading"></span> Загрузка ядра OpenCV...
         </div>
 
-        <!-- РАЗДЕЛ КАТАЛОГИ -->
+        <!-- РАЗДЕЛ КАТАЛОГИ (ЗАПИСКА / ЗАГЛУШКА) -->
         <div class="view-pane active" id="paneCatalog">
-            <div class="col" style="max-width: 400px; margin: 0 auto;">
-                <div class="col-header">
-                    <h3>Каталоги</h3>
-                    <span class="step-tag">RGB</span>
-                </div>
-                <div class="preview-box" onclick="openZoomModal('canvasCatalog')">
-                    <canvas id="canvasCatalog"></canvas>
-                </div>
-                <button class="btn-action" id="btnCatalog" onclick="openCatalogCamera()">
-                    📷 Сканировать каталог
-                </button>
-                <div class="info-container" id="infoCatalog"></div>
+            <div class="stub-box">
+                📚 <b>Каталоги</b><br><br>
+                Здесь будут цветовые каталоги. Скоро всё будет.
             </div>
         </div>
 
@@ -186,7 +177,7 @@
                 </svg>
             </div>
 
-            <button class="btn-action" onclick="takeCatalogSnapshot()">
+            <button class="btn-action" onclick="takeSnapshot()">
                 📸 Сделать снимок
             </button>
         </div>
@@ -304,8 +295,6 @@
     <!-- Внешние JS модули -->
     <script src="camera.js"></script>
     <script src="cv-processor.js"></script>
-    <script src="cg-camera.js"></script>
-    <script src="cg-cv-processor.js"></script>
     
     <!-- Модуль полевого люксометра (автоматически встраивается в paneLux) -->
     <script src="lux.js" defer></script>
